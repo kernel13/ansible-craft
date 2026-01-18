@@ -1,0 +1,30 @@
+{
+  "name": "ansible-craft",
+  "version": "0.1.0",
+  "description": "Generate production-ready Ansible roles from natural language",
+  "type": "module",
+  "bin": {
+    "ansible-craft": "./src/cli/index.ts"
+  },
+  "scripts": {
+    "dev": "bun run src/cli/index.ts",
+    "lint": "biome check .",
+    "format": "biome format . --write"
+  },
+  "keywords": ["ansible", "cli", "devops", "automation", "ai"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/bun": "latest",
+    "@types/node": "^22.15.30"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "boxen": "^8.0.1",
+    "chalk": "^5.4.1",
+    "commander": "^14.0.2"
+  }
+}
