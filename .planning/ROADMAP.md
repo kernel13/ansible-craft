@@ -12,7 +12,7 @@ Ansible Craft delivers an AI-powered CLI that generates production-ready Ansible
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation** - CLI skeleton with help, version, and proper exit codes
+- [x] **Phase 1: Foundation** - CLI skeleton with help, version, and proper exit codes
 - [ ] **Phase 2: Configuration** - Config file management and API key handling
 - [ ] **Phase 3: AI Integration** - Claude API client with rate limiting and streaming
 - [ ] **Phase 4: Role Generation** - Generate complete Ansible roles from natural language
@@ -35,9 +35,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 3 plans in 3 waves (sequential)
 
 Plans:
-- [ ] 01-01-PLAN.md — Project scaffolding and CLI entry point (Wave 1)
-- [ ] 01-02-PLAN.md — Help and version commands (Wave 2)
-- [ ] 01-03-PLAN.md — Exit code handling and error display (Wave 3)
+- [x] 01-01-PLAN.md — Project scaffolding and CLI entry point (Wave 1)
+- [x] 01-02-PLAN.md — Help and version commands (Wave 2)
+- [x] 01-03-PLAN.md — Exit code handling and error display (Wave 3)
 
 ### Phase 2: Configuration
 **Goal**: Users can configure the CLI with API key and persistent preferences
@@ -164,7 +164,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/3 | Planned | - |
+| 1. Foundation | 3/3 | Complete | 2026-01-18 |
 | 2. Configuration | 0/3 | Not started | - |
 | 3. AI Integration | 0/3 | Not started | - |
 | 4. Role Generation | 0/5 | Not started | - |
@@ -176,4 +176,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 ---
 *Roadmap created: 2025-01-18*
 *Phase 1 planned: 2025-01-18*
+*Phase 1 completed: 2026-01-18*
 *Total phases: 8 | Total plans: 30 | v1 requirements: 21 mapped*

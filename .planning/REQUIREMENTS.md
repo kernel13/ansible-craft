@@ -9,9 +9,9 @@ Requirements for initial CLI release. Each maps to roadmap phases.
 
 ### CLI Framework
 
-- [ ] **CLI-01**: CLI displays help with usage examples when invoked with --help or no arguments
-- [ ] **CLI-02**: CLI displays version when invoked with --version
-- [ ] **CLI-03**: CLI exits with code 0 on success, code 1 on error
+- [x] **CLI-01**: CLI displays help with usage examples when invoked with --help or no arguments
+- [x] **CLI-02**: CLI displays version when invoked with --version
+- [x] **CLI-03**: CLI exits with code 0 on success, code 1 on error
 - [ ] **CLI-04**: CLI reads defaults from config file (~/.config/ansible-craft/config.toml)
 - [ ] **CLI-05**: CLI provides shell completions for bash, zsh, and fish
 - [ ] **CLI-06**: CLI supports --json flag for machine-readable output
@@ -86,9 +86,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CLI-01 | Phase 1: Foundation | Pending |
-| CLI-02 | Phase 1: Foundation | Pending |
-| CLI-03 | Phase 1: Foundation | Pending |
+| CLI-01 | Phase 1: Foundation | Complete |
+| CLI-02 | Phase 1: Foundation | Complete |
+| CLI-03 | Phase 1: Foundation | Complete |
 | CLI-04 | Phase 2: Configuration | Pending |
 | CLI-05 | Phase 8: Publishing | Pending |
 | CLI-06 | Phase 8: Publishing | Pending |
@@ -115,4 +115,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2025-01-18*
-*Last updated: 2025-01-18 after roadmap creation*
+*Last updated: 2026-01-18 after Phase 1 completion*
