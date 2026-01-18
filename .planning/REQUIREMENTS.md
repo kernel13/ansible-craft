@@ -86,33 +86,33 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CLI-01 | — | Pending |
-| CLI-02 | — | Pending |
-| CLI-03 | — | Pending |
-| CLI-04 | — | Pending |
-| CLI-05 | — | Pending |
-| CLI-06 | — | Pending |
-| GEN-01 | — | Pending |
-| GEN-02 | — | Pending |
-| GEN-03 | — | Pending |
-| GEN-04 | — | Pending |
-| QUAL-01 | — | Pending |
-| QUAL-02 | — | Pending |
-| QUAL-03 | — | Pending |
-| QUAL-04 | — | Pending |
-| QUAL-05 | — | Pending |
-| ERR-01 | — | Pending |
-| ERR-02 | — | Pending |
-| ERR-03 | — | Pending |
-| CFG-01 | — | Pending |
-| CFG-02 | — | Pending |
-| CFG-03 | — | Pending |
+| CLI-01 | Phase 1: Foundation | Pending |
+| CLI-02 | Phase 1: Foundation | Pending |
+| CLI-03 | Phase 1: Foundation | Pending |
+| CLI-04 | Phase 2: Configuration | Pending |
+| CLI-05 | Phase 8: Publishing | Pending |
+| CLI-06 | Phase 8: Publishing | Pending |
+| GEN-01 | Phase 4: Role Generation | Pending |
+| GEN-02 | Phase 5: Playbook Generation | Pending |
+| GEN-03 | Phase 6: Quality Assurance | Pending |
+| GEN-04 | Phase 6: Quality Assurance | Pending |
+| QUAL-01 | Phase 4: Role Generation | Pending |
+| QUAL-02 | Phase 4: Role Generation | Pending |
+| QUAL-03 | Phase 4: Role Generation | Pending |
+| QUAL-04 | Phase 4: Role Generation | Pending |
+| QUAL-05 | Phase 6: Quality Assurance | Pending |
+| ERR-01 | Phase 7: Error Commands | Pending |
+| ERR-02 | Phase 7: Error Commands | Pending |
+| ERR-03 | Phase 7: Error Commands | Pending |
+| CFG-01 | Phase 2: Configuration | Pending |
+| CFG-02 | Phase 2: Configuration | Pending |
+| CFG-03 | Phase 7: Error Commands | Pending |
 
 **Coverage:**
 - v1 requirements: 21 total
-- Mapped to phases: 0
-- Unmapped: 21 ⚠️
+- Mapped to phases: 21
+- Unmapped: 0
 
 ---
 *Requirements defined: 2025-01-18*
-*Last updated: 2025-01-18 after initial definition*
+*Last updated: 2025-01-18 after roadmap creation*
