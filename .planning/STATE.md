@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2025-01-18)
 ## Current Position
 
 Phase: 3 of 8 (AI Integration)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: In progress
-Last activity: 2026-01-18 — Completed 03-01-PLAN.md (Anthropic SDK Setup)
+Last activity: 2026-01-18 — Completed 03-02-PLAN.md (API Error Handling)
 
-Progress: [███████░░░] ~30%
+Progress: [████████░░] ~35%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 7
-- Average duration: ~4 minutes
-- Total execution time: ~25 minutes
+- Total plans completed: 8
+- Average duration: ~3 minutes
+- Total execution time: ~27 minutes
 
 **By Phase:**
 
@@ -29,10 +29,10 @@ Progress: [███████░░░] ~30%
 |-------|-------|-------|----------|
 | 01-foundation | 3/3 | ~12min | ~4min |
 | 02-configuration | 3/3 | ~11min | ~4min |
-| 03-ai-integration | 1/3 | ~2min | ~2min |
+| 03-ai-integration | 2/3 | ~4min | ~2min |
 
 **Recent Trend:**
-- Last 5 plans: 02-01 (~4min), 02-02 (~2min), 02-03 (~5min), 03-01 (~2min)
+- Last 5 plans: 02-02 (~2min), 02-03 (~5min), 03-01 (~2min), 03-02 (~2min)
 - Trend: Consistent ~2-4min per plan
 
 *Updated after each plan completion*
@@ -69,6 +69,10 @@ Recent decisions affecting current work:
 - [03-01-01]: Pinned model claude-sonnet-4-5-20250929 — reproducibility
 - [03-01-02]: 3 retries default with noRetry option — fail-fast support
 - [03-01-03]: 2-minute timeout default — long generation support
+- [03-02-01]: GitHub repo URL for error docs — no separate docs site yet
+- [03-02-02]: Match boxen styling from config/errors.ts — consistency
+- [03-02-03]: 2-minute max wait time for rate limits — reasonable upper bound
+- [03-02-04]: 30s default when Retry-After header missing — common practice
 
 ### Pending Todos
 
@@ -81,7 +85,7 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-18
-Stopped at: Completed 03-01-PLAN.md (Anthropic SDK Setup)
+Stopped at: Completed 03-02-PLAN.md (API Error Handling)
 Resume file: None
 
 ---
