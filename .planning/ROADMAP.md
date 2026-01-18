@@ -32,12 +32,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. User can run `ansible-craft --version` and see the version number
   3. CLI exits with code 0 on success and code 1 on error
   4. CLI displays error messages to stderr, not stdout
-**Plans**: TBD
+**Plans**: 3 plans in 3 waves (sequential)
 
 Plans:
-- [ ] 01-01: Project scaffolding and CLI entry point
-- [ ] 01-02: Help and version commands
-- [ ] 01-03: Exit code handling and error display
+- [ ] 01-01-PLAN.md — Project scaffolding and CLI entry point (Wave 1)
+- [ ] 01-02-PLAN.md — Help and version commands (Wave 2)
+- [ ] 01-03-PLAN.md — Exit code handling and error display (Wave 3)
 
 ### Phase 2: Configuration
 **Goal**: Users can configure the CLI with API key and persistent preferences
@@ -164,7 +164,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/3 | Not started | - |
+| 1. Foundation | 0/3 | Planned | - |
 | 2. Configuration | 0/3 | Not started | - |
 | 3. AI Integration | 0/3 | Not started | - |
 | 4. Role Generation | 0/5 | Not started | - |
@@ -175,4 +175,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 
 ---
 *Roadmap created: 2025-01-18*
+*Phase 1 planned: 2025-01-18*
 *Total phases: 8 | Total plans: 30 | v1 requirements: 21 mapped*
