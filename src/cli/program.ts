@@ -1,5 +1,6 @@
 import { Command } from 'commander';
 import { formatHelp } from './help.js';
+import { formatError } from './output.js';
 import { displayVersion } from './version.js';
 
 export const program = new Command();
@@ -11,7 +12,21 @@ program
     formatHelp: formatHelp,
     sortSubcommands: true,
     sortOptions: true,
-  });
+  })
+  .configureOutput({
+    writeOut: (str) => process.stdout.write(str),
+    writeErr: (str) => process.stderr.write(str),
+    outputError: (str, write) => write(formatError(str)),
+  })
+  .exitOverride((err) => {
+    // help and version display are not errors
+    if (err.code === 'commander.helpDisplayed' || err.code === 'commander.version') {
+      process.exit(0);
+    }
+    // All other Commander errors exit with 1
+    process.exit(err.exitCode);
+  })
+  .showHelpAfterError('(run with --help for available options)');
 
 // Custom version option with styled display
 program.option('-V, --version', 'Display version information');
