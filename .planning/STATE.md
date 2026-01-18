@@ -10,28 +10,29 @@ See: .planning/PROJECT.md (updated 2025-01-18)
 ## Current Position
 
 Phase: 2 of 8 (Configuration)
-Plan: 0 of 3 in current phase
-Status: Ready to plan
-Last activity: 2026-01-18 — Phase 1 (Foundation) complete and verified
+Plan: 1 of 3 in current phase
+Status: In progress
+Last activity: 2026-01-18 — Completed 02-01 config infrastructure
 
-Progress: [██░░░░░░░░] ~12%
+Progress: [███░░░░░░░] ~16%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
+- Total plans completed: 4
 - Average duration: ~4 minutes
-- Total execution time: ~12 minutes
+- Total execution time: ~16 minutes
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-foundation | 3/3 | ~12min | ~4min |
+| 02-configuration | 1/3 | ~4min | ~4min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (~5min), 01-02 (~5min), 01-03 (~2min)
-- Trend: Getting faster with simpler plans
+- Last 5 plans: 01-01 (~5min), 01-02 (~5min), 01-03 (~2min), 02-01 (~4min)
+- Trend: Consistent ~4min per plan
 
 *Updated after each plan completion*
 
@@ -54,6 +55,9 @@ Recent decisions affecting current work:
 - [01-03-01]: formatError for inline Commander errors — simpler output
 - [01-03-02]: exitOverride for help/version — exit 0 for non-errors
 - [01-03-03]: showHelpAfterError — guide users to help on error
+- [02-01-01]: smol-toml for TOML parsing — lightweight, modern ESM library
+- [02-01-02]: Env var takes precedence over config file — common CLI pattern
+- [02-01-03]: Error on API key conflict — both sources have different values
 
 ### Pending Todos
 
@@ -66,7 +70,7 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-18
-Stopped at: Phase 1 complete and verified
+Stopped at: Completed 02-01 config infrastructure
 Resume file: None
 
 ---
