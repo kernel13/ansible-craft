@@ -10,29 +10,29 @@ See: .planning/PROJECT.md (updated 2025-01-18)
 ## Current Position
 
 Phase: 2 of 8 (Configuration)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: In progress
-Last activity: 2026-01-18 — Completed 02-01 config infrastructure
+Last activity: 2026-01-18 — Completed 02-02 API key validation
 
-Progress: [███░░░░░░░] ~16%
+Progress: [████░░░░░░] ~20%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
+- Total plans completed: 5
 - Average duration: ~4 minutes
-- Total execution time: ~16 minutes
+- Total execution time: ~18 minutes
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-foundation | 3/3 | ~12min | ~4min |
-| 02-configuration | 1/3 | ~4min | ~4min |
+| 02-configuration | 2/3 | ~6min | ~3min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (~5min), 01-02 (~5min), 01-03 (~2min), 02-01 (~4min)
-- Trend: Consistent ~4min per plan
+- Last 5 plans: 01-02 (~5min), 01-03 (~2min), 02-01 (~4min), 02-02 (~2min)
+- Trend: Consistent ~3-4min per plan
 
 *Updated after each plan completion*
 
@@ -58,6 +58,9 @@ Recent decisions affecting current work:
 - [02-01-01]: smol-toml for TOML parsing — lightweight, modern ESM library
 - [02-01-02]: Env var takes precedence over config file — common CLI pattern
 - [02-01-03]: Error on API key conflict — both sources have different values
+- [02-02-01]: Token counting endpoint for validation — no token consumption
+- [02-02-02]: Mask pattern sk-ant-api0***...***xxxx — shows enough for identification
+- [02-02-03]: requireApiKey returns null vs throwing — allows graceful handling
 
 ### Pending Todos
 
@@ -70,7 +73,7 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-18
-Stopped at: Completed 02-01 config infrastructure
+Stopped at: Completed 02-02 API key validation
 Resume file: None
 
 ---
