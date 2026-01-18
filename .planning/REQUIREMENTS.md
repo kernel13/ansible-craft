@@ -12,7 +12,7 @@ Requirements for initial CLI release. Each maps to roadmap phases.
 - [x] **CLI-01**: CLI displays help with usage examples when invoked with --help or no arguments
 - [x] **CLI-02**: CLI displays version when invoked with --version
 - [x] **CLI-03**: CLI exits with code 0 on success, code 1 on error
-- [ ] **CLI-04**: CLI reads defaults from config file (~/.config/ansible-craft/config.toml)
+- [x] **CLI-04**: CLI reads defaults from config file (~/.ansible-craft/config.toml)
 - [ ] **CLI-05**: CLI provides shell completions for bash, zsh, and fish
 - [ ] **CLI-06**: CLI supports --json flag for machine-readable output
 
@@ -39,8 +39,8 @@ Requirements for initial CLI release. Each maps to roadmap phases.
 
 ### Configuration
 
-- [ ] **CFG-01**: CLI reads API key from ANTHROPIC_API_KEY environment variable
-- [ ] **CFG-02**: User can save default preferences to config file
+- [x] **CFG-01**: CLI reads API key from ANTHROPIC_API_KEY environment variable
+- [x] **CFG-02**: User can save default preferences to config file
 - [ ] **CFG-03**: User can select Opus model for complex tasks via --complex flag
 
 ## v2 Requirements
@@ -89,7 +89,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CLI-01 | Phase 1: Foundation | Complete |
 | CLI-02 | Phase 1: Foundation | Complete |
 | CLI-03 | Phase 1: Foundation | Complete |
-| CLI-04 | Phase 2: Configuration | Pending |
+| CLI-04 | Phase 2: Configuration | Complete |
 | CLI-05 | Phase 8: Publishing | Pending |
 | CLI-06 | Phase 8: Publishing | Pending |
 | GEN-01 | Phase 4: Role Generation | Pending |
@@ -104,8 +104,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ERR-01 | Phase 7: Error Commands | Pending |
 | ERR-02 | Phase 7: Error Commands | Pending |
 | ERR-03 | Phase 7: Error Commands | Pending |
-| CFG-01 | Phase 2: Configuration | Pending |
-| CFG-02 | Phase 2: Configuration | Pending |
+| CFG-01 | Phase 2: Configuration | Complete |
+| CFG-02 | Phase 2: Configuration | Complete |
 | CFG-03 | Phase 7: Error Commands | Pending |
 
 **Coverage:**
@@ -115,4 +115,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2025-01-18*
-*Last updated: 2026-01-18 after Phase 1 completion*
+*Last updated: 2026-01-18 after Phase 2 completion*
