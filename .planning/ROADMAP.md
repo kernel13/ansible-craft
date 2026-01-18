@@ -64,12 +64,12 @@ Plans:
   2. Rate limit errors (429) trigger exponential backoff with jitter
   3. API errors display user-friendly messages (not raw stack traces)
   4. Streaming responses work for long-running generation
-**Plans**: TBD
+**Plans**: 3 plans in 3 waves (sequential)
 
 Plans:
-- [ ] 03-01: Anthropic SDK client wrapper
-- [ ] 03-02: Rate limiting and retry logic
-- [ ] 03-03: Streaming response handler
+- [ ] 03-01-PLAN.md — Anthropic SDK client wrapper (Wave 1)
+- [ ] 03-02-PLAN.md — Rate limiting and retry logic (Wave 2)
+- [ ] 03-03-PLAN.md — Streaming response handler (Wave 3)
 
 ### Phase 4: Role Generation
 **Goal**: Users can generate complete Ansible roles from natural language descriptions
@@ -166,7 +166,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 |-------|----------------|--------|-----------|
 | 1. Foundation | 3/3 | Complete | 2026-01-18 |
 | 2. Configuration | 3/3 | Complete | 2026-01-18 |
-| 3. AI Integration | 0/3 | Not started | - |
+| 3. AI Integration | 0/3 | Planned | - |
 | 4. Role Generation | 0/5 | Not started | - |
 | 5. Playbook Generation | 0/3 | Not started | - |
 | 6. Quality Assurance | 0/4 | Not started | - |
@@ -179,4 +179,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 *Phase 1 completed: 2026-01-18*
 *Phase 2 planned: 2026-01-18*
 *Phase 2 completed: 2026-01-18*
+*Phase 3 planned: 2026-01-18*
 *Total phases: 8 | Total plans: 30 | v1 requirements: 21 mapped*
