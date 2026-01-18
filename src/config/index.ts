@@ -14,6 +14,12 @@ export { displayMissingApiKeyError, maskApiKey } from './errors.ts';
 export { validateApiKey } from '../api/validate-key.ts';
 export type { ValidationResult } from '../api/validate-key.ts';
 
+// Config writer
+export { generateConfigToml, saveConfig } from './writer.ts';
+
+// Setup wizard
+export { runSetupWizard } from './wizard.ts';
+
 import { displayMissingApiKeyError } from './errors.ts';
 import { loadConfig } from './loader.ts';
 import type { Config } from './schema.ts';

@@ -1,4 +1,5 @@
 import { Command } from 'commander';
+import { configCommand } from './commands/config.js';
 import { formatHelp } from './help.js';
 import { formatError } from './output.js';
 import { displayVersion } from './version.js';
@@ -30,6 +31,9 @@ program
 
 // Custom version option with styled display
 program.option('-V, --version', 'Display version information');
+
+// Register commands
+program.addCommand(configCommand);
 
 /**
  * Check for version flag before parsing and handle no-arguments case.
