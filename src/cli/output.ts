@@ -1,5 +1,5 @@
-import chalk from 'chalk';
 import boxen from 'boxen';
+import chalk from 'chalk';
 import { CLIError } from '../errors/cli-error.js';
 
 /**
@@ -22,7 +22,7 @@ export function displayError(error: CLIError | Error): void {
     titleAlignment: 'center',
   });
 
-  process.stderr.write(box + '\n');
+  process.stderr.write(`${box}\n`);
 }
 
 /**

@@ -25,6 +25,7 @@
   "dependencies": {
     "boxen": "^8.0.1",
     "chalk": "^5.4.1",
-    "commander": "^14.0.2"
+    "commander": "^14.0.2",
+    "smol-toml": "^1.6.0"
   }
 }
