@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2025-01-18)
 ## Current Position
 
 Phase: 5 of 8 (Playbook Generation)
-Plan: 2 of 5 in current phase
+Plan: 3 of 5 in current phase
 Status: In progress
-Last activity: 2026-01-19 — Completed 05-02-PLAN.md (Playbook Prompt Templates)
+Last activity: 2026-01-19 — Completed 05-03-PLAN.md (Playbook Validation & Generation Orchestration)
 
-Progress: [████████████░░░░░░░░] ~65%
+Progress: [█████████████░░░░░░░] ~68%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 16
+- Total plans completed: 17
 - Average duration: ~3.4 minutes
-- Total execution time: ~55 minutes
+- Total execution time: ~58 minutes
 
 **By Phase:**
 
@@ -31,10 +31,10 @@ Progress: [████████████░░░░░░░░] ~65%
 | 02-configuration | 3/3 | ~11min | ~4min |
 | 03-ai-integration | 3/3 | ~7min | ~2min |
 | 04-role-generation | 5/5 | ~17min | ~3.5min |
-| 05-playbook-generation | 2/5 | ~8min | ~4min |
+| 05-playbook-generation | 3/5 | ~11min | ~4min |
 
 **Recent Trend:**
-- Last 5 plans: 04-03 (~2min), 04-04 (~3min), 04-05 (~2.5min), 05-01 (~5min), 05-02 (~3min)
+- Last 5 plans: 04-04 (~3min), 04-05 (~2.5min), 05-01 (~5min), 05-02 (~3min), 05-03 (~3min)
 - Trend: Consistent ~2-5min per plan
 
 *Updated after each plan completion*
@@ -101,6 +101,9 @@ Recent decisions affecting current work:
 - [05-02-01]: Local PlaybookPlanPreview type in generate prompt — schema module not yet created
 - [05-02-02]: FQCN section copied verbatim from role system prompt — same 27 modules apply
 - [05-02-03]: Export PlaybookPlanPreview type from prompts/index.ts — downstream access
+- [05-03-01]: Detect plays via 'hosts' key — distinguishes plays from tasks in idempotency checker
+- [05-03-02]: Check pre_tasks and post_tasks in idempotency checker — complete coverage of play task sections
+- [05-03-03]: Expected minimum files = 4 + non-all groups — playbook.yml + inventory.example + group_vars/all.yml + README.md plus per-group vars
 
 ### Pending Todos
 
@@ -113,7 +116,7 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-19
-Stopped at: Completed 05-02-PLAN.md (Playbook Prompt Templates)
+Stopped at: Completed 05-03-PLAN.md (Playbook Validation & Generation Orchestration)
 Resume file: None
 
 ---
