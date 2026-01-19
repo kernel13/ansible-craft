@@ -115,13 +115,14 @@ Plans:
   2. User sees generation progress in real-time via streaming output
   3. User can preview what will be created before writing via --dry-run flag
   4. Lint violations are fixed automatically or reported with suggestions
-**Plans**: TBD
+**Plans**: 5 plans in 3 waves
 
 Plans:
-- [ ] 06-01: ansible-lint integration
-- [ ] 06-02: Streaming progress display
-- [ ] 06-03: Dry-run preview mode
-- [ ] 06-04: Auto-fix for common lint issues
+- [ ] 06-01-PLAN.md — ansible-lint integration infrastructure (Wave 1)
+- [ ] 06-02-PLAN.md — Progressive phase tracking display (Wave 1)
+- [ ] 06-03-PLAN.md — Dry-run preview with syntax highlighting (Wave 2)
+- [ ] 06-04-PLAN.md — Auto-fix for common lint violations (Wave 2)
+- [ ] 06-05-PLAN.md — Command integration and workflow wiring (Wave 3)
 
 ### Phase 7: Error Commands
 **Goal**: Users can understand existing code and fix Ansible errors (killer differentiator)
@@ -170,7 +171,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 3. AI Integration | 3/3 | Complete | 2026-01-18 |
 | 4. Role Generation | 5/5 | Complete | 2026-01-19 |
 | 5. Playbook Generation | 4/4 | Complete | 2026-01-19 |
-| 6. Quality Assurance | 0/4 | Not started | - |
+| 6. Quality Assurance | 0/5 | Planned | - |
 | 7. Error Commands | 0/4 | Not started | - |
 | 8. Publishing | 0/5 | Not started | - |
 
@@ -186,4 +187,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 *Phase 4 completed: 2026-01-19*
 *Phase 5 planned: 2026-01-19*
 *Phase 5 completed: 2026-01-19*
-*Total phases: 8 | Total plans: 31 | v1 requirements: 21 mapped*
+*Phase 6 planned: 2026-01-19*
+*Total phases: 8 | Total plans: 32 | v1 requirements: 21 mapped*
