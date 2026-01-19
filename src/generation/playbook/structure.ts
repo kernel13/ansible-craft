@@ -1,5 +1,5 @@
-import { mkdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
+import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 
 /** Playbook project directories */
@@ -29,7 +29,7 @@ export interface PlaybookStructureResult {
  * Creates the playbook root and group_vars directory.
  */
 export async function createPlaybookStructure(
-  options: PlaybookStructureOptions
+  options: PlaybookStructureOptions,
 ): Promise<PlaybookStructureResult> {
   const { playbookName, outputDir, dryRun = false } = options;
   const playbookDir = join(outputDir, playbookName);

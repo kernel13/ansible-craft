@@ -122,3 +122,59 @@ export function validateRoleName(name: string): string | undefined {
 
   return undefined;
 }
+
+/** Common action words to strip when inferring playbook name */
+const PLAYBOOK_ACTION_WORDS = [
+  'deploy',
+  'provision',
+  'configure',
+  'setup',
+  'set up',
+  'install',
+  'create',
+  'manage',
+  'update',
+  'upgrade',
+] as const;
+
+/**
+ * Infer playbook name from a natural language description.
+ * Similar to inferRoleName but with playbook-specific action words.
+ *
+ * @example
+ * inferPlaybookName('deploy LAMP stack') // -> 'lamp-stack'
+ * inferPlaybookName('configure web servers with nginx') // -> 'web-servers-nginx'
+ * inferPlaybookName('set up kubernetes cluster') // -> 'kubernetes-cluster'
+ */
+export function inferPlaybookName(description: string): string {
+  let text = description.toLowerCase();
+
+  // Strip first matching action word
+  for (const action of PLAYBOOK_ACTION_WORDS) {
+    const actionRegex = new RegExp(`^${action}\\s+`, 'i');
+    if (actionRegex.test(text)) {
+      text = text.replace(actionRegex, '');
+      break;
+    }
+  }
+
+  // Remove common filler words (reuse FILLER_WORDS constant)
+  const fillerRegex = new RegExp(`\\b(${FILLER_WORDS.join('|')})\\b`, 'gi');
+  text = text.replace(fillerRegex, '');
+
+  // Split on whitespace/commas, filter empty and long words
+  const words = text
+    .split(/[\s,]+/)
+    .map((w) => w.trim())
+    .filter((w) => w.length > 0 && w.length <= 20);
+
+  // Take first 3 meaningful words
+  const meaningfulWords = words.slice(0, 3);
+
+  if (meaningfulWords.length === 0) {
+    return 'playbook';
+  }
+
+  // Join and sanitize using existing sanitizeRoleName (same rules apply)
+  return sanitizeRoleName(meaningfulWords.join('-'));
+}
