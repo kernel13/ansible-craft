@@ -20,8 +20,8 @@ Requirements for initial CLI release. Each maps to roadmap phases.
 
 - [x] **GEN-01**: User can generate complete Ansible role from natural language description via `new role "description"`
 - [x] **GEN-02**: User can generate Ansible playbook from natural language description via `new playbook "description"`
-- [ ] **GEN-03**: User sees generation progress in real-time via streaming output
-- [ ] **GEN-04**: User can preview what will be created before writing via --dry-run flag
+- [x] **GEN-03**: User sees generation progress in real-time via streaming output
+- [x] **GEN-04**: User can preview what will be created before writing via --dry-run flag
 
 ### Code Quality
 
@@ -29,7 +29,7 @@ Requirements for initial CLI release. Each maps to roadmap phases.
 - [x] **QUAL-02**: Generated roles include proper structure (tasks/, handlers/, defaults/, templates/, meta/, README.md)
 - [x] **QUAL-03**: Generated code uses Fully Qualified Collection Names (ansible.builtin.*)
 - [x] **QUAL-04**: Generated tasks are idempotent (safe to run multiple times)
-- [ ] **QUAL-05**: Generated code passes ansible-lint validation before output
+- [x] **QUAL-05**: Generated code passes ansible-lint validation before output
 
 ### Error Commands
 
@@ -94,13 +94,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CLI-06 | Phase 8: Publishing | Pending |
 | GEN-01 | Phase 4: Role Generation | Complete |
 | GEN-02 | Phase 5: Playbook Generation | Complete |
-| GEN-03 | Phase 6: Quality Assurance | Pending |
-| GEN-04 | Phase 6: Quality Assurance | Pending |
+| GEN-03 | Phase 6: Quality Assurance | Complete |
+| GEN-04 | Phase 6: Quality Assurance | Complete |
 | QUAL-01 | Phase 4: Role Generation | Complete |
 | QUAL-02 | Phase 4: Role Generation | Complete |
 | QUAL-03 | Phase 4: Role Generation | Complete |
 | QUAL-04 | Phase 4: Role Generation | Complete |
-| QUAL-05 | Phase 6: Quality Assurance | Pending |
+| QUAL-05 | Phase 6: Quality Assurance | Complete |
 | ERR-01 | Phase 7: Error Commands | Pending |
 | ERR-02 | Phase 7: Error Commands | Pending |
 | ERR-03 | Phase 7: Error Commands | Pending |
@@ -115,4 +115,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2025-01-18*
-*Last updated: 2026-01-19 after Phase 5 completion*
+*Last updated: 2026-01-19 after Phase 6 completion*
