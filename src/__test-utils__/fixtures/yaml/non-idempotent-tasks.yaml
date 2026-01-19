@@ -1,0 +1,10 @@
+---
+- name: Run setup script
+  ansible.builtin.shell: ./setup.sh
+
+- name: Execute command
+  ansible.builtin.command: echo "hello"
+
+- name: Install package without state
+  ansible.builtin.apt:
+    name: nginx
