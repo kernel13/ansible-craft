@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2025-01-18)
 ## Current Position
 
 Phase: 5 of 8 (Playbook Generation)
-Plan: 1 of 5 in current phase
+Plan: 2 of 5 in current phase
 Status: In progress
-Last activity: 2026-01-19 — Completed 05-01-PLAN.md (Playbook Plan Schema & Structure)
+Last activity: 2026-01-19 — Completed 05-02-PLAN.md (Playbook Prompt Templates)
 
-Progress: [███████████░░░░░░░░░] ~62%
+Progress: [████████████░░░░░░░░] ~65%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 15
-- Average duration: ~3.5 minutes
-- Total execution time: ~52 minutes
+- Total plans completed: 16
+- Average duration: ~3.4 minutes
+- Total execution time: ~55 minutes
 
 **By Phase:**
 
@@ -31,10 +31,10 @@ Progress: [███████████░░░░░░░░░] ~62%
 | 02-configuration | 3/3 | ~11min | ~4min |
 | 03-ai-integration | 3/3 | ~7min | ~2min |
 | 04-role-generation | 5/5 | ~17min | ~3.5min |
-| 05-playbook-generation | 1/5 | ~5min | ~5min |
+| 05-playbook-generation | 2/5 | ~8min | ~4min |
 
 **Recent Trend:**
-- Last 5 plans: 04-02 (~5min), 04-03 (~2min), 04-04 (~3min), 04-05 (~2.5min), 05-01 (~5min)
+- Last 5 plans: 04-03 (~2min), 04-04 (~3min), 04-05 (~2.5min), 05-01 (~5min), 05-02 (~3min)
 - Trend: Consistent ~2-5min per plan
 
 *Updated after each plan completion*
@@ -98,6 +98,9 @@ Recent decisions affecting current work:
 - [05-01-01]: has_pre_tasks/has_post_tasks as required booleans — ensures AI considers these
 - [05-01-02]: PLAYBOOK_DIRECTORIES only includes group_vars — simpler than roles
 - [05-01-03]: inferPlaybookName returns 'playbook' as fallback — consistent with role pattern
+- [05-02-01]: Local PlaybookPlanPreview type in generate prompt — schema module not yet created
+- [05-02-02]: FQCN section copied verbatim from role system prompt — same 27 modules apply
+- [05-02-03]: Export PlaybookPlanPreview type from prompts/index.ts — downstream access
 
 ### Pending Todos
 
@@ -110,7 +113,7 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-19
-Stopped at: Completed 05-01-PLAN.md (Playbook Plan Schema & Structure)
+Stopped at: Completed 05-02-PLAN.md (Playbook Prompt Templates)
 Resume file: None
 
 ---
