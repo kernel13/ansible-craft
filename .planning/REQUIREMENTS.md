@@ -19,7 +19,7 @@ Requirements for initial CLI release. Each maps to roadmap phases.
 ### Generation Commands
 
 - [x] **GEN-01**: User can generate complete Ansible role from natural language description via `new role "description"`
-- [ ] **GEN-02**: User can generate Ansible playbook from natural language description via `new playbook "description"`
+- [x] **GEN-02**: User can generate Ansible playbook from natural language description via `new playbook "description"`
 - [ ] **GEN-03**: User sees generation progress in real-time via streaming output
 - [ ] **GEN-04**: User can preview what will be created before writing via --dry-run flag
 
@@ -93,7 +93,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CLI-05 | Phase 8: Publishing | Pending |
 | CLI-06 | Phase 8: Publishing | Pending |
 | GEN-01 | Phase 4: Role Generation | Complete |
-| GEN-02 | Phase 5: Playbook Generation | Pending |
+| GEN-02 | Phase 5: Playbook Generation | Complete |
 | GEN-03 | Phase 6: Quality Assurance | Pending |
 | GEN-04 | Phase 6: Quality Assurance | Pending |
 | QUAL-01 | Phase 4: Role Generation | Complete |
@@ -115,4 +115,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2025-01-18*
-*Last updated: 2026-01-19 after Phase 4 completion*
+*Last updated: 2026-01-19 after Phase 5 completion*
