@@ -1,20 +1,29 @@
 /**
  * Generation module for ansible-craft.
  *
- * Provides role plan preview, code generation, prompt builders,
- * schemas, and role structure utilities.
+ * Provides role and playbook plan preview, code generation, prompt builders,
+ * schemas, structure utilities, and file writing.
  *
  * @example
  * ```typescript
  * import {
  *   generateRolePlan,
  *   generateRoleCode,
- *   type PlanPreview,
- *   type GeneratedFile,
+ *   writeGeneratedRole,
+ *   generatePlaybookPlan,
+ *   generatePlaybookCode,
+ *   writeGeneratedPlaybook,
  * } from './generation/index.js';
  *
- * const plan = await generateRolePlan(client, 'nginx with SSL');
- * const files = await generateRoleCode(client, plan, 'nginx with SSL');
+ * // Role generation
+ * const rolePlan = await generateRolePlan(client, 'nginx with SSL');
+ * const roleFiles = await generateRoleCode(client, rolePlan, 'nginx with SSL');
+ * await writeGeneratedRole(roleFiles, { roleName: 'nginx' });
+ *
+ * // Playbook generation
+ * const playbookPlan = await generatePlaybookPlan(client, 'deploy LAMP stack');
+ * const playbookFiles = await generatePlaybookCode(client, playbookPlan, 'deploy LAMP stack');
+ * await writeGeneratedPlaybook(playbookFiles, { playbookName: 'deploy-lamp' });
  * ```
  */
 
@@ -60,7 +69,7 @@ export {
 // Playbook name inference
 export { inferPlaybookName } from './role/sanitize.js';
 
-// File writing
+// File writing (role and playbook writers)
 export * from './writer.js';
 
 // Validation (exports validateGeneratedFiles, displayValidationReport, and types)
