@@ -21,7 +21,16 @@
  * const generatePrompt = buildGeneratePrompt(approvedPlan, userInput);
  * ```
  */
+// Role generation prompts
 export { ANSIBLE_EXPERT_SYSTEM_PROMPT } from './system.ts';
 export { buildClarifyPrompt } from './clarify.ts';
 export { buildPlanPrompt } from './plan.ts';
 export { buildGeneratePrompt } from './generate.ts';
+
+// Playbook generation prompts
+export { ANSIBLE_PLAYBOOK_SYSTEM_PROMPT } from './playbook-system.ts';
+export { buildPlaybookPlanPrompt } from './playbook-plan.ts';
+export {
+  buildPlaybookGeneratePrompt,
+  type PlaybookPlanPreview,
+} from './playbook-generate.ts';
