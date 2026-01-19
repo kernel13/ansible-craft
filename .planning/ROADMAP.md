@@ -98,12 +98,13 @@ Plans:
   1. User can run `ansible-craft new playbook "deploy LAMP stack"` and get a playbook
   2. Generated playbook includes proper YAML structure with hosts, tasks, handlers
   3. Generated playbook uses FQCN and follows idempotency patterns
-**Plans**: TBD
+**Plans**: 4 plans in 3 waves
 
 Plans:
-- [ ] 05-01: Playbook generation prompt engineering
-- [ ] 05-02: Playbook structure templates
-- [ ] 05-03: Multi-play and include handling
+- [ ] 05-01-PLAN.md — Playbook schema and structure utilities (Wave 1)
+- [ ] 05-02-PLAN.md — Playbook prompt templates (Wave 1)
+- [ ] 05-03-PLAN.md — Validation adaptation and generation orchestration (Wave 2)
+- [ ] 05-04-PLAN.md — CLI command integration (Wave 3)
 
 ### Phase 6: Quality Assurance
 **Goal**: Generated code is validated and users see progress in real-time
@@ -168,7 +169,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 2. Configuration | 3/3 | Complete | 2026-01-18 |
 | 3. AI Integration | 3/3 | Complete | 2026-01-18 |
 | 4. Role Generation | 5/5 | Complete | 2026-01-19 |
-| 5. Playbook Generation | 0/3 | Not started | - |
+| 5. Playbook Generation | 0/4 | Planned | - |
 | 6. Quality Assurance | 0/4 | Not started | - |
 | 7. Error Commands | 0/4 | Not started | - |
 | 8. Publishing | 0/5 | Not started | - |
@@ -183,4 +184,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 *Phase 3 completed: 2026-01-18*
 *Phase 4 planned: 2026-01-19*
 *Phase 4 completed: 2026-01-19*
-*Total phases: 8 | Total plans: 30 | v1 requirements: 21 mapped*
+*Phase 5 planned: 2026-01-19*
+*Total phases: 8 | Total plans: 31 | v1 requirements: 21 mapped*
