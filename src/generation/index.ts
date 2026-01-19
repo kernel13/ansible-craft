@@ -29,3 +29,15 @@ export * from './role/index.js';
 
 // Role generation orchestration
 export * from './generate-role.js';
+
+// File writing
+export * from './writer.js';
+
+// Validation (exports validateGeneratedFiles, displayValidationReport, and types)
+export {
+  validateGeneratedFiles,
+  displayValidationReport,
+  type ValidationReport,
+  type ValidationIssue,
+  type YamlValidationError,
+} from './validation/index.js';
