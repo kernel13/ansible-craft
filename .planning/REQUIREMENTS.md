@@ -18,17 +18,17 @@ Requirements for initial CLI release. Each maps to roadmap phases.
 
 ### Generation Commands
 
-- [ ] **GEN-01**: User can generate complete Ansible role from natural language description via `new role "description"`
+- [x] **GEN-01**: User can generate complete Ansible role from natural language description via `new role "description"`
 - [ ] **GEN-02**: User can generate Ansible playbook from natural language description via `new playbook "description"`
 - [ ] **GEN-03**: User sees generation progress in real-time via streaming output
 - [ ] **GEN-04**: User can preview what will be created before writing via --dry-run flag
 
 ### Code Quality
 
-- [ ] **QUAL-01**: Generated YAML is valid and parseable by standard YAML parsers
-- [ ] **QUAL-02**: Generated roles include proper structure (tasks/, handlers/, defaults/, templates/, meta/, README.md)
-- [ ] **QUAL-03**: Generated code uses Fully Qualified Collection Names (ansible.builtin.*)
-- [ ] **QUAL-04**: Generated tasks are idempotent (safe to run multiple times)
+- [x] **QUAL-01**: Generated YAML is valid and parseable by standard YAML parsers
+- [x] **QUAL-02**: Generated roles include proper structure (tasks/, handlers/, defaults/, templates/, meta/, README.md)
+- [x] **QUAL-03**: Generated code uses Fully Qualified Collection Names (ansible.builtin.*)
+- [x] **QUAL-04**: Generated tasks are idempotent (safe to run multiple times)
 - [ ] **QUAL-05**: Generated code passes ansible-lint validation before output
 
 ### Error Commands
@@ -92,14 +92,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CLI-04 | Phase 2: Configuration | Complete |
 | CLI-05 | Phase 8: Publishing | Pending |
 | CLI-06 | Phase 8: Publishing | Pending |
-| GEN-01 | Phase 4: Role Generation | Pending |
+| GEN-01 | Phase 4: Role Generation | Complete |
 | GEN-02 | Phase 5: Playbook Generation | Pending |
 | GEN-03 | Phase 6: Quality Assurance | Pending |
 | GEN-04 | Phase 6: Quality Assurance | Pending |
-| QUAL-01 | Phase 4: Role Generation | Pending |
-| QUAL-02 | Phase 4: Role Generation | Pending |
-| QUAL-03 | Phase 4: Role Generation | Pending |
-| QUAL-04 | Phase 4: Role Generation | Pending |
+| QUAL-01 | Phase 4: Role Generation | Complete |
+| QUAL-02 | Phase 4: Role Generation | Complete |
+| QUAL-03 | Phase 4: Role Generation | Complete |
+| QUAL-04 | Phase 4: Role Generation | Complete |
 | QUAL-05 | Phase 6: Quality Assurance | Pending |
 | ERR-01 | Phase 7: Error Commands | Pending |
 | ERR-02 | Phase 7: Error Commands | Pending |
@@ -115,4 +115,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2025-01-18*
-*Last updated: 2026-01-18 after Phase 2 completion*
+*Last updated: 2026-01-19 after Phase 4 completion*

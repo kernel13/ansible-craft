@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Foundation** - CLI skeleton with help, version, and proper exit codes
 - [x] **Phase 2: Configuration** - Config file management and API key handling
 - [x] **Phase 3: AI Integration** - Claude API client with rate limiting and streaming
-- [ ] **Phase 4: Role Generation** - Generate complete Ansible roles from natural language
+- [x] **Phase 4: Role Generation** - Generate complete Ansible roles from natural language
 - [ ] **Phase 5: Playbook Generation** - Generate Ansible playbooks from natural language
 - [ ] **Phase 6: Quality Assurance** - ansible-lint validation, dry-run preview, streaming UX
 - [ ] **Phase 7: Error Commands** - explain and fix commands with context awareness
@@ -84,11 +84,11 @@ Plans:
 **Plans**: 5 plans in 3 waves
 
 Plans:
-- [ ] 04-01-PLAN.md — Role generation prompt engineering (Wave 1)
-- [ ] 04-02-PLAN.md — Role structure scaffolding (Wave 1)
-- [ ] 04-03-PLAN.md — YAML generation and FQCN enforcement (Wave 2)
-- [ ] 04-04-PLAN.md — Idempotency patterns and validation (Wave 2)
-- [ ] 04-05-PLAN.md — File writing and conflict handling (Wave 3)
+- [x] 04-01-PLAN.md — Prompt engineering foundation (Wave 1)
+- [x] 04-02-PLAN.md — Role structure utilities (Wave 1)
+- [x] 04-03-PLAN.md — Two-phase generation orchestration (Wave 2)
+- [x] 04-04-PLAN.md — Post-generation validation (Wave 2)
+- [x] 04-05-PLAN.md — CLI command and file writing (Wave 3)
 
 ### Phase 5: Playbook Generation
 **Goal**: Users can generate Ansible playbooks from natural language descriptions
@@ -167,7 +167,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 1. Foundation | 3/3 | Complete | 2026-01-18 |
 | 2. Configuration | 3/3 | Complete | 2026-01-18 |
 | 3. AI Integration | 3/3 | Complete | 2026-01-18 |
-| 4. Role Generation | 0/5 | Planned | - |
+| 4. Role Generation | 5/5 | Complete | 2026-01-19 |
 | 5. Playbook Generation | 0/3 | Not started | - |
 | 6. Quality Assurance | 0/4 | Not started | - |
 | 7. Error Commands | 0/4 | Not started | - |
@@ -182,4 +182,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 *Phase 3 planned: 2026-01-18*
 *Phase 3 completed: 2026-01-18*
 *Phase 4 planned: 2026-01-19*
+*Phase 4 completed: 2026-01-19*
 *Total phases: 8 | Total plans: 30 | v1 requirements: 21 mapped*
