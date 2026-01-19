@@ -81,14 +81,14 @@ Plans:
   3. Generated YAML is valid and parseable
   4. Generated code uses Fully Qualified Collection Names (ansible.builtin.*)
   5. Generated tasks are idempotent (safe to run multiple times)
-**Plans**: TBD
+**Plans**: 5 plans in 3 waves
 
 Plans:
-- [ ] 04-01: Role generation prompt engineering
-- [ ] 04-02: Role structure scaffolding
-- [ ] 04-03: YAML generation and FQCN enforcement
-- [ ] 04-04: Idempotency patterns and validation
-- [ ] 04-05: File writing and conflict handling
+- [ ] 04-01-PLAN.md — Role generation prompt engineering (Wave 1)
+- [ ] 04-02-PLAN.md — Role structure scaffolding (Wave 1)
+- [ ] 04-03-PLAN.md — YAML generation and FQCN enforcement (Wave 2)
+- [ ] 04-04-PLAN.md — Idempotency patterns and validation (Wave 2)
+- [ ] 04-05-PLAN.md — File writing and conflict handling (Wave 3)
 
 ### Phase 5: Playbook Generation
 **Goal**: Users can generate Ansible playbooks from natural language descriptions
@@ -167,7 +167,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 1. Foundation | 3/3 | Complete | 2026-01-18 |
 | 2. Configuration | 3/3 | Complete | 2026-01-18 |
 | 3. AI Integration | 3/3 | Complete | 2026-01-18 |
-| 4. Role Generation | 0/5 | Not started | - |
+| 4. Role Generation | 0/5 | Planned | - |
 | 5. Playbook Generation | 0/3 | Not started | - |
 | 6. Quality Assurance | 0/4 | Not started | - |
 | 7. Error Commands | 0/4 | Not started | - |
@@ -181,4 +181,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 *Phase 2 completed: 2026-01-18*
 *Phase 3 planned: 2026-01-18*
 *Phase 3 completed: 2026-01-18*
+*Phase 4 planned: 2026-01-19*
 *Total phases: 8 | Total plans: 30 | v1 requirements: 21 mapped*
