@@ -40,7 +40,10 @@ export interface GenerateOptions {
   dryRun?: boolean;
   /** Overwrite existing directory */
   force?: boolean;
-  /** Suppress output */
+  /**
+   * Suppress internal spinner/progress output.
+   * Use this when external progress tracking (e.g., PhaseTracker) handles display.
+   */
   quiet?: boolean;
   /** No retries on failure */
   noRetry?: boolean;
