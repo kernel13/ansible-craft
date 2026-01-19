@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2025-01-18)
 ## Current Position
 
 Phase: 6 of 8 (Quality Assurance)
-Plan: 3 of 5 in current phase
+Plan: 4 of 5 in current phase
 Status: In progress
-Last activity: 2026-01-19 — Completed 06-03-PLAN.md
+Last activity: 2026-01-19 — Completed 06-04-PLAN.md
 
-Progress: [█████████████████░░░] ~72%
+Progress: [██████████████████░░] ~76%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 21
+- Total plans completed: 22
 - Average duration: ~3.2 minutes
-- Total execution time: ~68 minutes
+- Total execution time: ~70 minutes
 
 **By Phase:**
 
@@ -32,10 +32,10 @@ Progress: [█████████████████░░░] ~72%
 | 03-ai-integration | 3/3 | ~7min | ~2min |
 | 04-role-generation | 5/5 | ~17min | ~3.5min |
 | 05-playbook-generation | 4/4 | ~15min | ~4min |
-| 06-quality-assurance | 3/5 | ~6min | ~2min |
+| 06-quality-assurance | 4/5 | ~8min | ~2min |
 
 **Recent Trend:**
-- Last 5 plans: 05-03 (~3min), 05-04 (~4min), 06-01 (~2min), 06-02 (~2min), 06-03 (~2min)
+- Last 5 plans: 05-04 (~4min), 06-01 (~2min), 06-02 (~2min), 06-03 (~2min), 06-04 (~2min)
 - Trend: Consistent ~2-4min per plan
 
 *Updated after each plan completion*
@@ -116,6 +116,9 @@ Recent decisions affecting current work:
 - [06-03-01]: Detect language by file extension for highlighting — yaml, md, json, sh, py
 - [06-03-02]: Group lint violations by file for readability — Map<file, violations[]>
 - [06-03-03]: Default confirmation to false for safety — user must explicitly approve writes
+- [06-04-01]: FQCN_MAP duplicated from fqcn-checker.ts — avoids circular import complexity
+- [06-04-02]: Process violations in descending line order — prevents offset drift during multi-line fixes
+- [06-04-03]: getSuggestion provides rule-specific examples — helpful guidance for manual fixes
 
 ### Pending Todos
 
@@ -128,7 +131,7 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-19
-Stopped at: Completed 06-03-PLAN.md (dry-run preview)
+Stopped at: Completed 06-04-PLAN.md (auto-fix system)
 Resume file: None
 
 ---
