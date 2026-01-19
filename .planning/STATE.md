@@ -78,6 +78,9 @@ Recent decisions affecting current work:
 - [03-03-02]: Dots spinner with cyan color — professional CLI aesthetics
 - [03-03-03]: Newline before error if partial output — clean error display
 - [03-03-04]: import type for Anthropic — SDK used only for type annotations
+- [04-01-01]: 27 FQCN examples in system prompt — comprehensive coverage
+- [04-01-02]: File markers === PATH: / === END === — simple parsing format
+- [04-01-03]: additionalProperties: false in schema — strict validation
 - [04-02-01]: yaml package for YAML parsing — lightweight, well-maintained
 - [04-02-02]: File marker format === PATH: ... === — parsing generated output
 - [04-02-03]: FQCN and idempotency checks are warnings, not errors
