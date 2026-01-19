@@ -104,3 +104,4 @@ export * from './yaml-validator.js';
 export * from './fqcn-checker.js';
 export * from './idempotency-checker.js';
 export * from './ansible-lint.js';
+export * from './auto-fix.js';
