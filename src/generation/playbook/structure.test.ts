@@ -51,4 +51,33 @@ describe("createPlaybookStructure", () => {
       expect(result.createdDirs.length).toBe(2);
     });
   });
+
+  describe("dry run mode", () => {
+    test("should not create directories in dry run", async () => {
+      const result = await createPlaybookStructure({
+        playbookName: "dry-run-playbook",
+        outputDir: tempDir,
+        dryRun: true,
+      });
+
+      const dirExists = await readdir(result.playbookDir).then(
+        () => true,
+        () => false
+      );
+
+      expect(dirExists).toBe(false);
+    });
+
+    test("should still report what would be created", async () => {
+      const result = await createPlaybookStructure({
+        playbookName: "dry-run-playbook",
+        outputDir: tempDir,
+        dryRun: true,
+      });
+
+      // Should report root + group_vars even though not created
+      expect(result.createdDirs.length).toBe(2);
+      expect(result.playbookDir).toBe(join(tempDir, "dry-run-playbook"));
+    });
+  });
 });
