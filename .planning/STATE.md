@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2025-01-18)
 ## Current Position
 
 Phase: 4 of 8 (Role Generation)
-Plan: 2 of 5 in current phase
+Plan: 3 of 5 in current phase
 Status: In progress
-Last activity: 2026-01-19 — Completed 04-02-PLAN.md (Role Structure Utilities)
+Last activity: 2026-01-19 — Completed 04-03-PLAN.md (Role Generation Orchestration)
 
-Progress: [████████░░] ~45%
+Progress: [████████░░] ~50%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 11
+- Total plans completed: 12
 - Average duration: ~4 minutes
-- Total execution time: ~40 minutes
+- Total execution time: ~42 minutes
 
 **By Phase:**
 
@@ -30,10 +30,10 @@ Progress: [████████░░] ~45%
 | 01-foundation | 3/3 | ~12min | ~4min |
 | 02-configuration | 3/3 | ~11min | ~4min |
 | 03-ai-integration | 3/3 | ~7min | ~2min |
-| 04-role-generation | 2/5 | ~10min | ~5min |
+| 04-role-generation | 3/5 | ~12min | ~4min |
 
 **Recent Trend:**
-- Last 5 plans: 03-01 (~2min), 03-02 (~2min), 03-03 (~3min), 04-01 (~5min), 04-02 (~5min)
+- Last 5 plans: 03-02 (~2min), 03-03 (~3min), 04-01 (~5min), 04-02 (~5min), 04-03 (~2min)
 - Trend: Consistent ~2-5min per plan
 
 *Updated after each plan completion*
@@ -85,6 +85,9 @@ Recent decisions affecting current work:
 - [04-02-02]: File marker format === PATH: ... === — parsing generated output
 - [04-02-03]: FQCN and idempotency checks are warnings, not errors
 - [04-02-04]: .gitkeep files for templates/ and files/ directories
+- [04-03-01]: output_format with schema (not response_format) — SDK uses output_format param
+- [04-03-02]: 8192 max tokens for code generation — large roles need more tokens
+- [04-03-03]: Warn on fewer files than expected — non-blocking feedback
 
 ### Pending Todos
 
@@ -97,7 +100,7 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-19
-Stopped at: Completed 04-02-PLAN.md (Role Structure Utilities)
+Stopped at: Completed 04-03-PLAN.md (Role Generation Orchestration)
 Resume file: None
 
 ---
