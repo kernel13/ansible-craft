@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2025-01-18)
 
 **Core value:** Generate complete, production-ready Ansible roles from natural language — FQCN compliant, idempotent, ansible-lint passing
-**Current focus:** Phase 4 - Role Generation (COMPLETE)
+**Current focus:** Phase 5 - Playbook Generation (IN PROGRESS)
 
 ## Current Position
 
-Phase: 4 of 8 (Role Generation)
-Plan: 5 of 5 in current phase
-Status: Phase complete
-Last activity: 2026-01-19 — Completed 04-05-PLAN.md (CLI Command & File Writer)
+Phase: 5 of 8 (Playbook Generation)
+Plan: 1 of 5 in current phase
+Status: In progress
+Last activity: 2026-01-19 — Completed 05-01-PLAN.md (Playbook Plan Schema & Structure)
 
-Progress: [██████████] ~60%
+Progress: [███████████░░░░░░░░░] ~62%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 14
-- Average duration: ~3.3 minutes
-- Total execution time: ~47 minutes
+- Total plans completed: 15
+- Average duration: ~3.5 minutes
+- Total execution time: ~52 minutes
 
 **By Phase:**
 
@@ -31,9 +31,10 @@ Progress: [██████████] ~60%
 | 02-configuration | 3/3 | ~11min | ~4min |
 | 03-ai-integration | 3/3 | ~7min | ~2min |
 | 04-role-generation | 5/5 | ~17min | ~3.5min |
+| 05-playbook-generation | 1/5 | ~5min | ~5min |
 
 **Recent Trend:**
-- Last 5 plans: 04-01 (~5min), 04-02 (~5min), 04-03 (~2min), 04-04 (~3min), 04-05 (~2.5min)
+- Last 5 plans: 04-02 (~5min), 04-03 (~2min), 04-04 (~3min), 04-05 (~2.5min), 05-01 (~5min)
 - Trend: Consistent ~2-5min per plan
 
 *Updated after each plan completion*
@@ -94,6 +95,9 @@ Recent decisions affecting current work:
 - [04-05-01]: Confirm prompt for existing directory — safe default prevents data loss
 - [04-05-02]: Accept/Modify/Reject workflow for plan — user control over generation
 - [04-05-03]: Show next steps after generation — guide to ansible-lint and molecule test
+- [05-01-01]: has_pre_tasks/has_post_tasks as required booleans — ensures AI considers these
+- [05-01-02]: PLAYBOOK_DIRECTORIES only includes group_vars — simpler than roles
+- [05-01-03]: inferPlaybookName returns 'playbook' as fallback — consistent with role pattern
 
 ### Pending Todos
 
@@ -106,7 +110,7 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-19
-Stopped at: Completed 04-05-PLAN.md (CLI Command & File Writer) - Phase 4 COMPLETE
+Stopped at: Completed 05-01-PLAN.md (Playbook Plan Schema & Structure)
 Resume file: None
 
 ---
