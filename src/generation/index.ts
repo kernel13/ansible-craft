@@ -80,3 +80,11 @@ export {
   type ValidationIssue,
   type YamlValidationError,
 } from './validation/index.js';
+
+// Preview functions for dry-run mode
+export {
+  displayFilePreview,
+  displayFilesPreview,
+  displayLintResults,
+  previewAndConfirm,
+} from '../cli/preview.js';
