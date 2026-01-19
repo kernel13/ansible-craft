@@ -4,29 +4,42 @@
  * Provides the `new role` and `new playbook` subcommands.
  */
 
-import { input, select } from '@inquirer/prompts';
+import { mkdir, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
+
+import { confirm, input, select } from '@inquirer/prompts';
 import chalk from 'chalk';
 import { Command } from 'commander';
 import { createClient } from '../../ai/client.js';
 import { displayApiError, transformApiError } from '../../ai/errors.js';
 import { loadConfig } from '../../config/index.js';
 import {
+  type GeneratedFile,
+  type LintViolation,
   type PlanPreview,
   type PlaybookPlanPreview,
+  applyAutoFixes,
+  canAutoFix,
   displayPlaybookTree,
   displayRoleTree,
   displayValidationReport,
+  formatInstallInstructions,
   generatePlaybookCode,
   generatePlaybookPlan,
   generateRoleCode,
   generateRolePlan,
   inferPlaybookName,
   inferRoleName,
+  isAnsibleLintAvailable,
+  runAnsibleLint,
   sanitizeRoleName,
   validateGeneratedFiles,
   writeGeneratedPlaybook,
   writeGeneratedRole,
 } from '../../generation/index.js';
+import { createPhaseTracker } from '../output.js';
+import { displayLintResults, previewAndConfirm } from '../preview.js';
 
 /**
  * New command - create new Ansible resources.
@@ -89,7 +102,9 @@ newCommand
   .option('-n, --name <name>', 'Role name (default: inferred from description)')
   .option('--dry-run', 'Preview without writing files')
   .option('--force', 'Overwrite existing directory without prompting')
+  .option('--fix', 'Auto-fix lint violations without prompting')
   .option('--no-interactive', 'Skip clarifying questions')
+  .option('-q, --quiet', 'Suppress progress output')
   .action(
     async (
       description: string,
@@ -98,7 +113,9 @@ newCommand
         name?: string;
         dryRun?: boolean;
         force?: boolean;
+        fix?: boolean;
         interactive?: boolean;
+        quiet?: boolean;
       },
     ) => {
       try {
@@ -118,16 +135,22 @@ newCommand
         console.log(chalk.cyan(`\nGenerating role: ${chalk.bold(roleName)}`));
         console.log(chalk.dim(`From: "${description}"\n`));
 
+        // Create phase tracker for progress display
+        const tracker = createPhaseTracker(options.quiet ?? false);
+
         // 3. Generate plan preview
-        console.log(chalk.dim('Phase 1: Planning...\n'));
-        const plan = await generateRolePlan(client, description);
+        tracker.start('Planning role structure...');
+        const plan = await generateRolePlan(client, description, undefined, {
+          quiet: true, // Suppress inner spinner - tracker handles progress
+        });
+        tracker.succeed('Planning complete');
 
         // 4. Display plan preview
         displayPlanPreview(plan);
 
         // 5. Confirm or modify plan
-        let confirmed = false;
         let currentPlan = plan;
+        let confirmed = false;
 
         while (!confirmed) {
           const action = await select({
@@ -148,11 +171,14 @@ newCommand
             const feedback = await input({
               message: 'What changes would you like?',
             });
-            console.log(chalk.dim('\nRegenerating plan...\n'));
+            tracker.start('Regenerating plan...');
             currentPlan = await generateRolePlan(
               client,
               `${description}\n\nUser feedback: ${feedback}`,
+              undefined,
+              { quiet: true },
             );
+            tracker.succeed('Plan updated');
             displayPlanPreview(currentPlan);
           } else {
             confirmed = true;
@@ -160,12 +186,16 @@ newCommand
         }
 
         // 6. Generate code
-        console.log(chalk.dim('\nPhase 2: Generating code...\n'));
-        const files = await generateRoleCode(client, currentPlan, description);
+        tracker.start('Generating role code...');
+        let files = await generateRoleCode(client, currentPlan, description, {
+          quiet: true, // Suppress inner spinner - tracker handles progress
+        });
+        tracker.succeed('Code generation complete');
 
-        // 7. Validate
-        console.log(chalk.dim('\nValidating generated code...\n'));
+        // 7. Validate YAML syntax
+        tracker.start('Validating generated code...');
         const report = validateGeneratedFiles(files);
+        tracker.succeed('Validation complete');
         displayValidationReport(report);
 
         if (!report.valid) {
@@ -173,26 +203,78 @@ newCommand
           process.exit(1);
         }
 
-        // 8. Write files
+        // 8. Run ansible-lint (if available)
+        let lintViolations: LintViolation[] = [];
+        const lintAvailable = await isAnsibleLintAvailable();
+
+        if (lintAvailable) {
+          tracker.start('Running ansible-lint...');
+          const tempDir = await writeTempFiles(files);
+          try {
+            const lintResult = await runAnsibleLint(tempDir);
+            lintViolations = lintResult.violations;
+          } finally {
+            await cleanupTempDir(tempDir);
+          }
+          tracker.succeed('Lint check complete');
+        } else {
+          console.log(chalk.dim('\nNote: ansible-lint not found. ' + formatInstallInstructions()));
+        }
+
+        // 9. Auto-fix if violations exist
+        if (lintViolations.length > 0) {
+          const fixable = lintViolations.filter((v) => canAutoFix(v.ruleId));
+
+          if (fixable.length > 0) {
+            displayLintResults(lintViolations);
+
+            const shouldFix =
+              options.fix ||
+              (await confirm({
+                message: `Auto-fix ${fixable.length} issue(s)?`,
+                default: true,
+              }));
+
+            if (shouldFix) {
+              const fixResult = applyAutoFixes(files, lintViolations);
+              // Update files array with fixed content
+              for (const file of files) {
+                const fixed = fixResult.modifiedContent.get(file.path);
+                if (fixed) file.content = fixed;
+              }
+              console.log(chalk.green(`\n  Fixed ${fixResult.fixed.length} issue(s)`));
+            }
+          } else {
+            // Show lint results even if none are fixable
+            displayLintResults(lintViolations);
+          }
+        }
+
+        // 10. Dry-run preview or write files
+        if (options.dryRun) {
+          const proceed = await previewAndConfirm(files, lintViolations);
+          if (!proceed) {
+            console.log(chalk.yellow('\nGeneration cancelled.'));
+            return;
+          }
+        }
+
+        // 11. Write files
         const result = await writeGeneratedRole(files, {
           roleName,
           outputDir: options.output,
-          dryRun: options.dryRun,
+          dryRun: false, // Already handled dry-run above with preview
           force: options.force,
         });
 
-        // 9. Display result
+        // 12. Display result
         displayRoleTree(result);
 
-        if (result.dryRun) {
-          console.log(chalk.yellow('\nDry run complete. No files were written.'));
-        } else {
-          console.log(chalk.green(`\nRole created successfully at: ${result.roleDir}`));
-          console.log(chalk.dim('\nNext steps:'));
-          console.log(chalk.dim(`  cd ${result.roleDir}`));
-          console.log(chalk.dim('  ansible-lint .'));
-          console.log(chalk.dim('  molecule test'));
-        }
+        console.log(chalk.green(`\nRole created successfully at: ${result.roleDir}`));
+        console.log(chalk.dim('\nNext steps:'));
+        console.log(chalk.dim(`  cd ${result.roleDir}`));
+        console.log(chalk.dim('  ansible-lint .'));
+        console.log(chalk.dim('  molecule test'));
       } catch (error) {
         if (error instanceof Error && error.message === 'Operation cancelled by user') {
           console.log(chalk.yellow('\nOperation cancelled.'));
@@ -261,6 +343,32 @@ function displayPlaybookPlanPreview(plan: PlaybookPlanPreview): void {
   }
 
   console.log('');
+}
+
+/**
+ * Write generated files to a temporary directory for linting.
+ *
+ * @param files - Generated files to write
+ * @returns Path to the temporary directory
+ */
+async function writeTempFiles(files: GeneratedFile[]): Promise<string> {
+  const tempDir = join(tmpdir(), `ansible-craft-${Date.now()}`);
+  await mkdir(tempDir, { recursive: true });
+  for (const file of files) {
+    const filePath = join(tempDir, file.path);
+    await mkdir(dirname(filePath), { recursive: true });
+    await writeFile(filePath, file.content, 'utf-8');
+  }
+  return tempDir;
+}
+
+/**
+ * Clean up a temporary directory.
+ *
+ * @param dir - Directory to remove
+ */
+async function cleanupTempDir(dir: string): Promise<void> {
+  await rm(dir, { recursive: true, force: true });
 }
 
 /**

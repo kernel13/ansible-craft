@@ -81,6 +81,25 @@ export {
   type YamlValidationError,
 } from './validation/index.js';
 
+// Ansible-lint integration
+export {
+  runAnsibleLint,
+  isAnsibleLintAvailable,
+  formatInstallInstructions,
+  parseSarifResults,
+  type LintViolation,
+  type AnsibleLintResult,
+} from './validation/ansible-lint.js';
+
+// Auto-fix for lint violations
+export {
+  applyAutoFixes,
+  canAutoFix,
+  type AutoFixResult,
+  type FixedViolation,
+  type UnfixableViolation,
+} from './validation/auto-fix.js';
+
 // Preview functions for dry-run mode
 export {
   displayFilePreview,
