@@ -30,6 +30,36 @@ export * from './role/index.js';
 // Role generation orchestration
 export * from './generate-role.js';
 
+// Playbook generation orchestration
+export {
+  generatePlaybookPlan,
+  generatePlaybookCode,
+  type PlaybookGenerateOptions,
+} from './generate-playbook.js';
+
+// Playbook schemas
+export {
+  PLAYBOOK_PLAN_SCHEMA,
+  type PlaybookPlanPreview,
+  type PlaybookPlanPlay,
+  type PlaybookPlanTask,
+  type PlaybookPlanVariable,
+  type PlaybookPlanGroupVar,
+} from './schemas/playbook-plan.js';
+
+// Playbook structure
+export {
+  createPlaybookStructure,
+  playbookExists,
+  PLAYBOOK_DIRECTORIES,
+  REQUIRED_PLAYBOOK_FILES,
+  type PlaybookStructureOptions,
+  type PlaybookStructureResult,
+} from './playbook/index.js';
+
+// Playbook name inference
+export { inferPlaybookName } from './role/sanitize.js';
+
 // File writing
 export * from './writer.js';
 
