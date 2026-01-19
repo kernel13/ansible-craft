@@ -381,7 +381,9 @@ newCommand
   .option('-n, --name <name>', 'Playbook name (default: inferred from description)')
   .option('--dry-run', 'Preview without writing files')
   .option('--force', 'Overwrite existing directory without prompting')
+  .option('--fix', 'Auto-fix lint violations without prompting')
   .option('--no-interactive', 'Skip clarifying questions')
+  .option('-q, --quiet', 'Suppress progress output')
   .action(
     async (
       description: string,
@@ -390,7 +392,9 @@ newCommand
         name?: string;
         dryRun?: boolean;
         force?: boolean;
+        fix?: boolean;
         interactive?: boolean;
+        quiet?: boolean;
       },
     ) => {
       try {
@@ -412,16 +416,22 @@ newCommand
         console.log(chalk.cyan(`\nGenerating playbook: ${chalk.bold(playbookName)}`));
         console.log(chalk.dim(`From: "${description}"\n`));
 
+        // Create phase tracker for progress display
+        const tracker = createPhaseTracker(options.quiet ?? false);
+
         // 3. Generate plan preview
-        console.log(chalk.dim('Phase 1: Planning...\n'));
-        const plan = await generatePlaybookPlan(client, description);
+        tracker.start('Planning playbook structure...');
+        const plan = await generatePlaybookPlan(client, description, undefined, {
+          quiet: true, // Suppress inner spinner - tracker handles progress
+        });
+        tracker.succeed('Planning complete');
 
         // 4. Display plan preview
         displayPlaybookPlanPreview(plan);
 
         // 5. Confirm or modify plan
-        let confirmed = false;
         let currentPlan = plan;
+        let confirmed = false;
 
         while (!confirmed) {
           const action = await select({
@@ -442,11 +452,14 @@ newCommand
             const feedback = await input({
               message: 'What changes would you like?',
             });
-            console.log(chalk.dim('\nRegenerating plan...\n'));
+            tracker.start('Regenerating plan...');
             currentPlan = await generatePlaybookPlan(
               client,
               `${description}\n\nUser feedback: ${feedback}`,
+              undefined,
+              { quiet: true },
             );
+            tracker.succeed('Plan updated');
             displayPlaybookPlanPreview(currentPlan);
           } else {
             confirmed = true;
@@ -454,12 +467,16 @@ newCommand
         }
 
         // 6. Generate code
-        console.log(chalk.dim('\nPhase 2: Generating code...\n'));
-        const files = await generatePlaybookCode(client, currentPlan, description);
+        tracker.start('Generating playbook code...');
+        let files = await generatePlaybookCode(client, currentPlan, description, {
+          quiet: true, // Suppress inner spinner - tracker handles progress
+        });
+        tracker.succeed('Code generation complete');
 
-        // 7. Validate
-        console.log(chalk.dim('\nValidating generated code...\n'));
+        // 7. Validate YAML syntax
+        tracker.start('Validating generated code...');
         const report = validateGeneratedFiles(files);
+        tracker.succeed('Validation complete');
         displayValidationReport(report);
 
         if (!report.valid) {
@@ -467,26 +484,78 @@ newCommand
           process.exit(1);
         }
 
-        // 8. Write files
+        // 8. Run ansible-lint (if available)
+        let lintViolations: LintViolation[] = [];
+        const lintAvailable = await isAnsibleLintAvailable();
+
+        if (lintAvailable) {
+          tracker.start('Running ansible-lint...');
+          const tempDir = await writeTempFiles(files);
+          try {
+            const lintResult = await runAnsibleLint(tempDir);
+            lintViolations = lintResult.violations;
+          } finally {
+            await cleanupTempDir(tempDir);
+          }
+          tracker.succeed('Lint check complete');
+        } else {
+          console.log(chalk.dim('\nNote: ansible-lint not found. ' + formatInstallInstructions()));
+        }
+
+        // 9. Auto-fix if violations exist
+        if (lintViolations.length > 0) {
+          const fixable = lintViolations.filter((v) => canAutoFix(v.ruleId));
+
+          if (fixable.length > 0) {
+            displayLintResults(lintViolations);
+
+            const shouldFix =
+              options.fix ||
+              (await confirm({
+                message: `Auto-fix ${fixable.length} issue(s)?`,
+                default: true,
+              }));
+
+            if (shouldFix) {
+              const fixResult = applyAutoFixes(files, lintViolations);
+              // Update files array with fixed content
+              for (const file of files) {
+                const fixed = fixResult.modifiedContent.get(file.path);
+                if (fixed) file.content = fixed;
+              }
+              console.log(chalk.green(`\n  Fixed ${fixResult.fixed.length} issue(s)`));
+            }
+          } else {
+            // Show lint results even if none are fixable
+            displayLintResults(lintViolations);
+          }
+        }
+
+        // 10. Dry-run preview or write files
+        if (options.dryRun) {
+          const proceed = await previewAndConfirm(files, lintViolations);
+          if (!proceed) {
+            console.log(chalk.yellow('\nGeneration cancelled.'));
+            return;
+          }
+        }
+
+        // 11. Write files
         const result = await writeGeneratedPlaybook(files, {
           playbookName,
           outputDir: options.output,
-          dryRun: options.dryRun,
+          dryRun: false, // Already handled dry-run above with preview
           force: options.force,
         });
 
-        // 9. Display result
+        // 12. Display result
         displayPlaybookTree(result);
 
-        if (result.dryRun) {
-          console.log(chalk.yellow('\nDry run complete. No files were written.'));
-        } else {
-          console.log(chalk.green(`\nPlaybook created successfully at: ${result.playbookDir}`));
-          console.log(chalk.dim('\nNext steps:'));
-          console.log(chalk.dim(`  cd ${result.playbookDir}`));
-          console.log(chalk.dim('  ansible-lint playbook.yml'));
-          console.log(chalk.dim('  ansible-playbook -i inventory.example playbook.yml --check'));
-        }
+        console.log(chalk.green(`\nPlaybook created successfully at: ${result.playbookDir}`));
+        console.log(chalk.dim('\nNext steps:'));
+        console.log(chalk.dim(`  cd ${result.playbookDir}`));
+        console.log(chalk.dim('  ansible-lint playbook.yml'));
+        console.log(chalk.dim('  ansible-playbook -i inventory.example playbook.yml --check'));
       } catch (error) {
         if (error instanceof Error && error.message === 'Operation cancelled by user') {
           console.log(chalk.yellow('\nOperation cancelled.'));
