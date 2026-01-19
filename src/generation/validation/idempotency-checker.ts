@@ -30,12 +30,14 @@ const COMMAND_MODULES = new Set([
 ]);
 
 /**
- * Check if a file is a YAML file in the tasks directory.
+ * Check if a file is a YAML file containing tasks.
+ * Matches role task files (tasks/*.yml) and playbook files (playbook.yml).
  */
 function isTaskFile(path: string): boolean {
   const isYaml = path.endsWith('.yml') || path.endsWith('.yaml');
   const inTasks = path.includes('tasks/');
-  return isYaml && inTasks;
+  const isPlaybook = path.endsWith('playbook.yml');
+  return isYaml && (inTasks || isPlaybook);
 }
 
 /**
@@ -140,13 +142,48 @@ export function checkIdempotencyPatterns(
     return warnings;
   }
 
-  // Handle array of tasks (typical tasks/main.yml format)
+  // Handle array of items (tasks or plays)
   if (Array.isArray(parsed)) {
-    for (const task of parsed) {
-      if (typeof task !== 'object' || task === null) {
+    for (const item of parsed) {
+      if (typeof item !== 'object' || item === null) {
         continue;
       }
-      checkTask(task as Record<string, unknown>, file, warnings);
+
+      // Check if this is a play (has 'hosts' key) or a task
+      if ('hosts' in item) {
+        // It's a play - check its tasks, pre_tasks, post_tasks
+        const play = item as Record<string, unknown>;
+
+        // Check tasks array
+        if (Array.isArray(play.tasks)) {
+          for (const task of play.tasks) {
+            if (typeof task === 'object' && task !== null) {
+              checkTask(task as Record<string, unknown>, file, warnings);
+            }
+          }
+        }
+
+        // Check pre_tasks array
+        if (Array.isArray(play.pre_tasks)) {
+          for (const task of play.pre_tasks) {
+            if (typeof task === 'object' && task !== null) {
+              checkTask(task as Record<string, unknown>, file, warnings);
+            }
+          }
+        }
+
+        // Check post_tasks array
+        if (Array.isArray(play.post_tasks)) {
+          for (const task of play.post_tasks) {
+            if (typeof task === 'object' && task !== null) {
+              checkTask(task as Record<string, unknown>, file, warnings);
+            }
+          }
+        }
+      } else {
+        // It's a task directly (role's tasks/main.yml format)
+        checkTask(item as Record<string, unknown>, file, warnings);
+      }
     }
   }
 
