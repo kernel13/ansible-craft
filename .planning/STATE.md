@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2025-01-18)
 ## Current Position
 
 Phase: 4 of 8 (Role Generation)
-Plan: 3 of 5 in current phase
+Plan: 4 of 5 in current phase
 Status: In progress
-Last activity: 2026-01-19 — Completed 04-03-PLAN.md (Role Generation Orchestration)
+Last activity: 2026-01-19 — Completed 04-04-PLAN.md (Post-Generation Validation)
 
-Progress: [████████░░] ~50%
+Progress: [████████░░] ~55%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 12
-- Average duration: ~4 minutes
-- Total execution time: ~42 minutes
+- Total plans completed: 13
+- Average duration: ~3.5 minutes
+- Total execution time: ~45 minutes
 
 **By Phase:**
 
@@ -30,10 +30,10 @@ Progress: [████████░░] ~50%
 | 01-foundation | 3/3 | ~12min | ~4min |
 | 02-configuration | 3/3 | ~11min | ~4min |
 | 03-ai-integration | 3/3 | ~7min | ~2min |
-| 04-role-generation | 3/5 | ~12min | ~4min |
+| 04-role-generation | 4/5 | ~15min | ~4min |
 
 **Recent Trend:**
-- Last 5 plans: 03-02 (~2min), 03-03 (~3min), 04-01 (~5min), 04-02 (~5min), 04-03 (~2min)
+- Last 5 plans: 03-03 (~3min), 04-01 (~5min), 04-02 (~5min), 04-03 (~2min), 04-04 (~3min)
 - Trend: Consistent ~2-5min per plan
 
 *Updated after each plan completion*
@@ -88,6 +88,9 @@ Recent decisions affecting current work:
 - [04-03-01]: output_format with schema (not response_format) — SDK uses output_format param
 - [04-03-02]: 8192 max tokens for code generation — large roles need more tokens
 - [04-03-03]: Warn on fewer files than expected — non-blocking feedback
+- [04-04-01]: YAMLParseError for line/column extraction — precise error locations
+- [04-04-02]: YAML errors are blocking, FQCN/idempotency are warnings — quality guidance without blocking
+- [04-04-03]: Check args: key for command idempotency — Ansible supports both inline and args
 
 ### Pending Todos
 
@@ -100,7 +103,7 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-19
-Stopped at: Completed 04-03-PLAN.md (Role Generation Orchestration)
+Stopped at: Completed 04-04-PLAN.md (Post-Generation Validation)
 Resume file: None
 
 ---
