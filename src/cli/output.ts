@@ -32,3 +32,6 @@ export function displayError(error: CLIError | Error): void {
 export function formatError(str: string): string {
   return chalk.red(str);
 }
+
+// Re-export progress tracking utilities
+export * from './progress.js';
