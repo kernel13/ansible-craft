@@ -5,17 +5,7 @@
  * Output format enforces extractable ```yaml blocks for applying fixes.
  */
 
-/**
- * Context extracted from related Ansible files.
- * Will be defined in context-extractor.ts (07-01).
- * Temporary local definition for type safety.
- */
-interface ContextExtraction {
-  variables: Record<string, unknown>;
-  handlers: string[];
-  roleStructure?: string;
-  taskContext?: string;
-}
+import type { ContextExtraction } from '../context-extractor.js';
 
 /**
  * System prompt establishing Claude as an Ansible error fixer.
