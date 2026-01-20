@@ -18,7 +18,15 @@ interface ContextExtraction {
 }
 
 /** Ansible file types that can be explained */
-export type ExplainFileType = 'tasks' | 'handlers' | 'playbook' | 'role' | 'defaults' | 'vars' | 'meta' | 'template';
+export type ExplainFileType =
+  | 'tasks'
+  | 'handlers'
+  | 'playbook'
+  | 'role'
+  | 'defaults'
+  | 'vars'
+  | 'meta'
+  | 'template';
 
 /**
  * System prompt establishing Claude as an Ansible explainer.
@@ -90,12 +98,12 @@ Be direct and helpful. Don't pad responses with unnecessary caveats.`;
 export function buildExplainPrompt(
   content: string,
   fileType: ExplainFileType,
-  context?: ContextExtraction
+  context?: ContextExtraction,
 ): string {
   let prompt = `Explain the following Ansible ${fileType}:\n\n`;
 
   if (context) {
-    prompt += `CONTEXT FROM RELATED FILES:\n`;
+    prompt += 'CONTEXT FROM RELATED FILES:\n';
     if (Object.keys(context.variables).length > 0) {
       prompt += `Variables available:\n${JSON.stringify(context.variables, null, 2)}\n\n`;
     }

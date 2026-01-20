@@ -78,15 +78,12 @@ If you cannot determine the fix with confidence, say so clearly rather than gues
  * @param context - Optional context from playbook/role (via --playbook)
  * @returns User prompt with error and context
  */
-export function buildFixPrompt(
-  errorMessage: string,
-  context?: ContextExtraction
-): string {
-  let prompt = `Fix this Ansible error:\n\n`;
+export function buildFixPrompt(errorMessage: string, context?: ContextExtraction): string {
+  let prompt = 'Fix this Ansible error:\n\n';
   prompt += `ERROR MESSAGE:\n\`\`\`\n${errorMessage}\n\`\`\`\n\n`;
 
   if (context) {
-    prompt += `CONTEXT FROM PLAYBOOK/ROLE:\n`;
+    prompt += 'CONTEXT FROM PLAYBOOK/ROLE:\n';
 
     if (context.taskContext) {
       prompt += `Code around the failing task:\n\`\`\`yaml\n${context.taskContext}\n\`\`\`\n\n`;
@@ -100,10 +97,10 @@ export function buildFixPrompt(
       prompt += `Available handlers: ${context.handlers.join(', ')}\n\n`;
     }
   } else {
-    prompt += `Note: No playbook context provided. For better results, use --playbook flag.\n\n`;
+    prompt += 'Note: No playbook context provided. For better results, use --playbook flag.\n\n';
   }
 
-  prompt += `Analyze this error and provide a fix following the output format.`;
+  prompt += 'Analyze this error and provide a fix following the output format.';
 
   return prompt;
 }
