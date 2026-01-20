@@ -33,15 +33,15 @@ Requirements for initial CLI release. Each maps to roadmap phases.
 
 ### Error Commands
 
-- [ ] **ERR-01**: User can get plain-English explanation of Ansible code via `explain path/to/file.yml`
-- [ ] **ERR-02**: User can get error interpretation and fix suggestions via `fix "error message"`
-- [ ] **ERR-03**: fix command accepts --playbook flag to provide context from related playbook
+- [x] **ERR-01**: User can get plain-English explanation of Ansible code via `explain path/to/file.yml`
+- [x] **ERR-02**: User can get error interpretation and fix suggestions via `fix "error message"`
+- [x] **ERR-03**: fix command accepts --playbook flag to provide context from related playbook
 
 ### Configuration
 
 - [x] **CFG-01**: CLI reads API key from ANTHROPIC_API_KEY environment variable
 - [x] **CFG-02**: User can save default preferences to config file
-- [ ] **CFG-03**: User can select Opus model for complex tasks via --complex flag
+- [x] **CFG-03**: User can select Opus model for complex tasks via --complex flag
 
 ## v2 Requirements
 
@@ -101,12 +101,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | QUAL-03 | Phase 4: Role Generation | Complete |
 | QUAL-04 | Phase 4: Role Generation | Complete |
 | QUAL-05 | Phase 6: Quality Assurance | Complete |
-| ERR-01 | Phase 7: Error Commands | Pending |
-| ERR-02 | Phase 7: Error Commands | Pending |
-| ERR-03 | Phase 7: Error Commands | Pending |
+| ERR-01 | Phase 7: Error Commands | Complete |
+| ERR-02 | Phase 7: Error Commands | Complete |
+| ERR-03 | Phase 7: Error Commands | Complete |
 | CFG-01 | Phase 2: Configuration | Complete |
 | CFG-02 | Phase 2: Configuration | Complete |
-| CFG-03 | Phase 7: Error Commands | Pending |
+| CFG-03 | Phase 7: Error Commands | Complete |
 
 **Coverage:**
 - v1 requirements: 21 total
@@ -115,4 +115,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2025-01-18*
-*Last updated: 2026-01-19 after Phase 6 completion*
+*Last updated: 2026-01-20 after Phase 7 completion*
