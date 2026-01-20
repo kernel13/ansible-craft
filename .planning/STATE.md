@@ -19,9 +19,9 @@ Progress: [██████████████████░░] ~77%
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 24
+- Total plans completed: 25
 - Average duration: ~3.1 minutes
-- Total execution time: ~75 minutes
+- Total execution time: ~78 minutes
 
 **By Phase:**
 
@@ -33,10 +33,10 @@ Progress: [██████████████████░░] ~77%
 | 04-role-generation | 5/5 | ~17min | ~3.5min |
 | 05-playbook-generation | 4/4 | ~15min | ~4min |
 | 06-quality-assurance | 5/5 | ~11min | ~2min |
-| 07-error-commands | 2/4 | ~4min | ~2min |
+| 07-error-commands | 2/4 | ~5min | ~2.5min |
 
 **Recent Trend:**
-- Last 5 plans: 06-02 (~2min), 06-03 (~2min), 06-04 (~2min), 06-05 (~3min), 07-02 (~2min)
+- Last 5 plans: 06-03 (~2min), 06-04 (~2min), 06-05 (~3min), 07-01 (~3min), 07-02 (~2min)
 - Trend: Consistent ~2-3min per plan
 
 *Updated after each plan completion*
@@ -123,6 +123,11 @@ Recent decisions affecting current work:
 - [06-05-01]: Pass quiet: true to inner functions when PhaseTracker handles progress
 - [06-05-02]: Temp file approach for ansible-lint validation — lint requires files on disk
 - [06-05-03]: Auto-fix confirmation default true — safe fixes encouraged
+- [07-01-01]: inferFileType defaults to 'playbook' — sensible classification for standalone YAML files
+- [07-01-02]: Task context ±5 lines or full task if >15 lines — balances context with token efficiency
+- [07-01-03]: Confidence threshold 2+ uncertainty markers — detects hedging effectively
+- [07-01-04]: Higher threshold (4+) with certainty language — prevents false positives
+- [07-01-05]: Multiple error format patterns — handles Ansible error diversity across versions
 - [07-02-01]: EXPLAIN_SYSTEM_PROMPT enforces 6 structured sections — Purpose, Tasks, Variables, Dependencies, Issues, Role Structure
 - [07-02-02]: FIX_SYSTEM_PROMPT requires corrected YAML in extractable code blocks — enables automated fix application
 - [07-02-03]: Temporary ContextExtraction interface in prompts — will update import when 07-01 completes
