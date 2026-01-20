@@ -133,13 +133,13 @@ Plans:
   2. User can run `ansible-craft fix "error message"` and get interpretation with fix suggestions
   3. User can provide playbook context via --playbook flag for better fix suggestions
   4. User can use --complex flag to invoke Claude Opus for difficult problems
-**Plans**: TBD
+**Plans**: 4 plans in 3 waves
 
 Plans:
-- [ ] 07-01: Explain command implementation
-- [ ] 07-02: Error pattern recognition
-- [ ] 07-03: Fix command with context awareness
-- [ ] 07-04: Model selection (--complex flag)
+- [ ] 07-01-PLAN.md — Shared infrastructure (file reader, context extractor, confidence detector) (Wave 1)
+- [ ] 07-02-PLAN.md — Prompts and model selection (explain prompts, fix prompts, --complex handler) (Wave 1)
+- [ ] 07-03-PLAN.md — Explain command implementation (Wave 2)
+- [ ] 07-04-PLAN.md — Fix command with apply workflow (Wave 3)
 
 ### Phase 8: Publishing
 **Goal**: CLI is published to npm and provides professional UX features
@@ -172,7 +172,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 4. Role Generation | 5/5 | Complete | 2026-01-19 |
 | 5. Playbook Generation | 4/4 | Complete | 2026-01-19 |
 | 6. Quality Assurance | 5/5 | Complete | 2026-01-19 |
-| 7. Error Commands | 0/4 | Not started | - |
+| 7. Error Commands | 0/4 | Planned | - |
 | 8. Publishing | 0/5 | Not started | - |
 
 ---
@@ -189,4 +189,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 *Phase 5 completed: 2026-01-19*
 *Phase 6 planned: 2026-01-19*
 *Phase 6 completed: 2026-01-19*
+*Phase 7 planned: 2026-01-20*
 *Total phases: 8 | Total plans: 32 | v1 requirements: 21 mapped*
