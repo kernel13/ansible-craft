@@ -150,14 +150,14 @@ Plans:
   2. CLI works via bunx/npx/pnpx without global install
   3. Shell completions work for bash, zsh, and fish
   4. CLI supports --json flag for machine-readable output
-**Plans**: TBD
+**Plans**: 5 plans in 3 waves
 
 Plans:
-- [ ] 08-01: npm package configuration
-- [ ] 08-02: ESM/CJS dual publishing
-- [ ] 08-03: Shell completion scripts
-- [ ] 08-04: JSON output mode
-- [ ] 08-05: Final documentation and README
+- [ ] 08-01-PLAN.md — npm package configuration and tsup bundler (Wave 1)
+- [ ] 08-02-PLAN.md — ESM/CJS dual publishing with build verification (Wave 2)
+- [ ] 08-03-PLAN.md — Shell completion scripts for bash, zsh, fish (Wave 2)
+- [ ] 08-04-PLAN.md — JSON output mode for CI/CD integration (Wave 2)
+- [ ] 08-05-PLAN.md — Final documentation and README (Wave 3)
 
 ## Progress
 
@@ -173,7 +173,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 5. Playbook Generation | 4/4 | Complete | 2026-01-19 |
 | 6. Quality Assurance | 5/5 | Complete | 2026-01-19 |
 | 7. Error Commands | 4/4 | Complete | 2026-01-20 |
-| 8. Publishing | 0/5 | Not started | - |
+| 8. Publishing | 0/5 | Planned | - |
 
 ---
 *Roadmap created: 2025-01-18*
@@ -191,4 +191,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 *Phase 6 completed: 2026-01-19*
 *Phase 7 planned: 2026-01-20*
 *Phase 7 completed: 2026-01-20*
+*Phase 8 planned: 2026-01-21*
 *Total phases: 8 | Total plans: 32 | v1 requirements: 21 mapped*
