@@ -458,6 +458,7 @@ newCommand
   .option('--fix', 'Auto-fix lint violations without prompting')
   .option('--no-interactive', 'Skip clarifying questions')
   .option('-q, --quiet', 'Suppress progress output')
+  .option('--json', 'Output results in JSON format')
   .action(
     async (
       description: string,
@@ -469,12 +470,27 @@ newCommand
         fix?: boolean;
         interactive?: boolean;
         quiet?: boolean;
+        json?: boolean;
       },
     ) => {
+      const startTime = Date.now();
+      const jsonMode = options.json ?? false;
+
+      // In JSON mode: quiet=true for all operations, no interactive prompts
+      if (jsonMode) {
+        options.quiet = true;
+        options.force = true; // Don't prompt for overwrite in JSON mode
+        options.fix = true; // Auto-fix without prompting in JSON mode
+      }
+
       try {
         // 1. Load config and create client
         const config = await loadConfig();
         if (!config.api.key) {
+          if (jsonMode) {
+            outputJson(formatJsonError('CONFIG_ERROR', 'API key not configured'));
+            process.exit(1);
+          }
           console.error(chalk.red('Error: API key not configured'));
           console.error(chalk.dim('Run: ansible-craft config save'));
           process.exit(1);
@@ -487,8 +503,10 @@ newCommand
           ? sanitizeRoleName(options.name) // Reuse sanitize for playbooks
           : inferPlaybookName(description);
 
-        console.log(chalk.cyan(`\nGenerating playbook: ${chalk.bold(playbookName)}`));
-        console.log(chalk.dim(`From: "${description}"\n`));
+        if (!jsonMode) {
+          console.log(chalk.cyan(`\nGenerating playbook: ${chalk.bold(playbookName)}`));
+          console.log(chalk.dim(`From: "${description}"\n`));
+        }
 
         // Create phase tracker for progress display
         const tracker = createPhaseTracker(options.quiet ?? false);
@@ -500,43 +518,46 @@ newCommand
         });
         tracker.succeed('Planning complete');
 
-        // 4. Display plan preview
-        displayPlaybookPlanPreview(plan);
-
-        // 5. Confirm or modify plan
+        // 4. Display plan preview and confirm (skip in JSON mode)
         let currentPlan = plan;
-        let confirmed = false;
 
-        while (!confirmed) {
-          const action = await select({
-            message: 'How would you like to proceed?',
-            choices: [
-              { value: 'accept', name: 'Accept - Generate the playbook' },
-              { value: 'modify', name: 'Modify - Provide feedback to adjust the plan' },
-              { value: 'reject', name: 'Reject - Cancel generation' },
-            ],
-          });
+        if (!jsonMode) {
+          displayPlaybookPlanPreview(plan);
 
-          if (action === 'reject') {
-            console.log(chalk.yellow('\nGeneration cancelled.'));
-            return;
-          }
+          // 5. Confirm or modify plan
+          let confirmed = false;
 
-          if (action === 'modify') {
-            const feedback = await input({
-              message: 'What changes would you like?',
+          while (!confirmed) {
+            const action = await select({
+              message: 'How would you like to proceed?',
+              choices: [
+                { value: 'accept', name: 'Accept - Generate the playbook' },
+                { value: 'modify', name: 'Modify - Provide feedback to adjust the plan' },
+                { value: 'reject', name: 'Reject - Cancel generation' },
+              ],
             });
-            tracker.start('Regenerating plan...');
-            currentPlan = await generatePlaybookPlan(
-              client,
-              `${description}\n\nUser feedback: ${feedback}`,
-              undefined,
-              { quiet: true },
-            );
-            tracker.succeed('Plan updated');
-            displayPlaybookPlanPreview(currentPlan);
-          } else {
-            confirmed = true;
+
+            if (action === 'reject') {
+              console.log(chalk.yellow('\nGeneration cancelled.'));
+              return;
+            }
+
+            if (action === 'modify') {
+              const feedback = await input({
+                message: 'What changes would you like?',
+              });
+              tracker.start('Regenerating plan...');
+              currentPlan = await generatePlaybookPlan(
+                client,
+                `${description}\n\nUser feedback: ${feedback}`,
+                undefined,
+                { quiet: true },
+              );
+              tracker.succeed('Plan updated');
+              displayPlaybookPlanPreview(currentPlan);
+            } else {
+              confirmed = true;
+            }
           }
         }
 
@@ -551,9 +572,24 @@ newCommand
         tracker.start('Validating generated code...');
         const report = validateGeneratedFiles(files);
         tracker.succeed('Validation complete');
-        displayValidationReport(report);
+        if (!jsonMode) {
+          displayValidationReport(report);
+        }
 
         if (!report.valid) {
+          if (jsonMode) {
+            outputJson(
+              formatJsonError('VALIDATION_ERROR', 'Generation failed due to YAML errors', {
+                errors: report.errors.map((e) => ({
+                  file: e.file,
+                  message: e.message,
+                  line: e.line,
+                  column: e.column,
+                })),
+              }),
+            );
+            process.exit(1);
+          }
           console.error(chalk.red('\nGeneration failed due to YAML errors.'));
           process.exit(1);
         }
@@ -572,7 +608,7 @@ newCommand
             await cleanupTempDir(tempDir);
           }
           tracker.succeed('Lint check complete');
-        } else {
+        } else if (!jsonMode) {
           console.log(chalk.dim(`\nNote: ansible-lint not found. ${formatInstallInstructions()}`));
         }
 
@@ -581,8 +617,11 @@ newCommand
           const fixable = lintViolations.filter((v) => canAutoFix(v.ruleId));
 
           if (fixable.length > 0) {
-            displayLintResults(lintViolations);
+            if (!jsonMode) {
+              displayLintResults(lintViolations);
+            }
 
+            // In JSON mode, options.fix is already true
             const shouldFix =
               options.fix ||
               (await confirm({
@@ -597,16 +636,18 @@ newCommand
                 const fixed = fixResult.modifiedContent.get(file.path);
                 if (fixed) file.content = fixed;
               }
-              console.log(chalk.green(`\n  Fixed ${fixResult.fixed.length} issue(s)`));
+              if (!jsonMode) {
+                console.log(chalk.green(`\n  Fixed ${fixResult.fixed.length} issue(s)`));
+              }
             }
-          } else {
+          } else if (!jsonMode) {
             // Show lint results even if none are fixable
             displayLintResults(lintViolations);
           }
         }
 
-        // 10. Dry-run preview or write files
-        if (options.dryRun) {
+        // 10. Dry-run preview or write files (skip in JSON mode)
+        if (options.dryRun && !jsonMode) {
           const proceed = await previewAndConfirm(files, lintViolations);
           if (!proceed) {
             console.log(chalk.yellow('\nGeneration cancelled.'));
@@ -618,11 +659,26 @@ newCommand
         const result = await writeGeneratedPlaybook(files, {
           playbookName,
           outputDir: options.output,
-          dryRun: false, // Already handled dry-run above with preview
+          dryRun: options.dryRun ?? false,
           force: options.force,
         });
 
-        // 12. Display result
+        // 12. Display result or output JSON
+        if (jsonMode) {
+          const warnings = lintViolationsToWarnings(lintViolations);
+          const jsonResult = formatJsonSuccess(
+            'playbook',
+            playbookName,
+            result.playbookDir,
+            files,
+            warnings,
+            `ansible-craft new playbook "${description}"`,
+            startTime,
+          );
+          outputJson(jsonResult);
+          return;
+        }
+
         displayPlaybookTree(result);
 
         console.log(chalk.green(`\nPlaybook created successfully at: ${result.playbookDir}`));
@@ -631,6 +687,18 @@ newCommand
         console.log(chalk.dim('  ansible-lint playbook.yml'));
         console.log(chalk.dim('  ansible-playbook -i inventory.example playbook.yml --check'));
       } catch (error) {
+        // Handle JSON mode errors
+        if (jsonMode) {
+          const code =
+            error instanceof Error && 'code' in error
+              ? (error as Error & { code: string }).code
+              : 'UNKNOWN_ERROR';
+          outputJson(
+            formatJsonError(code, error instanceof Error ? error.message : 'Unknown error'),
+          );
+          process.exit(1);
+        }
+
         if (error instanceof Error && error.message === 'Operation cancelled by user') {
           console.log(chalk.yellow('\nOperation cancelled.'));
           return;
