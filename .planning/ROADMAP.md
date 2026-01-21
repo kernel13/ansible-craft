@@ -50,10 +50,10 @@ See `.planning/milestones/v1.0-ROADMAP.md` for complete v1.0 phase details.
   2. Zod schema validates WizardContext at runtime
   3. formatForPrompt() function converts WizardContext to clarifications format
   4. Unit tests verify schema validation and formatting
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 09-01: Wizard types and context schema
+- [ ] 09-01-PLAN.md — Wizard types, Zod schemas, and formatForPrompt utilities
 
 #### Phase 10: Role Wizard
 **Goal**: Users can interactively customize role generation through step-by-step prompts
@@ -121,7 +121,7 @@ Phases execute in numeric order: 9 -> 10 -> 11 -> 12 -> 13
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 1-8 | v1.0 | 32/32 | Complete | 2026-01-21 |
-| 9. Foundation | v1.1 | 0/1 | Not started | - |
+| 9. Foundation | v1.1 | 0/1 | Planned | - |
 | 10. Role Wizard | v1.1 | 0/2 | Not started | - |
 | 11. Playbook Wizard | v1.1 | 0/1 | Not started | - |
 | 12. CLI Integration | v1.1 | 0/2 | Not started | - |
