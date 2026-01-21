@@ -19,7 +19,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 5: Playbook Generation** - Generate Ansible playbooks from natural language
 - [x] **Phase 6: Quality Assurance** - ansible-lint validation, dry-run preview, streaming UX
 - [x] **Phase 7: Error Commands** - explain and fix commands with context awareness
-- [ ] **Phase 8: Publishing** - npm package, shell completions, JSON output
+- [x] **Phase 8: Publishing** - npm package, shell completions, JSON output
 
 ## Phase Details
 
@@ -153,11 +153,11 @@ Plans:
 **Plans**: 5 plans in 3 waves
 
 Plans:
-- [ ] 08-01-PLAN.md — npm package configuration and tsup bundler (Wave 1)
-- [ ] 08-02-PLAN.md — ESM/CJS dual publishing with build verification (Wave 2)
-- [ ] 08-03-PLAN.md — Shell completion scripts for bash, zsh, fish (Wave 2)
-- [ ] 08-04-PLAN.md — JSON output mode for CI/CD integration (Wave 2)
-- [ ] 08-05-PLAN.md — Final documentation and README (Wave 3)
+- [x] 08-01-PLAN.md — npm package configuration and tsup bundler (Wave 1)
+- [x] 08-02-PLAN.md — ESM publishing with build verification (Wave 2)
+- [x] 08-03-PLAN.md — Shell completion scripts for bash, zsh, fish (Wave 2)
+- [x] 08-04-PLAN.md — JSON output mode for CI/CD integration (Wave 2)
+- [x] 08-05-PLAN.md — Final documentation and README (Wave 3)
 
 ## Progress
 
@@ -173,7 +173,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 5. Playbook Generation | 4/4 | Complete | 2026-01-19 |
 | 6. Quality Assurance | 5/5 | Complete | 2026-01-19 |
 | 7. Error Commands | 4/4 | Complete | 2026-01-20 |
-| 8. Publishing | 0/5 | Planned | - |
+| 8. Publishing | 5/5 | Complete | 2026-01-21 |
 
 ---
 *Roadmap created: 2025-01-18*
@@ -192,4 +192,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 *Phase 7 planned: 2026-01-20*
 *Phase 7 completed: 2026-01-20*
 *Phase 8 planned: 2026-01-21*
+*Phase 8 completed: 2026-01-21*
 *Total phases: 8 | Total plans: 32 | v1 requirements: 21 mapped*
