@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2025-01-18)
 
 **Core value:** Generate complete, production-ready Ansible roles from natural language — FQCN compliant, idempotent, ansible-lint passing
-**Current focus:** Phase 8 - Publishing (In Progress)
+**Current focus:** Phase 8 - Publishing (Complete)
 
 ## Current Position
 
 Phase: 8 of 8 (Publishing)
-Plan: 4 of 5 in current phase
-Status: In progress
-Last activity: 2026-01-21 — Completed 08-04-PLAN.md
+Plan: 5 of 5 in current phase
+Status: Phase complete
+Last activity: 2026-01-21 — Completed 08-05-PLAN.md
 
-Progress: [███████████████████████░] ~94%
+Progress: [████████████████████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 31
+- Total plans completed: 32
 - Average duration: ~3.1 minutes
-- Total execution time: ~97.5 minutes
+- Total execution time: ~100.5 minutes
 
 **By Phase:**
 
@@ -34,11 +34,11 @@ Progress: [███████████████████████
 | 05-playbook-generation | 4/4 | ~15min | ~4min |
 | 06-quality-assurance | 5/5 | ~11min | ~2min |
 | 07-error-commands | 4/4 | ~10.5min | ~2.6min |
-| 08-publishing | 4/5 | ~14min | ~3.5min |
+| 08-publishing | 5/5 | ~17min | ~3.4min |
 
 **Recent Trend:**
-- Last 5 plans: 07-02 (~2min), 07-03 (~2.5min), 07-04 (~3min), 08-01 (~4min)
-- Trend: Consistent ~2-4min per plan
+- Last 5 plans: 07-04 (~3min), 08-01 (~4min), 08-02 (~4min), 08-04 (~3min), 08-05 (~3min)
+- Trend: Consistent ~3-4min per plan
 
 *Updated after each plan completion*
 
@@ -156,6 +156,8 @@ Recent decisions affecting current work:
 - [08-04-01]: JSON to stdout, progress to stderr — clean piping support
 - [08-04-02]: format_version '1.0' field — backward compatibility
 - [08-04-03]: Auto-set quiet, force, fix in JSON mode — non-interactive
+- [08-05-01]: MIT license for open source distribution
+- [08-05-02]: Comprehensive README with all commands documented
 
 ### Pending Todos
 
@@ -168,9 +170,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-21
-Stopped at: Completed 08-04-PLAN.md
+Stopped at: Completed 08-05-PLAN.md (Phase 8 complete)
 Resume file: None
-Next: 08-05-PLAN.md (if exists)
+Next: Project complete - ready for npm publish
 
 ---
 *State initialized: 2025-01-18*
