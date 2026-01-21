@@ -69,26 +69,26 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| RWIZ-01 | TBD | Pending |
-| RWIZ-02 | TBD | Pending |
-| RWIZ-03 | TBD | Pending |
-| RWIZ-04 | TBD | Pending |
-| RWIZ-05 | TBD | Pending |
-| RWIZ-06 | TBD | Pending |
-| PWIZ-01 | TBD | Pending |
-| PWIZ-02 | TBD | Pending |
-| PWIZ-03 | TBD | Pending |
-| PWIZ-04 | TBD | Pending |
-| DFLT-01 | TBD | Pending |
-| DFLT-02 | TBD | Pending |
-| INTG-01 | TBD | Pending |
-| INTG-02 | TBD | Pending |
+| RWIZ-01 | Phase 10: Role Wizard | Pending |
+| RWIZ-02 | Phase 10: Role Wizard | Pending |
+| RWIZ-03 | Phase 10: Role Wizard | Pending |
+| RWIZ-04 | Phase 10: Role Wizard | Pending |
+| RWIZ-05 | Phase 12: CLI Integration | Pending |
+| RWIZ-06 | Phase 10: Role Wizard | Pending |
+| PWIZ-01 | Phase 11: Playbook Wizard | Pending |
+| PWIZ-02 | Phase 11: Playbook Wizard | Pending |
+| PWIZ-03 | Phase 11: Playbook Wizard | Pending |
+| PWIZ-04 | Phase 11: Playbook Wizard | Pending |
+| DFLT-01 | Phase 13: Defaults Management | Pending |
+| DFLT-02 | Phase 13: Defaults Management | Pending |
+| INTG-01 | Phase 12: CLI Integration | Pending |
+| INTG-02 | Phase 12: CLI Integration | Pending |
 
 **Coverage:**
 - v1.1 requirements: 14 total
-- Mapped to phases: 0
-- Unmapped: 14
+- Mapped to phases: 14
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-01-21*
-*Last updated: 2026-01-21 after initial definition*
+*Last updated: 2026-01-21 — Traceability updated with phase mappings*
