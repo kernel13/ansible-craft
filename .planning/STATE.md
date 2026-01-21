@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2025-01-18)
 ## Current Position
 
 Phase: 8 of 8 (Publishing)
-Plan: 2 of 5 in current phase
+Plan: 3 of 5 in current phase
 Status: In progress
-Last activity: 2026-01-21 — Completed 08-02-PLAN.md
+Last activity: 2026-01-21 — Completed 08-03-PLAN.md
 
-Progress: [██████████████████████░░] ~91%
+Progress: [██████████████████████░░] ~92%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 29
+- Total plans completed: 30
 - Average duration: ~3.1 minutes
-- Total execution time: ~89.5 minutes
+- Total execution time: ~91.5 minutes
 
 **By Phase:**
 
@@ -34,7 +34,7 @@ Progress: [██████████████████████░
 | 05-playbook-generation | 4/4 | ~15min | ~4min |
 | 06-quality-assurance | 5/5 | ~11min | ~2min |
 | 07-error-commands | 4/4 | ~10.5min | ~2.6min |
-| 08-publishing | 2/5 | ~6min | ~3min |
+| 08-publishing | 3/5 | ~8min | ~2.7min |
 
 **Recent Trend:**
 - Last 5 plans: 07-02 (~2min), 07-03 (~2.5min), 07-04 (~3min), 08-01 (~4min)
@@ -150,6 +150,9 @@ Recent decisions affecting current work:
 - [08-02-02]: bin points to dist/cli/index.js — direct ESM execution
 - [08-02-03]: exports.default = exports.import — consistent ESM resolution
 - [08-02-04]: Removed typescript peerDependencies — not needed at runtime
+- [08-03-01]: process.stdout.write for completions — clean output for shell piping
+- [08-03-02]: Case-insensitive shell argument — user convenience
+- [08-03-03]: All commands in completions — comprehensive UX
 
 ### Pending Todos
 
@@ -162,9 +165,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-21
-Stopped at: Completed 08-02-PLAN.md
+Stopped at: Completed 08-03-PLAN.md
 Resume file: None
-Next: 08-03-PLAN.md (Shell completions)
+Next: 08-04-PLAN.md (JSON output mode)
 
 ---
 *State initialized: 2025-01-18*
