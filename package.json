@@ -4,7 +4,14 @@
   "description": "Generate production-ready Ansible roles from natural language",
   "type": "module",
   "bin": {
-    "ansible-craft": "./src/cli/index.ts"
+    "ansible-craft": "./dist/cli/index.js"
+  },
+  "main": "./dist/cli/index.js",
+  "exports": {
+    ".": {
+      "import": "./dist/cli/index.js",
+      "default": "./dist/cli/index.js"
+    }
   },
   "files": [
     "dist",
@@ -54,9 +61,6 @@
     "@types/bun": "latest",
     "@types/node": "^22.15.30",
     "tsup": "^8.5.1"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",
