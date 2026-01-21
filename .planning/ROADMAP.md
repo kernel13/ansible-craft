@@ -15,7 +15,7 @@ v1.1 adds an interactive wizard system to ansible-craft that gathers structured 
 - Integer phases (9, 10, 11...): Planned milestone work
 - Decimal phases (10.1, 10.2): Urgent insertions (marked with INSERTED)
 
-- [ ] **Phase 9: Foundation** - Type definitions and context schema for wizard system
+- [x] **Phase 9: Foundation** - Type definitions and context schema for wizard system
 - [ ] **Phase 10: Role Wizard** - Interactive prompts for role structure, platforms, handlers
 - [ ] **Phase 11: Playbook Wizard** - Interactive prompts for playbook hosts, escalation, handlers
 - [ ] **Phase 12: CLI Integration** - --quick flag, TTY detection, context passing to AI
@@ -53,7 +53,7 @@ See `.planning/milestones/v1.0-ROADMAP.md` for complete v1.0 phase details.
 **Plans**: 1 plan
 
 Plans:
-- [ ] 09-01-PLAN.md — Wizard types, Zod schemas, and formatForPrompt utilities
+- [x] 09-01-PLAN.md — Wizard types, Zod schemas, and formatForPrompt utilities
 
 #### Phase 10: Role Wizard
 **Goal**: Users can interactively customize role generation through step-by-step prompts
@@ -121,7 +121,7 @@ Phases execute in numeric order: 9 -> 10 -> 11 -> 12 -> 13
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 1-8 | v1.0 | 32/32 | Complete | 2026-01-21 |
-| 9. Foundation | v1.1 | 0/1 | Planned | - |
+| 9. Foundation | v1.1 | 1/1 | Complete | 2026-01-21 |
 | 10. Role Wizard | v1.1 | 0/2 | Not started | - |
 | 11. Playbook Wizard | v1.1 | 0/1 | Not started | - |
 | 12. CLI Integration | v1.1 | 0/2 | Not started | - |
@@ -129,4 +129,4 @@ Phases execute in numeric order: 9 -> 10 -> 11 -> 12 -> 13
 
 ---
 *Roadmap created: 2026-01-21*
-*Last updated: 2026-01-21*
+*Last updated: 2026-01-21 — Phase 9 complete*
