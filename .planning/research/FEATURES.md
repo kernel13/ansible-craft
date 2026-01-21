@@ -1,211 +1,337 @@
-# Feature Landscape: AI-Powered CLI for Ansible Generation
+# Feature Landscape: Plan Mode (Interactive Wizard)
 
-**Domain:** AI CLI code generation tools (Ansible specialization)
-**Researched:** 2026-01-18
-**Confidence:** HIGH (verified against competitor analysis and market research)
+**Domain:** CLI interactive wizard for Ansible role/playbook configuration
+**Researched:** 2026-01-21
+**Confidence:** HIGH (verified against CLI UX guidelines and @inquirer/prompts documentation)
+**Mode:** Subsequent Milestone - Adding to existing CLI tool
+
+## Context: Existing Features
+
+ansible-craft v1.0 already has:
+- `new role "description"` - two-phase generation (plan preview -> code)
+- `new playbook "description"` - same two-phase pattern
+- Plan preview with accept/modify/reject flow
+- @inquirer/prompts already in use (select, input, confirm)
+- Configuration system (TOML-based, ~/.config/ansible-craft/)
+- Progress indicators (ora spinners)
+- Dry-run preview
+
+**Key insight:** The plan preview interaction already exists. "Plan mode" extends this with a **front-loaded wizard** before the AI generates anything.
 
 ## Table Stakes
 
-Features users expect from any AI CLI tool. Missing = product feels incomplete or amateurish.
+Features users expect from any CLI wizard. Missing = wizard feels incomplete.
 
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| Natural language to code | Core value proposition of AI CLI tools | High | Foundation of the entire product |
-| Syntax-correct output | Users won't tolerate broken YAML | Medium | Requires Ansible-specific validation |
-| Clear error messages | Standard CLI UX expectation | Low | Parse and explain failures clearly |
-| Progress indicators | Users need feedback during generation | Low | Spinners, status updates |
-| Configuration file support | All modern CLIs support `.rc` files | Low | `~/.ansible-craft.yaml` or similar |
-| Help/documentation | `--help`, man pages, examples | Low | Standard CLI convention |
-| Exit codes | Proper 0/1 exit for scripting | Low | Critical for CI/CD integration |
-| API key management | Secure credential handling | Medium | Env vars, config files, keychain |
-| Version command | `--version` for troubleshooting | Trivial | Standard CLI feature |
-| Colored terminal output | Modern CLI expectation | Low | Distinguish errors, warnings, success |
+| Feature | Why Expected | Complexity | Dependencies |
+|---------|--------------|------------|--------------|
+| **Step-by-step prompts** | Core wizard pattern - one question at a time | Low | Uses existing @inquirer/prompts |
+| **Progress indicator** | "Step 2 of 5" - users need orientation | Low | Simple counter, no new deps |
+| **Keyboard navigation** | Arrow keys, Enter, Tab | Built-in | @inquirer/prompts provides this |
+| **Clear exit pathway** | Ctrl+C cancellation with confirmation | Low | Handle SIGINT gracefully |
+| **Input validation** | Reject invalid values with clear error | Low | @inquirer/prompts validation |
+| **Default values** | Sensible pre-filled answers | Low | Infer from context |
+| **Skip flag (--quick)** | Bypass wizard for scripts/power users | Low | CLI flag + defaults |
+| **Non-interactive mode** | Full bypass with all defaults | Low | --no-interactive flag exists |
 
 ### Ansible-Specific Table Stakes
 
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| Valid YAML output | Ansible requires valid YAML | Medium | Post-process validation |
-| Proper role structure | `ansible-galaxy init` standard | Low | tasks/, handlers/, defaults/, etc. |
-| Idempotent task generation | Core Ansible principle | Medium | Model must understand idempotency |
-| Module name correctness | Use FQCN (ansible.builtin.*) | Medium | Modern Ansible best practice |
-| Variable templating | Jinja2 syntax correctness | Medium | `{{ variable }}` patterns |
+| Feature | Why Expected | Complexity | Dependencies |
+|---------|--------------|------------|--------------|
+| **Role structure selection** | Choose what directories to include | Low | Checkbox prompt |
+| **Platform targeting** | RHEL/Ubuntu/Debian/generic | Low | Select prompt |
+| **Variable collection** | Define key variables upfront | Medium | Dynamic input prompts |
+| **Handler definition** | Specify restart/reload handlers | Low | Multi-input prompt |
+| **Template specification** | Identify config files to template | Low | Input with suggestions |
 
 ## Differentiators
 
-Features that would set Ansible Craft apart. Not expected, but highly valued.
+Features that set ansible-craft apart. Not expected, but valued.
 
 ### High-Impact Differentiators
 
-| Feature | Value Proposition | Complexity | Notes |
-|---------|-------------------|------------|-------|
-| **Ansible-lint integration** | Auto-validate before output | Medium | Use `ansible-lint` API or subprocess |
-| **Context-aware generation** | Read existing roles/vars | High | Parse inventory, group_vars, existing roles |
-| **Error interpretation** | Parse Ansible errors into fixes | High | `fix` command core value |
-| **Best practices enforcement** | Output follows Red Hat patterns | Medium | FQCN, naming, structure conventions |
-| **Interactive refinement** | "Make it more secure" follow-ups | Medium | Conversational iteration on output |
-| **Dry-run preview** | Show what will be created before writing | Low | User confirmation before file writes |
-| **Molecule test scaffolding** | Generate test scenarios | Medium | Molecule + Docker/Podman configs |
-| **Role dependency detection** | Identify needed Galaxy roles | Medium | Parse generated code for dependencies |
+| Feature | Value Proposition | Complexity | Dependencies |
+|---------|-------------------|------------|--------------|
+| **Save defaults option** | "Remember my choices" for future runs | Medium | Extend config system |
+| **Context detection** | Auto-detect existing project structure | Medium | File system analysis |
+| **Conditional prompts** | Show/hide prompts based on previous answers | Low | @inquirer/prompts when() |
+| **Description enhancement** | Wizard augments user description with collected details | Low | String concatenation |
+| **Preview before generation** | Show what will be asked of AI before API call | Low | Summary display |
+| **Wizard profiles** | --profile=minimal, --profile=full, --profile=testing | Medium | Profile definitions |
 
 ### Medium-Impact Differentiators
 
-| Feature | Value Proposition | Complexity | Notes |
-|---------|-------------------|------------|-------|
-| **Explain command** | Teach Ansible to newcomers | Medium | Parse and annotate existing YAML |
-| **Multiple output formats** | Role vs playbook vs task | Low | Different scaffolding templates |
-| **Platform targeting** | RHEL vs Ubuntu vs mixed | Low | OS-specific modules and paths |
-| **Vault integration hints** | Suggest what to encrypt | Low | Identify sensitive variables |
-| **Streaming output** | See generation in real-time | Medium | Better UX for long generations |
-| **Git-aware generation** | Respect .gitignore, detect repo | Low | Nice-to-have integration |
-| **Offline model support** | Local LLM option | High | Privacy-sensitive environments |
+| Feature | Value Proposition | Complexity | Dependencies |
+|---------|-------------------|------------|--------------|
+| **Suggested values from description** | AI-assisted defaults based on initial description | High | Extra API call |
+| **Role complexity selector** | Simple/standard/advanced templates | Low | Predefined structures |
+| **Group vars wizard** | Collect environment-specific variables | Medium | Nested wizard flow |
+| **Multi-play wizard** | Playbook-specific: define multiple plays | Medium | Repeatable prompt groups |
+| **Import existing role** | Parse existing role to pre-fill wizard | High | YAML parsing + inference |
 
 ### Lower-Impact Differentiators
 
-| Feature | Value Proposition | Complexity | Notes |
-|---------|-------------------|------------|-------|
-| **Shell completions** | Bash/Zsh/Fish autocompletion | Low | Standard developer convenience |
-| **JSON output mode** | Machine-readable for scripting | Low | `--json` flag |
-| **Quiet mode** | Suppress non-essential output | Trivial | `--quiet` flag |
-| **Template library** | Pre-built common patterns | Medium | Nginx, Docker, users, packages |
-| **Cost estimation** | Show token/API cost | Low | Transparency for API costs |
+| Feature | Value Proposition | Complexity | Dependencies |
+|---------|-------------------|------------|--------------|
+| **Wizard history** | Recall last wizard session answers | Medium | Session storage |
+| **Undo/back navigation** | Go back to previous question | Medium | State machine |
+| **Autocomplete for modules** | Suggest Ansible modules while typing | Medium | Module database |
+| **Dry-run wizard** | Show what prompts will be asked | Low | Separate command |
 
 ## Anti-Features
 
-Features to explicitly NOT build. Common mistakes in this domain.
+Features to explicitly NOT build. Common mistakes in wizard design.
 
 | Anti-Feature | Why Avoid | What to Do Instead |
 |--------------|-----------|-------------------|
-| **Auto-execute generated playbooks** | Security nightmare; never run untrusted code automatically | Always require explicit `ansible-playbook` by user |
-| **Auto-write without confirmation** | Users must review AI output before committing | Require `--force` or interactive confirmation |
-| **Enterprise auth/SSO** | Scope creep; Red Hat owns enterprise market | Simple API key; let enterprises wrapper it |
-| **GUI/web interface** | Distracts from CLI focus; different product | Stay terminal-native |
-| **Ansible execution engine** | Reinventing Ansible itself | Generate code, let Ansible run it |
-| **Inventory management** | Complex domain, out of scope | Focus on role/playbook generation |
-| **Plugin/extension system** | Over-engineering for MVP | Direct code modification if needed |
-| **Multi-cloud orchestration** | Terraform/Pulumi territory | Stick to configuration management |
-| **Secrets management** | Vault/1Password territory | Suggest vault usage, don't implement |
-| **User accounts/cloud sync** | Unnecessary complexity | Local-first, file-based |
-| **Telemetry without consent** | Trust destroyer | Explicit opt-in or none |
-| **"Helpful" auto-updates** | Breaking user workflows | Manual updates, version pinning |
+| **Too many prompts** | >7 prompts cause abandonment (research shows 5-7 optimal) | Group related questions, use smart defaults |
+| **Mandatory wizard** | Frustrates power users | Always allow --quick or positional args |
+| **No skip for optional prompts** | Users stuck on irrelevant questions | Allow Enter for default/skip |
+| **Nested wizards within wizards** | Confusing, hard to track state | Flatten or use separate commands |
+| **Verbose explanations per prompt** | Slows down experienced users | Brief hints, --verbose for details |
+| **Auto-save without consent** | Unexpected persistence | Explicit "Save as default?" prompt |
+| **Complex branching logic** | Combinatorial explosion of paths | Linear flow with skip conditions |
+| **GUI-style forms** | Terminal limitations, accessibility | Sequential prompts, one at a time |
+| **Required prompts for scriptable info** | Breaks CI/CD | Accept via flags or env vars |
+| **Changing prompt order** | Confuses returning users | Consistent, predictable order |
+
+## UX Patterns to Follow
+
+### 1. First-Run Wizard Pattern
+From [Lucas F. Costa's CLI UX guide](https://lucasfcosta.com/2022/06/01/ux-patterns-cli-tools.html):
+> "Your very first impression should be a guided setup that writes a config you can tweak later. Not a questionnaire - just a few, high-signal prompts with safe defaults and a clear escape hatch."
+
+**Implementation:**
+```
+ansible-craft new role "nginx reverse proxy"
+
+  Plan Mode (5 steps, press Ctrl+C to use defaults)
+
+  Step 1/5: Role Structure
+  > Which directories do you need?
+    [x] tasks (required)
+    [x] handlers
+    [x] templates
+    [ ] files
+    [x] defaults
+    [ ] vars
+    [ ] meta
+
+  Step 2/5: Target Platforms
+  > Select target OS(es):
+    [x] Ubuntu 20.04+
+    [x] RHEL 8+
+    [ ] Debian
+    [ ] Generic (all)
+
+  ...
+```
+
+### 2. Smart Prompting for Missing Information
+From [clig.dev guidelines](https://clig.dev/):
+> "Rather than throwing an error, your CLI should prompt the user to enter any outstanding information. Make sure to consider the cases where users provide some, none, and all of the required options."
+
+**Implementation:**
+```bash
+# No flags: full wizard
+ansible-craft new role "nginx"
+
+# Partial flags: only missing prompts
+ansible-craft new role "nginx" --platform=ubuntu
+
+# All flags: skip wizard entirely
+ansible-craft new role "nginx" --platform=ubuntu --structure=standard --quick
+```
+
+### 3. Progress Indication
+From [Evil Martians CLI UX guide](https://evilmartians.com/chronicles/cli-ux-best-practices-3-patterns-for-improving-progress-displays):
+> "Opt for the X of Y pattern whenever you're handling step-by-step processes."
+
+**Implementation:**
+```
+Step 2 of 5: Target Platforms
+```
+
+### 4. Bypass for Scripts
+From [clig.dev](https://clig.dev/):
+> "The user cannot script the command if prompting is required to complete it. To avoid frustrating users, allow the user to override prompts always."
+
+**Implementation:**
+- `--quick` flag skips wizard, uses intelligent defaults
+- `--no-interactive` completely disables prompts (existing flag)
+- All wizard options available as CLI flags
+
+### 5. Store Option Pattern
+From [Yeoman documentation](https://yeoman.io/authoring/user-interactions.html):
+> "When set to true, Yeoman will store/fetch the user's answers as defaults."
+
+**Implementation:**
+```
+  Step 5/5: Save Preferences?
+  > Save these choices as defaults for future roles?
+    ( ) Yes, always use these settings
+    ( ) Yes, but ask to confirm
+    (x) No, ask me each time
+```
+
+### 6. Conditional Prompts
+From [Enquirer documentation](https://github.com/enquirer/enquirer):
+> "The when property receives previous answers as its parameter, allowing complex decision-making."
+
+**Implementation:**
+```typescript
+{
+  type: 'checkbox',
+  name: 'handlers',
+  message: 'Which handlers do you need?',
+  when: (answers) => answers.structure.includes('handlers'),
+  choices: ['restart service', 'reload config', 'custom']
+}
+```
+
+## Wizard Flow Design
+
+### Role Generation Wizard
+
+```
+1. Role Structure (checkbox)
+   - tasks, handlers, templates, files, defaults, vars, meta
+   - Default: tasks, handlers, defaults
+
+2. Target Platforms (checkbox, conditional)
+   - Show only if description doesn't specify
+   - Ubuntu, RHEL, Debian, Generic
+   - Default: Generic
+
+3. Key Variables (dynamic input, optional)
+   - "What variables should be configurable?"
+   - Allow multiple entries or skip
+   - Default: infer from description
+
+4. Service Handlers (checkbox, conditional)
+   - Show only if handlers selected in step 1
+   - restart, reload, enable, custom
+   - Default: restart + reload
+
+5. Save Preferences (select, last step)
+   - Save as default / Confirm each time / Never
+   - Default: Never
+```
+
+### Playbook Generation Wizard
+
+```
+1. Play Count (number or select)
+   - Single play / Multiple plays / Let AI decide
+   - Default: Let AI decide
+
+2. Inventory Groups (input)
+   - "Which inventory groups will this target?"
+   - Default: all
+
+3. Become/Privileges (confirm)
+   - "Requires privilege escalation (become: yes)?"
+   - Default: infer from description
+
+4. Include Handlers (confirm)
+   - Default: yes
+
+5. Group Variables (conditional, complex)
+   - Show only if multiple groups
+   - Collect per-group variables
+   - Default: skip
+
+6. Save Preferences (same as role)
+```
 
 ## Feature Dependencies
 
 ```
-Core Dependencies (must build in order):
-----------------------------------------
-1. Natural language parsing
-   |
-   v
-2. LLM API integration (OpenAI/Anthropic/local)
-   |
-   v
-3. Ansible output formatting (valid YAML, proper structure)
-   |
-   v
-4. Basic CLI framework (commands, flags, help)
+Existing Features:
+------------------
+@inquirer/prompts (select, input, confirm) -----> Wizard prompts
+Config system (TOML) --------------------------> Save defaults
+Phase tracker (ora) ---------------------------> Step progress
+--no-interactive flag -------------------------> Quick mode
 
-Feature Dependencies:
----------------------
-ansible-lint integration --> valid YAML output (must validate valid code)
+New Feature Dependencies:
+-------------------------
+Wizard step counter --> ora spinner integration (update message format)
 
-context-aware generation --> file system reading
-                        --> Ansible structure parsing
+Save defaults --> Config schema extension
+             --> Prompt history storage
+             --> Re-read on next run
 
-error interpretation (fix command) --> Ansible error pattern knowledge
-                                   --> context-aware generation (to suggest fixes)
+Conditional prompts --> Answer state tracking
+                   --> when() function per prompt
 
-interactive refinement --> session/conversation state
-                      --> streaming output (for good UX)
+Context detection --> File system reading
+                 --> Existing code in src/explain/file-reader.ts
 
-molecule scaffolding --> role generation (need role first)
-                    --> platform targeting (for test matrix)
-
-explain command --> Ansible parsing (read existing code)
-               --> output formatting (annotated display)
-
-dry-run preview --> output formatting
-               --> file system operations (show diffs)
-
-offline mode --> local LLM integration (separate from cloud APIs)
-           --> model download/management
+--quick flag --> Default value inference
+           --> Skip wizard logic
+           --> Command-line flag parsing
 ```
 
 ## Complexity Assessment
 
-### Low Complexity (Days)
-- Help/documentation system
-- Exit codes and error formatting
-- Version command
-- Colored terminal output
-- Configuration file loading
-- Quiet/verbose modes
-- JSON output format
-- Shell completions
-- Dry-run preview
-- Platform targeting flags
-- Git-aware generation
+### Low Complexity (Hours to 1-2 Days)
+- Step counter display ("Step 2 of 5")
+- --quick flag to skip wizard
+- Checkbox prompts for structure/platforms
+- Basic input prompts for variables
+- Exit/cancel handling
+- Description enhancement with wizard answers
 
-### Medium Complexity (Weeks)
-- Natural language to Ansible parsing
-- LLM API integration with streaming
-- Ansible-lint integration
-- Valid YAML/structure validation
-- Interactive refinement sessions
-- Error message parsing (fix command)
-- Explain command (code annotation)
-- Best practices post-processing
-- Molecule test scaffolding
-- Template library system
-- Role dependency detection
+### Medium Complexity (Days)
+- Save defaults to config (extend schema)
+- Load saved defaults on next run
+- Conditional prompts (when() logic)
+- Dynamic prompt count based on conditions
+- Profile system (--profile=minimal)
+- Context detection from existing files
 
-### High Complexity (Months)
-- Context-aware generation (reading existing codebase)
-- Offline/local LLM support
-- Advanced error interpretation with fixes
-- Multi-model support (OpenAI + Anthropic + local)
+### High Complexity (Week+)
+- AI-assisted default values (extra API call)
+- Import existing role to pre-fill wizard
+- Undo/back navigation in wizard
+- Full wizard state machine with branching
 
 ## MVP Recommendation
 
-For MVP, prioritize:
+### Phase 1: Basic Wizard (v1.1.0)
+1. Step counter ("Step 2 of 5")
+2. Role structure checkbox (tasks, handlers, templates, etc.)
+3. Platform targeting select
+4. --quick flag to skip
+5. Enhance description with wizard answers
 
-1. **Table stakes first:**
-   - Natural language to Ansible role/playbook generation
-   - Valid YAML with proper structure
-   - Basic CLI framework (help, version, config)
-   - Clear error messages
+### Phase 2: Smart Defaults (v1.2.0)
+1. Save defaults to config
+2. Load defaults on next run
+3. Conditional prompts
+4. Playbook wizard (multi-play support)
 
-2. **One killer differentiator:**
-   - `fix` command (error interpretation) - unique value prop
-   - OR ansible-lint integration - immediate quality signal
-
-3. **Defer to post-MVP:**
-   - Context-aware generation (complex)
-   - Offline mode (separate infrastructure)
-   - Molecule scaffolding (nice-to-have)
-   - Template library (can grow organically)
-   - Interactive refinement (needs conversation state)
-
-## Competitive Positioning
-
-| Competitor | Strengths | Ansible Craft Opportunity |
-|------------|-----------|---------------------------|
-| **Ansible Lightspeed** | IBM backing, enterprise features, VS Code integration | CLI-native, open/indie, simpler setup |
-| **ChatGPT/Claude** | General knowledge, conversational | Ansible-specialized, validated output, workflow integration |
-| **GitHub Copilot CLI** | GitHub ecosystem, broad language support | Deep Ansible expertise, domain-specific quality |
-| **Generic scaffolders** | Fast, predictable | AI-powered customization, natural language |
+### Phase 3: Advanced (v1.3.0+)
+1. Wizard profiles
+2. Context detection
+3. AI-assisted suggestions
+4. Import existing role
 
 ## Sources
 
-- [AI Coding Tools in 2025: The Agentic CLI Era - The New Stack](https://thenewstack.io/ai-coding-tools-in-2025-welcome-to-the-agentic-cli-era/)
-- [Agentic CLI Tools Compared - AIMultiple](https://research.aimultiple.com/agentic-cli/)
-- [Red Hat Ansible Lightspeed](https://www.redhat.com/en/technologies/management/ansible/ansible-lightspeed)
-- [3 Ways Ansible Lightspeed Simplifies Automation - Red Hat Developer](https://developers.redhat.com/articles/2025/02/11/3-ways-ansible-lightspeed-simplifies-automation)
-- [GitHub Copilot CLI Features - GitHub Docs](https://docs.github.com/en/copilot/concepts/agents/about-copilot-cli)
-- [Ansible Best Practices 2025 - GoCodeo](https://www.gocodeo.com/post/ansible-in-2025-best-practices-for-configuration-and-provisioning)
-- [5 Best Ansible Playbook Scanning Tools - Steampunk](https://steampunk.si/spotter/blog/five-best-ansible-playbook-scanning-tools/)
-- [IBM watsonx Code Generation for Ansible](https://www.ibm.com/architectures/hybrid/genai-code-generation-ansible)
-- [Rethinking CLI Interfaces for AI](https://www.notcheckmark.com/2025/07/rethinking-cli-interfaces-for-ai/)
-- [AI CLI Security Concerns - Red Canary](https://redcanary.com/blog/threat-detection/ai-cli-tools/)
-- [Top 5 Agentic Coding CLI Tools - KDnuggets](https://www.kdnuggets.com/top-5-agentic-coding-cli-tools)
-- [Testing 5 AI CLI Tools - LogRocket](https://blog.logrocket.com/tested-5-ai-cli-tools/)
+### CLI UX Guidelines
+- [Command Line Interface Guidelines](https://clig.dev/) - Comprehensive CLI design principles
+- [UX Patterns for CLI Tools](https://lucasfcosta.com/2022/06/01/ux-patterns-cli-tools.html) - Lucas F. Costa's detailed patterns
+- [Atlassian's 10 Design Principles for CLIs](https://www.atlassian.com/blog/it-teams/10-design-principles-for-delightful-clis) - Enterprise CLI best practices
+- [Evil Martians CLI Progress Displays](https://evilmartians.com/chronicles/cli-ux-best-practices-3-patterns-for-improving-progress-displays) - Progress indicator patterns
+
+### Prompt Libraries
+- [@inquirer/prompts npm](https://www.npmjs.com/package/@inquirer/prompts) - Modern Inquirer.js API
+- [Enquirer GitHub](https://github.com/enquirer/enquirer) - Alternative prompt library with when() support
+- [Yeoman User Interactions](https://yeoman.io/authoring/user-interactions.html) - Store option pattern
+
+### Wizard Design
+- [NN/g Wizard Definition](https://www.nngroup.com/articles/wizards/) - When to use wizards
+- [How to Design a Form Wizard](https://coyleandrew.medium.com/how-to-design-a-form-wizard-b85fe1cc665a) - Best practices
+- [AWS CLI Wizards](https://docs.aws.amazon.com/cli/latest/userguide/cli-usage-wizard.html) - Enterprise wizard patterns
+- [GitHub CLI Prompts](https://github.com/cli/cli/issues/1739) - Non-interactive mode discussion
