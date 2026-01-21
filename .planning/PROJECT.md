@@ -27,7 +27,12 @@ Generate complete, production-ready Ansible roles from natural language descript
 
 ### Active
 
-(None — awaiting v1.1 milestone planning)
+**v1.1 Plan Mode:**
+- Interactive wizard flow for context gathering before generation
+- Structured questions covering code organization, components, variable strategy
+- Applies to both role and playbook generation
+- Option to save choices as defaults for future sessions
+- `--quick` flag to bypass wizard and use defaults
 
 ### Out of Scope
 
@@ -37,7 +42,7 @@ Generate complete, production-ready Ansible roles from natural language descript
 - Billing/subscriptions — requires backend
 - Template library — future feature requiring persistence
 - Team features — requires backend and accounts
-- Molecule test generation — defer to v2
+- Molecule test generation — may include basic scaffolding in v1.1 plan mode questions
 - MCP server mode — defer to v2
 - VS Code extension — defer to v2
 
@@ -90,5 +95,17 @@ Generate complete, production-ready Ansible roles from natural language descript
 | SARIF lint format | Machine-readable, version-stable parsing | ✓ Good — reliable integration |
 | Warnings not errors for FQCN/idempotency | Quality guidance without blocking generation | ✓ Good — better UX |
 
+## Current Milestone: v1.1 Plan Mode
+
+**Goal:** Add interactive context-gathering wizard before generation for more tailored, user-controlled output.
+
+**Target features:**
+- Wizard flow with step-by-step questions and progress indicators
+- Questions covering: code structure, component inclusion, variable strategy
+- Both `new role` and `new playbook` commands support wizard
+- Option to save choices as defaults at end of wizard
+- `--quick` flag to skip wizard and use saved/built-in defaults
+- Temporary context file passed to generation (not persisted unless saved as defaults)
+
 ---
-*Last updated: 2026-01-21 after v1.0 milestone*
+*Last updated: 2026-01-21 after v1.1 milestone started*
