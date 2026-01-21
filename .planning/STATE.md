@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2025-01-18)
 
 **Core value:** Generate complete, production-ready Ansible roles from natural language — FQCN compliant, idempotent, ansible-lint passing
-**Current focus:** Phase 7 - Error Commands (VERIFIED COMPLETE)
+**Current focus:** Phase 8 - Publishing (In Progress)
 
 ## Current Position
 
-Phase: 7 of 8 (Error Commands)
-Plan: 4 of 4 in current phase
-Status: Phase verified and complete
-Last activity: 2026-01-20 — Phase 7 verified and complete
+Phase: 8 of 8 (Publishing)
+Plan: 1 of 5 in current phase
+Status: In progress
+Last activity: 2026-01-21 — Completed 08-01-PLAN.md
 
-Progress: [██████████████████████░░] ~88%
+Progress: [██████████████████████░░] ~90%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 27
+- Total plans completed: 28
 - Average duration: ~3.1 minutes
-- Total execution time: ~83.5 minutes
+- Total execution time: ~87.5 minutes
 
 **By Phase:**
 
@@ -34,10 +34,11 @@ Progress: [██████████████████████░
 | 05-playbook-generation | 4/4 | ~15min | ~4min |
 | 06-quality-assurance | 5/5 | ~11min | ~2min |
 | 07-error-commands | 4/4 | ~10.5min | ~2.6min |
+| 08-publishing | 1/5 | ~4min | ~4min |
 
 **Recent Trend:**
-- Last 5 plans: 06-05 (~3min), 07-01 (~3min), 07-02 (~2min), 07-03 (~2.5min), 07-04 (~3min)
-- Trend: Consistent ~2-3min per plan
+- Last 5 plans: 07-02 (~2min), 07-03 (~2.5min), 07-04 (~3min), 08-01 (~4min)
+- Trend: Consistent ~2-4min per plan
 
 *Updated after each plan completion*
 
@@ -80,7 +81,7 @@ Recent decisions affecting current work:
 - [03-03-01]: Spinner on stderr — keep stdout clean for piping
 - [03-03-02]: Dots spinner with cyan color — professional CLI aesthetics
 - [03-03-03]: Newline before error if partial output — clean error display
-- [03-03-04]: import type for Anthropic — SDK used only for type annotations
+- [03-33-04]: import type for Anthropic — SDK used only for type annotations
 - [04-01-01]: 27 FQCN examples in system prompt — comprehensive coverage
 - [04-01-02]: File markers === PATH: / === END === — simple parsing format
 - [04-01-03]: additionalProperties: false in schema — strict validation
@@ -142,6 +143,9 @@ Recent decisions affecting current work:
 - [07-04-03]: applyFix default confirm=false (safety first) — explicit user approval required
 - [07-04-04]: locateTargetFile uses multiple regex patterns — handles diverse Ansible error formats
 - [07-04-05]: Fix command skips confirmation only with --apply flag — explicit opt-in to auto-apply
+- [08-01-01]: ESM-only build — CJS incompatible with top-level await in codebase
+- [08-01-02]: No banner needed — source already has shebang
+- [08-01-03]: files whitelist — dist, README.md, LICENSE
 
 ### Pending Todos
 
@@ -153,11 +157,11 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-01-20
-Stopped at: Phase 7 verified and complete
+Last session: 2026-01-21
+Stopped at: Completed 08-01-PLAN.md
 Resume file: None
-Next: Phase 8 - Publishing
+Next: 08-02-PLAN.md (Dual format entry points)
 
 ---
 *State initialized: 2025-01-18*
-*Last updated: 2026-01-20*
+*Last updated: 2026-01-21*
