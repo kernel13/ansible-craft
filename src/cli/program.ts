@@ -1,4 +1,5 @@
 import { Command } from 'commander';
+import { completionsCommand } from './commands/completions.js';
 import { configCommand } from './commands/config.js';
 import { explainCommand } from './commands/explain.js';
 import { fixCommand } from './commands/fix.js';
@@ -36,6 +37,7 @@ program
 program.option('-V, --version', 'Display version information');
 
 // Register commands
+program.addCommand(completionsCommand);
 program.addCommand(configCommand);
 program.addCommand(newCommand);
 program.addCommand(explainCommand);
