@@ -65,11 +65,11 @@ Plans:
   3. User can select target platforms (Ubuntu, RHEL, Debian, Windows, Generic)
   4. User can select which handlers to generate (restart, reload, enable, custom)
   5. User can exit wizard with Ctrl+C and see clean cancellation message
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 10-01: Role wizard prompts and runner
-- [ ] 10-02: Role wizard state management and Ctrl+C handling
+- [ ] 10-01-PLAN.md — Wizard prompts and runner (4-step flow with validation)
+- [ ] 10-02-PLAN.md — Unit tests and ExitPromptError handling verification
 
 #### Phase 11: Playbook Wizard
 **Goal**: Users can interactively customize playbook generation through step-by-step prompts
@@ -122,11 +122,11 @@ Phases execute in numeric order: 9 -> 10 -> 11 -> 12 -> 13
 |-------|-----------|----------------|--------|-----------|
 | 1-8 | v1.0 | 32/32 | Complete | 2026-01-21 |
 | 9. Foundation | v1.1 | 1/1 | Complete | 2026-01-21 |
-| 10. Role Wizard | v1.1 | 0/2 | Not started | - |
+| 10. Role Wizard | v1.1 | 0/2 | Planned | - |
 | 11. Playbook Wizard | v1.1 | 0/1 | Not started | - |
 | 12. CLI Integration | v1.1 | 0/2 | Not started | - |
 | 13. Defaults Management | v1.1 | 0/1 | Not started | - |
 
 ---
 *Roadmap created: 2026-01-21*
-*Last updated: 2026-01-21 — Phase 9 complete*
+*Last updated: 2026-01-22 — Phase 10 planned (2 plans)*
