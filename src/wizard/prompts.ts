@@ -58,7 +58,7 @@ export async function promptDirectories(): Promise<RoleStructureDirectory[]> {
     ],
     pageSize: 10,
     loop: true,
-    validate: (answer) => {
+    validate: (answer: readonly RoleStructureDirectory[]) => {
       // Ensure tasks is always included (safety check since it's disabled)
       return answer.includes('tasks') || 'tasks directory is required';
     },
@@ -87,7 +87,7 @@ export async function promptPlatforms(): Promise<RolePlatform[]> {
     ],
     pageSize: 8,
     loop: true,
-    validate: (answer) => {
+    validate: (answer: readonly RolePlatform[]) => {
       if (answer.length === 0) {
         return 'Select at least one platform';
       }
