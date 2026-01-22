@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-01-21)
 
 **Core value:** Generate complete, production-ready Ansible roles from natural language — FQCN compliant, idempotent, ansible-lint passing
-**Current focus:** v1.1 Plan Mode — Phase 12: CLI Integration
+**Current focus:** v1.1 Plan Mode — Phase 12: CLI Integration (COMPLETE)
 
 ## Current Position
 
 Phase: 12 of 13 (CLI Integration)
-Plan: 1 of 2 in current phase (COMPLETE)
-Status: In progress
-Last activity: 2026-01-22 — Completed 12-01-PLAN.md (wizard CLI integration)
+Plan: 2 of 2 in current phase (COMPLETE)
+Status: Phase complete
+Last activity: 2026-01-22 — Completed 12-02-PLAN.md (CLI integration tests)
 
-Progress: [##############......] 71% (v1.0 complete + 5/7 v1.1 plans)
+Progress: [###############.....] 86% (v1.0 complete + 6/7 v1.1 plans)
 
 ## Completed Milestones
 
@@ -33,7 +33,7 @@ Progress: [##############......] 71% (v1.0 complete + 5/7 v1.1 plans)
 
 **v1.1 Milestone:**
 - Total plans: 7 (estimated)
-- Completed: 5
+- Completed: 6
 - Average duration: ~2.8 minutes per plan
 
 ## Accumulated Context
@@ -62,6 +62,8 @@ Recent decisions for v1.1:
 - Use capital -Q for --quick since -q is already used for --quiet (12-01)
 - Non-TTY stdin silently skips wizard without error (12-01)
 - JSON mode implies wizard skip for machine output (12-01)
+- Use logic extraction pattern for CLI tests to avoid mock pollution (12-02)
+- Test CLI options via Commander introspection (12-02)
 
 ### Pending Todos
 
@@ -74,10 +76,10 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-22
-Stopped at: Completed 12-01-PLAN.md (wizard CLI integration)
+Stopped at: Completed 12-02-PLAN.md (CLI integration tests)
 Resume file: None
-Next: Phase 12-02 (CLI integration tests)
+Next: Phase 13 (remaining v1.1 work)
 
 ---
 *State initialized: 2025-01-18*
-*Last updated: 2026-01-22 — Completed 12-01 wizard CLI integration*
+*Last updated: 2026-01-22 — Completed 12-02 CLI integration tests*
