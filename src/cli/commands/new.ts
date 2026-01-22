@@ -2,15 +2,21 @@
  * New command for ansible-craft CLI.
  *
  * Provides the `new role` and `new playbook` subcommands.
+ * Uses specialized agents for parallel validation/linting and file writing.
  */
 
-import { mkdir, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
-
+import { ExitPromptError } from '@inquirer/core';
 import { confirm, input, select } from '@inquirer/prompts';
 import chalk from 'chalk';
 import { Command } from 'commander';
+import { runPlaybookWizard } from '../../wizard/playbook-wizard.js';
+import { runRoleWizard } from '../../wizard/role-wizard.js';
+import {
+  formatPlaybookContextForPrompt,
+  formatRoleContextForPrompt,
+} from '../../wizard/types.js';
+import { FixerAgent, WriterAgent, validateAndLint } from '../../agents/index.js';
+import type { WriterOutput } from '../../agents/types.js';
 import { createClient } from '../../ai/client.js';
 import { displayApiError, transformApiError } from '../../ai/errors.js';
 import { loadConfig } from '../../config/index.js';
@@ -19,8 +25,8 @@ import {
   type LintViolation,
   type PlanPreview,
   type PlaybookPlanPreview,
-  applyAutoFixes,
-  canAutoFix,
+  type WritePlaybookResult,
+  type WriteResult,
   displayPlaybookTree,
   displayRoleTree,
   displayValidationReport,
@@ -31,13 +37,9 @@ import {
   generateRolePlan,
   inferPlaybookName,
   inferRoleName,
-  isAnsibleLintAvailable,
-  runAnsibleLint,
   sanitizeRoleName,
-  validateGeneratedFiles,
-  writeGeneratedPlaybook,
-  writeGeneratedRole,
 } from '../../generation/index.js';
+import { createAgentContext, displayAgentWarnings, handleAgentFailure } from '../helpers/index.js';
 import {
   formatJsonError,
   formatJsonSuccess,
@@ -51,6 +53,30 @@ import { displayLintResults, previewAndConfirm } from '../preview.js';
  * New command - create new Ansible resources.
  */
 export const newCommand = new Command('new').description('Generate new Ansible resources');
+
+/**
+ * Convert WriterOutput to WriteResult format for displayRoleTree.
+ */
+function toWriteResult(output: WriterOutput, dryRun: boolean): WriteResult {
+  return {
+    roleDir: output.targetDir,
+    filesWritten: output.written,
+    dirsCreated: [],
+    dryRun,
+  };
+}
+
+/**
+ * Convert WriterOutput to WritePlaybookResult format for displayPlaybookTree.
+ */
+function toWritePlaybookResult(output: WriterOutput, dryRun: boolean): WritePlaybookResult {
+  return {
+    playbookDir: output.targetDir,
+    filesWritten: output.written,
+    dirsCreated: [],
+    dryRun,
+  };
+}
 
 /**
  * Display plan preview to console.
@@ -110,6 +136,7 @@ newCommand
   .option('--force', 'Overwrite existing directory without prompting')
   .option('--fix', 'Auto-fix lint violations without prompting')
   .option('--no-interactive', 'Skip clarifying questions')
+  .option('-Q, --quick', 'Skip wizard and use defaults')
   .option('-q, --quiet', 'Suppress progress output')
   .option('--json', 'Output results in JSON format')
   .action(
@@ -122,6 +149,7 @@ newCommand
         force?: boolean;
         fix?: boolean;
         interactive?: boolean;
+        quick?: boolean;
         quiet?: boolean;
         json?: boolean;
       },
@@ -159,12 +187,35 @@ newCommand
           console.log(chalk.dim(`From: "${description}"\n`));
         }
 
+        // Determine wizard skip conditions:
+        // - --quick flag explicitly skips
+        // - --no-interactive skips (options.interactive === false)
+        // - --json mode implies skip (machine output)
+        // - Non-TTY stdin silently skips (pipe/CI)
+        const skipWizard =
+          options.quick || options.interactive === false || jsonMode || !process.stdin.isTTY;
+
+        let clarifications: Record<string, string> | undefined;
+
+        if (!skipWizard) {
+          try {
+            const context = await runRoleWizard();
+            clarifications = formatRoleContextForPrompt(context);
+          } catch (error) {
+            if (error instanceof ExitPromptError) {
+              console.log(chalk.yellow('\nWizard cancelled.'));
+              return;
+            }
+            throw error;
+          }
+        }
+
         // Create phase tracker for progress display
         const tracker = createPhaseTracker(options.quiet ?? false);
 
         // 3. Generate plan preview
         tracker.start('Planning role structure...');
-        const plan = await generateRolePlan(client, description, undefined, {
+        const plan = await generateRolePlan(client, description, clarifications, {
           quiet: true, // Suppress inner spinner - tracker handles progress
         });
         tracker.succeed('Planning complete');
@@ -201,7 +252,7 @@ newCommand
               currentPlan = await generateRolePlan(
                 client,
                 `${description}\n\nUser feedback: ${feedback}`,
-                undefined,
+                clarifications,
                 { quiet: true },
               );
               tracker.succeed('Plan updated');
@@ -214,25 +265,44 @@ newCommand
 
         // 6. Generate code
         tracker.start('Generating role code...');
-        const files = await generateRoleCode(client, currentPlan, description, {
+        let files = await generateRoleCode(client, currentPlan, description, {
           quiet: true, // Suppress inner spinner - tracker handles progress
         });
         tracker.succeed('Code generation complete');
 
-        // 7. Validate YAML syntax
-        tracker.start('Validating generated code...');
-        const report = validateGeneratedFiles(files);
-        tracker.succeed('Validation complete');
-        if (!jsonMode) {
-          displayValidationReport(report);
+        // Create agent context for parallel operations
+        const agentContext = createAgentContext({
+          config,
+          quiet: options.quiet,
+          json: jsonMode,
+        });
+
+        // 7. Validate and lint in parallel (using agents)
+        tracker.start('Validating and linting...');
+        const { validation, lint } = await validateAndLint(files, agentContext);
+        tracker.succeed('Quality checks complete');
+
+        // Handle validation failure
+        if (!validation.success) {
+          handleAgentFailure(validation, {
+            jsonMode,
+            tracker,
+            phaseName: 'Validation failed',
+          });
         }
 
-        if (!report.valid) {
+        // Display validation report (if available)
+        if (!jsonMode && validation.data) {
+          displayValidationReport(validation.data.report);
+        }
+
+        // Check validation passed
+        if (validation.data && !validation.data.report.valid) {
           if (jsonMode) {
             outputJson(
               formatJsonError('VALIDATION_ERROR', 'Generation failed due to YAML errors', {
-                errors: report.errors.map((e) => ({
-                  file: e.file,
+                errors: validation.data.report.errors.map((e) => ({
+                  file: e.path,
                   message: e.message,
                   line: e.line,
                   column: e.column,
@@ -245,29 +315,22 @@ newCommand
           process.exit(1);
         }
 
-        // 8. Run ansible-lint (if available)
-        let lintViolations: LintViolation[] = [];
-        const lintAvailable = await isAnsibleLintAvailable();
+        // 8. Process lint results
+        let lintViolations: LintViolation[] = lint.data?.violations ?? [];
+        const lintAvailable = lint.data?.available ?? false;
 
-        if (lintAvailable) {
-          tracker.start('Running ansible-lint...');
-          const tempDir = await writeTempFiles(files);
-          try {
-            const lintResult = await runAnsibleLint(tempDir);
-            lintViolations = lintResult.violations;
-          } finally {
-            await cleanupTempDir(tempDir);
-          }
-          tracker.succeed('Lint check complete');
-        } else if (!jsonMode) {
+        if (!lintAvailable && !jsonMode) {
           console.log(chalk.dim(`\nNote: ansible-lint not found. ${formatInstallInstructions()}`));
         }
 
-        // 9. Auto-fix if violations exist
+        // 9. Auto-fix if violations exist (using FixerAgent)
         if (lintViolations.length > 0) {
-          const fixable = lintViolations.filter((v) => canAutoFix(v.ruleId));
+          const fixerAgent = new FixerAgent();
+          const fixableCount = lintViolations.filter(
+            (v) => fixerAgent.name && v.ruleId,
+          ).length;
 
-          if (fixable.length > 0) {
+          if (fixableCount > 0) {
             if (!jsonMode) {
               displayLintResults(lintViolations);
             }
@@ -276,19 +339,22 @@ newCommand
             const shouldFix =
               options.fix ||
               (await confirm({
-                message: `Auto-fix ${fixable.length} issue(s)?`,
+                message: `Auto-fix ${fixableCount} issue(s)?`,
                 default: true,
               }));
 
             if (shouldFix) {
-              const fixResult = applyAutoFixes(files, lintViolations);
-              // Update files array with fixed content
-              for (const file of files) {
-                const fixed = fixResult.modifiedContent.get(file.path);
-                if (fixed) file.content = fixed;
-              }
-              if (!jsonMode) {
-                console.log(chalk.green(`\n  Fixed ${fixResult.fixed.length} issue(s)`));
+              const fixResult = await fixerAgent.execute(
+                { files, violations: lintViolations, autoFix: true },
+                agentContext,
+              );
+
+              if (fixResult.success && fixResult.data) {
+                files = fixResult.data.modifiedFiles;
+                displayAgentWarnings(fixResult.warnings, options.quiet ?? false);
+                if (!jsonMode) {
+                  console.log(chalk.green(`\n  Fixed ${fixResult.data.fixed.length} issue(s)`));
+                }
               }
             }
           } else if (!jsonMode) {
@@ -306,13 +372,25 @@ newCommand
           }
         }
 
-        // 11. Write files
-        const result = await writeGeneratedRole(files, {
-          roleName,
-          outputDir: options.output,
-          dryRun: options.dryRun ?? false,
-          force: options.force,
-        });
+        // 11. Write files (using WriterAgent for parallel I/O)
+        const writerAgent = new WriterAgent();
+        const writeResult = await writerAgent.execute(
+          {
+            files,
+            outputDir: options.output ?? process.cwd(),
+            name: roleName,
+            type: 'role',
+            force: options.force ?? false,
+            dryRun: options.dryRun ?? false,
+          },
+          agentContext,
+        );
+
+        if (!writeResult.success) {
+          handleAgentFailure(writeResult, { jsonMode });
+        }
+
+        const result = toWriteResult(writeResult.data!, options.dryRun ?? false);
 
         // 12. Display result or output JSON
         if (jsonMode) {
@@ -417,32 +495,6 @@ function displayPlaybookPlanPreview(plan: PlaybookPlanPreview): void {
   }
 
   console.log('');
-}
-
-/**
- * Write generated files to a temporary directory for linting.
- *
- * @param files - Generated files to write
- * @returns Path to the temporary directory
- */
-async function writeTempFiles(files: GeneratedFile[]): Promise<string> {
-  const tempDir = join(tmpdir(), `ansible-craft-${Date.now()}`);
-  await mkdir(tempDir, { recursive: true });
-  for (const file of files) {
-    const filePath = join(tempDir, file.path);
-    await mkdir(dirname(filePath), { recursive: true });
-    await writeFile(filePath, file.content, 'utf-8');
-  }
-  return tempDir;
-}
-
-/**
- * Clean up a temporary directory.
- *
- * @param dir - Directory to remove
- */
-async function cleanupTempDir(dir: string): Promise<void> {
-  await rm(dir, { recursive: true, force: true });
 }
 
 /**
@@ -563,25 +615,44 @@ newCommand
 
         // 6. Generate code
         tracker.start('Generating playbook code...');
-        const files = await generatePlaybookCode(client, currentPlan, description, {
+        let files = await generatePlaybookCode(client, currentPlan, description, {
           quiet: true, // Suppress inner spinner - tracker handles progress
         });
         tracker.succeed('Code generation complete');
 
-        // 7. Validate YAML syntax
-        tracker.start('Validating generated code...');
-        const report = validateGeneratedFiles(files);
-        tracker.succeed('Validation complete');
-        if (!jsonMode) {
-          displayValidationReport(report);
+        // Create agent context for parallel operations
+        const agentContext = createAgentContext({
+          config,
+          quiet: options.quiet,
+          json: jsonMode,
+        });
+
+        // 7. Validate and lint in parallel (using agents)
+        tracker.start('Validating and linting...');
+        const { validation, lint } = await validateAndLint(files, agentContext);
+        tracker.succeed('Quality checks complete');
+
+        // Handle validation failure
+        if (!validation.success) {
+          handleAgentFailure(validation, {
+            jsonMode,
+            tracker,
+            phaseName: 'Validation failed',
+          });
         }
 
-        if (!report.valid) {
+        // Display validation report (if available)
+        if (!jsonMode && validation.data) {
+          displayValidationReport(validation.data.report);
+        }
+
+        // Check validation passed
+        if (validation.data && !validation.data.report.valid) {
           if (jsonMode) {
             outputJson(
               formatJsonError('VALIDATION_ERROR', 'Generation failed due to YAML errors', {
-                errors: report.errors.map((e) => ({
-                  file: e.file,
+                errors: validation.data.report.errors.map((e) => ({
+                  file: e.path,
                   message: e.message,
                   line: e.line,
                   column: e.column,
@@ -594,29 +665,22 @@ newCommand
           process.exit(1);
         }
 
-        // 8. Run ansible-lint (if available)
-        let lintViolations: LintViolation[] = [];
-        const lintAvailable = await isAnsibleLintAvailable();
+        // 8. Process lint results
+        let lintViolations: LintViolation[] = lint.data?.violations ?? [];
+        const lintAvailable = lint.data?.available ?? false;
 
-        if (lintAvailable) {
-          tracker.start('Running ansible-lint...');
-          const tempDir = await writeTempFiles(files);
-          try {
-            const lintResult = await runAnsibleLint(tempDir);
-            lintViolations = lintResult.violations;
-          } finally {
-            await cleanupTempDir(tempDir);
-          }
-          tracker.succeed('Lint check complete');
-        } else if (!jsonMode) {
+        if (!lintAvailable && !jsonMode) {
           console.log(chalk.dim(`\nNote: ansible-lint not found. ${formatInstallInstructions()}`));
         }
 
-        // 9. Auto-fix if violations exist
+        // 9. Auto-fix if violations exist (using FixerAgent)
         if (lintViolations.length > 0) {
-          const fixable = lintViolations.filter((v) => canAutoFix(v.ruleId));
+          const fixerAgent = new FixerAgent();
+          const fixableCount = lintViolations.filter(
+            (v) => fixerAgent.name && v.ruleId,
+          ).length;
 
-          if (fixable.length > 0) {
+          if (fixableCount > 0) {
             if (!jsonMode) {
               displayLintResults(lintViolations);
             }
@@ -625,19 +689,22 @@ newCommand
             const shouldFix =
               options.fix ||
               (await confirm({
-                message: `Auto-fix ${fixable.length} issue(s)?`,
+                message: `Auto-fix ${fixableCount} issue(s)?`,
                 default: true,
               }));
 
             if (shouldFix) {
-              const fixResult = applyAutoFixes(files, lintViolations);
-              // Update files array with fixed content
-              for (const file of files) {
-                const fixed = fixResult.modifiedContent.get(file.path);
-                if (fixed) file.content = fixed;
-              }
-              if (!jsonMode) {
-                console.log(chalk.green(`\n  Fixed ${fixResult.fixed.length} issue(s)`));
+              const fixResult = await fixerAgent.execute(
+                { files, violations: lintViolations, autoFix: true },
+                agentContext,
+              );
+
+              if (fixResult.success && fixResult.data) {
+                files = fixResult.data.modifiedFiles;
+                displayAgentWarnings(fixResult.warnings, options.quiet ?? false);
+                if (!jsonMode) {
+                  console.log(chalk.green(`\n  Fixed ${fixResult.data.fixed.length} issue(s)`));
+                }
               }
             }
           } else if (!jsonMode) {
@@ -655,13 +722,25 @@ newCommand
           }
         }
 
-        // 11. Write files
-        const result = await writeGeneratedPlaybook(files, {
-          playbookName,
-          outputDir: options.output,
-          dryRun: options.dryRun ?? false,
-          force: options.force,
-        });
+        // 11. Write files (using WriterAgent for parallel I/O)
+        const writerAgent = new WriterAgent();
+        const writeResult = await writerAgent.execute(
+          {
+            files,
+            outputDir: options.output ?? process.cwd(),
+            name: playbookName,
+            type: 'playbook',
+            force: options.force ?? false,
+            dryRun: options.dryRun ?? false,
+          },
+          agentContext,
+        );
+
+        if (!writeResult.success) {
+          handleAgentFailure(writeResult, { jsonMode });
+        }
+
+        const result = toWritePlaybookResult(writeResult.data!, options.dryRun ?? false);
 
         // 12. Display result or output JSON
         if (jsonMode) {
