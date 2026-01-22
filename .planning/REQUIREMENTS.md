@@ -9,12 +9,12 @@ Requirements for Plan Mode milestone. Each maps to roadmap phases.
 
 ### Role Wizard
 
-- [ ] **RWIZ-01**: User sees step-by-step prompts with progress indicator (Step 1 of N)
-- [ ] **RWIZ-02**: User can select role structure directories (tasks, handlers, templates, files, defaults, vars, meta)
-- [ ] **RWIZ-03**: User can select target platforms (Ubuntu, RHEL, Debian, Windows, Generic)
-- [ ] **RWIZ-04**: User can select handlers needed (restart, reload, enable, custom)
+- [x] **RWIZ-01**: User sees step-by-step prompts with progress indicator (Step 1 of N)
+- [x] **RWIZ-02**: User can select role structure directories (tasks, handlers, templates, files, defaults, vars, meta)
+- [x] **RWIZ-03**: User can select target platforms (Ubuntu, RHEL, Debian, Windows, Generic)
+- [x] **RWIZ-04**: User can select handlers needed (restart, reload, enable, custom)
 - [ ] **RWIZ-05**: User can skip wizard with --quick flag and use defaults
-- [ ] **RWIZ-06**: User can exit wizard with Ctrl+C (uses defaults or cancels)
+- [x] **RWIZ-06**: User can exit wizard with Ctrl+C (uses defaults or cancels)
 
 ### Playbook Wizard
 
@@ -69,12 +69,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| RWIZ-01 | Phase 10: Role Wizard | Pending |
-| RWIZ-02 | Phase 10: Role Wizard | Pending |
-| RWIZ-03 | Phase 10: Role Wizard | Pending |
-| RWIZ-04 | Phase 10: Role Wizard | Pending |
+| RWIZ-01 | Phase 10: Role Wizard | Complete |
+| RWIZ-02 | Phase 10: Role Wizard | Complete |
+| RWIZ-03 | Phase 10: Role Wizard | Complete |
+| RWIZ-04 | Phase 10: Role Wizard | Complete |
 | RWIZ-05 | Phase 12: CLI Integration | Pending |
-| RWIZ-06 | Phase 10: Role Wizard | Pending |
+| RWIZ-06 | Phase 10: Role Wizard | Complete |
 | PWIZ-01 | Phase 11: Playbook Wizard | Pending |
 | PWIZ-02 | Phase 11: Playbook Wizard | Pending |
 | PWIZ-03 | Phase 11: Playbook Wizard | Pending |
@@ -91,4 +91,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-01-21*
-*Last updated: 2026-01-21 — Traceability updated with phase mappings*
+*Last updated: 2026-01-22 — Phase 10 requirements complete (RWIZ-01, RWIZ-02, RWIZ-03, RWIZ-04, RWIZ-06)*

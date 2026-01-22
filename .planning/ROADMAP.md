@@ -16,7 +16,7 @@ v1.1 adds an interactive wizard system to ansible-craft that gathers structured 
 - Decimal phases (10.1, 10.2): Urgent insertions (marked with INSERTED)
 
 - [x] **Phase 9: Foundation** - Type definitions and context schema for wizard system
-- [ ] **Phase 10: Role Wizard** - Interactive prompts for role structure, platforms, handlers
+- [x] **Phase 10: Role Wizard** - Interactive prompts for role structure, platforms, handlers
 - [ ] **Phase 11: Playbook Wizard** - Interactive prompts for playbook hosts, escalation, handlers
 - [ ] **Phase 12: CLI Integration** - --quick flag, TTY detection, context passing to AI
 - [ ] **Phase 13: Defaults Management** - Save and load wizard choices as defaults
@@ -68,8 +68,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 10-01-PLAN.md — Wizard prompts and runner (4-step flow with validation)
-- [ ] 10-02-PLAN.md — Unit tests and ExitPromptError handling verification
+- [x] 10-01-PLAN.md — Wizard prompts and runner (4-step flow with validation)
+- [x] 10-02-PLAN.md — Unit tests and ExitPromptError handling verification
 
 #### Phase 11: Playbook Wizard
 **Goal**: Users can interactively customize playbook generation through step-by-step prompts
@@ -122,11 +122,11 @@ Phases execute in numeric order: 9 -> 10 -> 11 -> 12 -> 13
 |-------|-----------|----------------|--------|-----------|
 | 1-8 | v1.0 | 32/32 | Complete | 2026-01-21 |
 | 9. Foundation | v1.1 | 1/1 | Complete | 2026-01-21 |
-| 10. Role Wizard | v1.1 | 0/2 | Planned | - |
+| 10. Role Wizard | v1.1 | 2/2 | Complete | 2026-01-22 |
 | 11. Playbook Wizard | v1.1 | 0/1 | Not started | - |
 | 12. CLI Integration | v1.1 | 0/2 | Not started | - |
 | 13. Defaults Management | v1.1 | 0/1 | Not started | - |
 
 ---
 *Roadmap created: 2026-01-21*
-*Last updated: 2026-01-22 — Phase 10 planned (2 plans)*
+*Last updated: 2026-01-22 — Phase 10 complete (2 plans)*
