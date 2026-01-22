@@ -94,11 +94,11 @@ Plans:
   2. Wizard context is passed to AI generation (visible in improved output quality)
   3. --no-interactive flag bypasses wizard completely (non-TTY environments)
   4. Wizard detects non-TTY stdin and skips prompts automatically
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 12-01: CLI flag integration and TTY detection
-- [ ] 12-02: Context passing to generation prompts
+- [ ] 12-01-PLAN.md — CLI flag integration (--quick), TTY detection, wizard invocation in commands/new.ts
+- [ ] 12-02-PLAN.md — Integration tests for wizard CLI behavior
 
 #### Phase 13: Defaults Management
 **Goal**: Users can save wizard choices for reuse in future sessions
@@ -124,9 +124,9 @@ Phases execute in numeric order: 9 -> 10 -> 11 -> 12 -> 13
 | 9. Foundation | v1.1 | 1/1 | Complete | 2026-01-21 |
 | 10. Role Wizard | v1.1 | 2/2 | Complete | 2026-01-22 |
 | 11. Playbook Wizard | v1.1 | 1/1 | Complete | 2026-01-22 |
-| 12. CLI Integration | v1.1 | 0/2 | Not started | - |
+| 12. CLI Integration | v1.1 | 0/2 | Planned | - |
 | 13. Defaults Management | v1.1 | 0/1 | Not started | - |
 
 ---
 *Roadmap created: 2026-01-21*
-*Last updated: 2026-01-22 — Phase 11 complete (playbook wizard)*
+*Last updated: 2026-01-22 — Phase 12 plans created*
