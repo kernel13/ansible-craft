@@ -91,46 +91,56 @@ describe('promptDirectories', () => {
   });
 
   test('returns array of RoleStructureDirectory', async () => {
-    mockCheckbox.mockResolvedValueOnce(['tasks', 'handlers', 'templates']);
+    // Note: disabled items (tasks) are excluded from checkbox answer
+    mockCheckbox.mockResolvedValueOnce(['handlers', 'templates']);
 
     const result = await promptDirectories();
 
     expect(Array.isArray(result)).toBe(true);
+    // tasks is always prepended
     expect(result).toEqual(['tasks', 'handlers', 'templates']);
   });
 
-  test('tasks is always included when selected', async () => {
-    mockCheckbox.mockResolvedValueOnce(['tasks']);
+  test('tasks is always first in result', async () => {
+    mockCheckbox.mockResolvedValueOnce(['handlers']);
+
+    const result = await promptDirectories();
+
+    expect(result[0]).toBe('tasks');
+    expect(result).toContain('handlers');
+  });
+
+  test('returns all selected directories with tasks first', async () => {
+    // Disabled checkbox items (tasks) excluded from answer
+    const selectedDirs = ['handlers', 'templates', 'files', 'defaults', 'vars', 'meta'];
+    mockCheckbox.mockResolvedValueOnce(selectedDirs);
+
+    const result = await promptDirectories();
+
+    // tasks prepended, then selected dirs
+    expect(result).toEqual(['tasks', ...selectedDirs]);
+  });
+
+  test('always includes tasks even if not in checkbox answer', async () => {
+    // Disabled checkbox items are excluded from answer array,
+    // so we must prepend 'tasks' to ensure it's always included
+    mockCheckbox.mockResolvedValueOnce(['handlers']); // tasks NOT included (disabled)
 
     const result = await promptDirectories();
 
     expect(result).toContain('tasks');
+    expect(result[0]).toBe('tasks'); // tasks should be first
+    expect(result).toContain('handlers');
   });
 
-  test('returns all selected directories', async () => {
-    const allDirs = ['tasks', 'handlers', 'templates', 'files', 'defaults', 'vars', 'meta'];
-    mockCheckbox.mockResolvedValueOnce(allDirs);
+  test('avoids duplicate tasks if checkbox somehow includes it', async () => {
+    // Safety check: if checkbox behavior changes and includes tasks
+    mockCheckbox.mockResolvedValueOnce(['tasks', 'handlers']);
 
     const result = await promptDirectories();
 
-    expect(result).toEqual(allDirs);
-  });
-
-  test('validates that tasks is required via checkbox config', async () => {
-    // The checkbox validate function should reject empty tasks
-    // We test this by checking the mock was called with correct options
-    mockCheckbox.mockResolvedValueOnce(['tasks']);
-
-    await promptDirectories();
-
-    expect(mockCheckbox).toHaveBeenCalledTimes(1);
-    const options = mockCheckbox.mock.calls[0]?.[0] as { validate?: (answer: readonly string[]) => boolean | string };
-    expect(options.validate).toBeDefined();
-
-    // Test the validation function directly
-    const validate = options.validate!;
-    expect(validate(['tasks'])).toBe(true);
-    expect(validate([])).toBe('tasks directory is required');
+    const tasksCount = result.filter((dir) => dir === 'tasks').length;
+    expect(tasksCount).toBe(1); // should only appear once
   });
 });
 
@@ -153,7 +163,9 @@ describe('promptPlatforms', () => {
 
     await promptPlatforms();
 
-    const options = mockCheckbox.mock.calls[0]?.[0] as { validate?: (answer: readonly string[]) => boolean | string };
+    const options = mockCheckbox.mock.calls[0]?.[0] as {
+      validate?: (answer: readonly string[]) => boolean | string;
+    };
     expect(options.validate).toBeDefined();
 
     const validate = options.validate!;
@@ -165,7 +177,9 @@ describe('promptPlatforms', () => {
 
     await promptPlatforms();
 
-    const options = mockCheckbox.mock.calls[0]?.[0] as { validate?: (answer: readonly string[]) => boolean | string };
+    const options = mockCheckbox.mock.calls[0]?.[0] as {
+      validate?: (answer: readonly string[]) => boolean | string;
+    };
     const validate = options.validate!;
     expect(validate(['Generic'])).toBe(true);
   });
@@ -175,9 +189,13 @@ describe('promptPlatforms', () => {
 
     await promptPlatforms();
 
-    const options = mockCheckbox.mock.calls[0]?.[0] as { validate?: (answer: readonly string[]) => boolean | string };
+    const options = mockCheckbox.mock.calls[0]?.[0] as {
+      validate?: (answer: readonly string[]) => boolean | string;
+    };
     const validate = options.validate!;
-    expect(validate(['Generic', 'Ubuntu'])).toBe('Generic cannot be combined with specific platforms');
+    expect(validate(['Generic', 'Ubuntu'])).toBe(
+      'Generic cannot be combined with specific platforms',
+    );
   });
 
   test('validates multiple specific platforms is valid', async () => {
@@ -185,7 +203,9 @@ describe('promptPlatforms', () => {
 
     await promptPlatforms();
 
-    const options = mockCheckbox.mock.calls[0]?.[0] as { validate?: (answer: readonly string[]) => boolean | string };
+    const options = mockCheckbox.mock.calls[0]?.[0] as {
+      validate?: (answer: readonly string[]) => boolean | string;
+    };
     const validate = options.validate!;
     expect(validate(['Ubuntu', 'RHEL', 'Debian'])).toBe(true);
   });
@@ -227,7 +247,9 @@ describe('promptHandlers', () => {
 
     await promptHandlers();
 
-    const options = mockCheckbox.mock.calls[0]?.[0] as { validate?: (answer: readonly string[]) => boolean | string };
+    const options = mockCheckbox.mock.calls[0]?.[0] as {
+      validate?: (answer: readonly string[]) => boolean | string;
+    };
     // Handlers prompt should not have a validate function since selection is optional
     expect(options.validate).toBeUndefined();
   });
@@ -247,15 +269,16 @@ describe('runRoleWizard', () => {
 
   test('returns validated RoleWizardContext on complete flow', async () => {
     // Mock the three checkbox prompts in sequence
+    // Note: disabled items (tasks) are excluded from checkbox answer
     mockCheckbox
-      .mockResolvedValueOnce(['tasks', 'handlers']) // directories
+      .mockResolvedValueOnce(['handlers']) // directories (tasks excluded, will be prepended)
       .mockResolvedValueOnce(['Ubuntu']) // platforms
       .mockResolvedValueOnce(['restart']); // handlers
 
     const result = await runRoleWizard();
 
     expect(result).toEqual({
-      structure: ['tasks', 'handlers'],
+      structure: ['tasks', 'handlers'], // tasks prepended
       platforms: ['Ubuntu'],
       handlers: ['restart'],
       custom: {},
@@ -263,8 +286,9 @@ describe('runRoleWizard', () => {
   });
 
   test('result is validated by Zod schema', async () => {
+    // Note: disabled items (tasks) are excluded from checkbox answer
     mockCheckbox
-      .mockResolvedValueOnce(['tasks', 'templates', 'defaults'])
+      .mockResolvedValueOnce(['templates', 'defaults']) // tasks excluded, will be prepended
       .mockResolvedValueOnce(['Generic'])
       .mockResolvedValueOnce([]);
 

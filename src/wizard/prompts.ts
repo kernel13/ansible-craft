@@ -34,7 +34,9 @@ export function showStepHeader(current: number, total: number, title: string): v
  * @returns Array of selected directory names
  */
 export async function promptDirectories(): Promise<RoleStructureDirectory[]> {
-  return (await checkbox({
+  // Note: disabled items are excluded from checkbox answer array,
+  // so we manually include 'tasks' in the result
+  const selected = (await checkbox({
     message: 'Select role directories to generate:',
     choices: [
       {
@@ -58,11 +60,12 @@ export async function promptDirectories(): Promise<RoleStructureDirectory[]> {
     ],
     pageSize: 10,
     loop: true,
-    validate: (answer: readonly RoleStructureDirectory[]) => {
-      // Ensure tasks is always included (safety check since it's disabled)
-      return answer.includes('tasks') || 'tasks directory is required';
-    },
   })) as RoleStructureDirectory[];
+
+  // Always include 'tasks' since it's required (disabled items excluded from answer)
+  // Filter to avoid duplicates in case behavior changes
+  const withoutTasks = selected.filter((dir) => dir !== 'tasks');
+  return ['tasks', ...withoutTasks];
 }
 
 /**
