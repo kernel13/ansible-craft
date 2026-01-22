@@ -18,10 +18,10 @@ Requirements for Plan Mode milestone. Each maps to roadmap phases.
 
 ### Playbook Wizard
 
-- [ ] **PWIZ-01**: User sees step-by-step prompts for playbook generation
-- [ ] **PWIZ-02**: User can specify inventory groups to target
-- [ ] **PWIZ-03**: User can specify whether privilege escalation is needed
-- [ ] **PWIZ-04**: User can specify whether to include handlers
+- [x] **PWIZ-01**: User sees step-by-step prompts for playbook generation
+- [x] **PWIZ-02**: User can specify inventory groups to target
+- [x] **PWIZ-03**: User can specify whether privilege escalation is needed
+- [x] **PWIZ-04**: User can specify whether to include handlers
 
 ### Defaults
 
@@ -75,10 +75,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RWIZ-04 | Phase 10: Role Wizard | Complete |
 | RWIZ-05 | Phase 12: CLI Integration | Pending |
 | RWIZ-06 | Phase 10: Role Wizard | Complete |
-| PWIZ-01 | Phase 11: Playbook Wizard | Pending |
-| PWIZ-02 | Phase 11: Playbook Wizard | Pending |
-| PWIZ-03 | Phase 11: Playbook Wizard | Pending |
-| PWIZ-04 | Phase 11: Playbook Wizard | Pending |
+| PWIZ-01 | Phase 11: Playbook Wizard | Complete |
+| PWIZ-02 | Phase 11: Playbook Wizard | Complete |
+| PWIZ-03 | Phase 11: Playbook Wizard | Complete |
+| PWIZ-04 | Phase 11: Playbook Wizard | Complete |
 | DFLT-01 | Phase 13: Defaults Management | Pending |
 | DFLT-02 | Phase 13: Defaults Management | Pending |
 | INTG-01 | Phase 12: CLI Integration | Pending |
@@ -91,4 +91,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-01-21*
-*Last updated: 2026-01-22 — Phase 10 requirements complete (RWIZ-01, RWIZ-02, RWIZ-03, RWIZ-04, RWIZ-06)*
+*Last updated: 2026-01-22 — Phase 11 requirements complete (PWIZ-01, PWIZ-02, PWIZ-03, PWIZ-04)*
