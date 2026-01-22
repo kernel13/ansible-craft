@@ -509,6 +509,7 @@ newCommand
   .option('--force', 'Overwrite existing directory without prompting')
   .option('--fix', 'Auto-fix lint violations without prompting')
   .option('--no-interactive', 'Skip clarifying questions')
+  .option('-Q, --quick', 'Skip wizard and use defaults')
   .option('-q, --quiet', 'Suppress progress output')
   .option('--json', 'Output results in JSON format')
   .action(
@@ -521,6 +522,7 @@ newCommand
         force?: boolean;
         fix?: boolean;
         interactive?: boolean;
+        quick?: boolean;
         quiet?: boolean;
         json?: boolean;
       },
@@ -560,12 +562,35 @@ newCommand
           console.log(chalk.dim(`From: "${description}"\n`));
         }
 
+        // Determine wizard skip conditions:
+        // - --quick flag explicitly skips
+        // - --no-interactive skips (options.interactive === false)
+        // - --json mode implies skip (machine output)
+        // - Non-TTY stdin silently skips (pipe/CI)
+        const skipWizard =
+          options.quick || options.interactive === false || jsonMode || !process.stdin.isTTY;
+
+        let clarifications: Record<string, string> | undefined;
+
+        if (!skipWizard) {
+          try {
+            const context = await runPlaybookWizard();
+            clarifications = formatPlaybookContextForPrompt(context);
+          } catch (error) {
+            if (error instanceof ExitPromptError) {
+              console.log(chalk.yellow('\nWizard cancelled.'));
+              return;
+            }
+            throw error;
+          }
+        }
+
         // Create phase tracker for progress display
         const tracker = createPhaseTracker(options.quiet ?? false);
 
         // 3. Generate plan preview
         tracker.start('Planning playbook structure...');
-        const plan = await generatePlaybookPlan(client, description, undefined, {
+        const plan = await generatePlaybookPlan(client, description, clarifications, {
           quiet: true, // Suppress inner spinner - tracker handles progress
         });
         tracker.succeed('Planning complete');
@@ -602,7 +627,7 @@ newCommand
               currentPlan = await generatePlaybookPlan(
                 client,
                 `${description}\n\nUser feedback: ${feedback}`,
-                undefined,
+                clarifications,
                 { quiet: true },
               );
               tracker.succeed('Plan updated');
