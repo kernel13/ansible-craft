@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-01-21)
 
 **Core value:** Generate complete, production-ready Ansible roles from natural language — FQCN compliant, idempotent, ansible-lint passing
-**Current focus:** v1.1 Plan Mode — Phase 10: Role Wizard
+**Current focus:** v1.1 Plan Mode — Phase 12: CLI Integration
 
 ## Current Position
 
-Phase: 11 of 13 (Playbook Wizard)
-Plan: 1 of 1 in current phase (COMPLETE)
-Status: Phase complete
-Last activity: 2026-01-22 — Completed 11-01-PLAN.md (playbook wizard)
+Phase: 12 of 13 (CLI Integration)
+Plan: 1 of 2 in current phase (COMPLETE)
+Status: In progress
+Last activity: 2026-01-22 — Completed 12-01-PLAN.md (wizard CLI integration)
 
-Progress: [#############.......] 67% (v1.0 complete + 4/7 v1.1 plans)
+Progress: [##############......] 71% (v1.0 complete + 5/7 v1.1 plans)
 
 ## Completed Milestones
 
@@ -33,8 +33,8 @@ Progress: [#############.......] 67% (v1.0 complete + 4/7 v1.1 plans)
 
 **v1.1 Milestone:**
 - Total plans: 7 (estimated)
-- Completed: 4
-- Average duration: ~2.6 minutes per plan
+- Completed: 5
+- Average duration: ~2.8 minutes per plan
 
 ## Accumulated Context
 
@@ -59,6 +59,9 @@ Recent decisions for v1.1:
 - Playbook hosts array contains single element with full user pattern (11-01)
 - Playbook become defaults to false (safer default) (11-01)
 - Validation warnings non-blocking for playbook wizard (11-01)
+- Use capital -Q for --quick since -q is already used for --quiet (12-01)
+- Non-TTY stdin silently skips wizard without error (12-01)
+- JSON mode implies wizard skip for machine output (12-01)
 
 ### Pending Todos
 
@@ -71,10 +74,10 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-22
-Stopped at: Completed 11-01-PLAN.md (playbook wizard)
+Stopped at: Completed 12-01-PLAN.md (wizard CLI integration)
 Resume file: None
-Next: Phase 12 (CLI Integration)
+Next: Phase 12-02 (CLI integration tests)
 
 ---
 *State initialized: 2025-01-18*
-*Last updated: 2026-01-22 — Completed 11-01 playbook wizard (Phase 11 complete)*
+*Last updated: 2026-01-22 — Completed 12-01 wizard CLI integration*
