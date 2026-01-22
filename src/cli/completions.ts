@@ -45,7 +45,7 @@ _ansible_craft_completions() {
                 new)
                     case "\${words[2]}" in
                         role|playbook)
-                            COMPREPLY=( $(compgen -W "--output --name --dry-run --force --fix --no-interactive --quiet --json --help" -- "\${cur}") )
+                            COMPREPLY=( $(compgen -W "--output --name --dry-run --force --fix --no-interactive --quick --quiet --json --help" -- "\${cur}") )
                             ;;
                     esac
                     ;;
@@ -139,6 +139,7 @@ _ansible_craft() {
                         '--force[Overwrite existing]' \\
                         '--fix[Auto-fix lint issues]' \\
                         '--no-interactive[Skip prompts]' \\
+                        '(-Q --quick)'{-Q,--quick}'[Skip wizard]' \\
                         '(-q --quiet)'{-q,--quiet}'[Suppress progress]' \\
                         '--json[Output JSON format]' \\
                         '(-h --help)'{-h,--help}'[Show help]'
@@ -202,6 +203,7 @@ complete -c ansible-craft -n "__fish_seen_subcommand_from role playbook" -l dry-
 complete -c ansible-craft -n "__fish_seen_subcommand_from role playbook" -l force -d "Overwrite existing"
 complete -c ansible-craft -n "__fish_seen_subcommand_from role playbook" -l fix -d "Auto-fix lint issues"
 complete -c ansible-craft -n "__fish_seen_subcommand_from role playbook" -l no-interactive -d "Skip prompts"
+complete -c ansible-craft -n "__fish_seen_subcommand_from role playbook" -s Q -l quick -d "Skip wizard"
 complete -c ansible-craft -n "__fish_seen_subcommand_from role playbook" -s q -l quiet -d "Suppress progress"
 complete -c ansible-craft -n "__fish_seen_subcommand_from role playbook" -l json -d "Output JSON format"
 
