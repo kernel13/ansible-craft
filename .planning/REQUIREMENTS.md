@@ -13,7 +13,7 @@ Requirements for Plan Mode milestone. Each maps to roadmap phases.
 - [x] **RWIZ-02**: User can select role structure directories (tasks, handlers, templates, files, defaults, vars, meta)
 - [x] **RWIZ-03**: User can select target platforms (Ubuntu, RHEL, Debian, Windows, Generic)
 - [x] **RWIZ-04**: User can select handlers needed (restart, reload, enable, custom)
-- [ ] **RWIZ-05**: User can skip wizard with --quick flag and use defaults
+- [x] **RWIZ-05**: User can skip wizard with --quick flag and use defaults
 - [x] **RWIZ-06**: User can exit wizard with Ctrl+C (uses defaults or cancels)
 
 ### Playbook Wizard
@@ -30,8 +30,8 @@ Requirements for Plan Mode milestone. Each maps to roadmap phases.
 
 ### Integration
 
-- [ ] **INTG-01**: Wizard context is passed to AI generation for tailored output
-- [ ] **INTG-02**: Existing --no-interactive flag bypasses wizard completely
+- [x] **INTG-01**: Wizard context is passed to AI generation for tailored output
+- [x] **INTG-02**: Existing --no-interactive flag bypasses wizard completely
 
 ## Future Requirements
 
@@ -73,7 +73,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RWIZ-02 | Phase 10: Role Wizard | Complete |
 | RWIZ-03 | Phase 10: Role Wizard | Complete |
 | RWIZ-04 | Phase 10: Role Wizard | Complete |
-| RWIZ-05 | Phase 12: CLI Integration | Pending |
+| RWIZ-05 | Phase 12: CLI Integration | Complete |
 | RWIZ-06 | Phase 10: Role Wizard | Complete |
 | PWIZ-01 | Phase 11: Playbook Wizard | Complete |
 | PWIZ-02 | Phase 11: Playbook Wizard | Complete |
@@ -81,8 +81,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PWIZ-04 | Phase 11: Playbook Wizard | Complete |
 | DFLT-01 | Phase 13: Defaults Management | Pending |
 | DFLT-02 | Phase 13: Defaults Management | Pending |
-| INTG-01 | Phase 12: CLI Integration | Pending |
-| INTG-02 | Phase 12: CLI Integration | Pending |
+| INTG-01 | Phase 12: CLI Integration | Complete |
+| INTG-02 | Phase 12: CLI Integration | Complete |
 
 **Coverage:**
 - v1.1 requirements: 14 total
@@ -91,4 +91,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-01-21*
-*Last updated: 2026-01-22 — Phase 11 requirements complete (PWIZ-01, PWIZ-02, PWIZ-03, PWIZ-04)*
+*Last updated: 2026-01-22 — Phase 12 requirements complete (RWIZ-05, INTG-01, INTG-02)*
