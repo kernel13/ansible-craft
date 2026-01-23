@@ -653,18 +653,45 @@ newCommand
         const skipWizard =
           options.quick || options.interactive === false || jsonMode || !process.stdin.isTTY;
 
+        // Load existing defaults for comparison and --quick mode
+        const existingPlaybookDefaults = config.defaults?.wizard?.playbook;
+
+        let playbookWizardContext: PlaybookWizardContext | undefined;
         let clarifications: Record<string, string> | undefined;
 
         if (!skipWizard) {
           try {
             const context = await runPlaybookWizard();
+            playbookWizardContext = context;
             clarifications = formatPlaybookContextForPrompt(context);
+
+            // CRITICAL: Prompt to save defaults IMMEDIATELY after wizard completes
+            // This happens BEFORE generation starts (DFLT-01 requirement)
+            await promptToSaveDefaults(
+              'playbook',
+              playbookWizardContext,
+              existingPlaybookDefaults,
+              jsonMode,
+            );
           } catch (error) {
             if (error instanceof ExitPromptError) {
               console.log(chalk.yellow('\nWizard cancelled.'));
               return;
             }
             throw error;
+          }
+        } else if (options.quick) {
+          // Use saved defaults or fall back to quick mode defaults
+          const defaults = existingPlaybookDefaults ?? getQuickModeDefaults('playbook');
+          playbookWizardContext = defaults;
+          clarifications = formatPlaybookContextForPrompt(defaults);
+
+          if (!jsonMode && !options.quiet) {
+            if (existingPlaybookDefaults) {
+              console.log(chalk.dim('Using saved defaults (--quick)'));
+            } else {
+              console.log(chalk.dim('Using default settings (no saved defaults found)'));
+            }
           }
         }
 
