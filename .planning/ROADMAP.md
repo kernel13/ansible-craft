@@ -108,10 +108,11 @@ Plans:
   1. User is asked at end of wizard "Save these choices as defaults?"
   2. Saved defaults are stored in config file (~/.config/ansible-craft/config.toml)
   3. --quick flag uses saved defaults when available
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 13-01: Defaults save prompt and config storage
+- [ ] 13-01-PLAN.md — Core defaults infrastructure (Config schema, TOML serialization, project-level override)
+- [ ] 13-02-PLAN.md — CLI integration (post-generation save prompt, config defaults command, --quick enhancement)
 
 ## Progress
 
@@ -125,8 +126,8 @@ Phases execute in numeric order: 9 -> 10 -> 11 -> 12 -> 13
 | 10. Role Wizard | v1.1 | 2/2 | Complete | 2026-01-22 |
 | 11. Playbook Wizard | v1.1 | 1/1 | Complete | 2026-01-22 |
 | 12. CLI Integration | v1.1 | 2/2 | Complete | 2026-01-22 |
-| 13. Defaults Management | v1.1 | 0/1 | Not started | - |
+| 13. Defaults Management | v1.1 | 0/2 | Planned | - |
 
 ---
 *Roadmap created: 2026-01-21*
-*Last updated: 2026-01-22 — Phase 12 complete (CLI Integration)*
+*Last updated: 2026-01-23 — Phase 13 planning complete (Defaults Management)*
