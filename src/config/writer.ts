@@ -53,6 +53,41 @@ export function generateConfigToml(config: Config): string {
     '',
   );
 
+  // Add wizard defaults sections if they exist
+  if (config.defaults.wizard) {
+    const wizard = config.defaults.wizard;
+    lines.push(
+      '[defaults.wizard]',
+      '# Wizard defaults schema version',
+      `defaults_version = ${wizard.defaults_version}`,
+      '',
+    );
+
+    // Role defaults section
+    if (wizard.role) {
+      lines.push(
+        '[defaults.wizard.role]',
+        `# Saved: ${new Date().toISOString().split('T')[0]}`,
+        `structure = ${JSON.stringify(wizard.role.structure)}`,
+        `platforms = ${JSON.stringify(wizard.role.platforms)}`,
+        `handlers = ${JSON.stringify(wizard.role.handlers)}`,
+        '',
+      );
+    }
+
+    // Playbook defaults section
+    if (wizard.playbook) {
+      lines.push(
+        '[defaults.wizard.playbook]',
+        `# Saved: ${new Date().toISOString().split('T')[0]}`,
+        `hosts = ${JSON.stringify(wizard.playbook.hosts)}`,
+        `become = ${wizard.playbook.become}`,
+        `include_handlers = ${wizard.playbook.includeHandlers}`,
+        '',
+      );
+    }
+  }
+
   return lines.join('\n');
 }
 
@@ -68,6 +103,8 @@ function mergeConfig(base: Config, overlay: Partial<Config>): Config {
     defaults: {
       ...base.defaults,
       ...overlay.defaults,
+      // Deep merge wizard if both exist
+      wizard: overlay.defaults?.wizard ?? base.defaults.wizard,
     },
     output: {
       ...base.output,
