@@ -4,12 +4,16 @@
  * Provides config save subcommand for configuring API key and preferences.
  */
 
+import { ExitPromptError } from '@inquirer/core';
 import { confirm } from '@inquirer/prompts';
 import chalk from 'chalk';
 import { Command } from 'commander';
 import { CONFIG_PATH, maskApiKey, saveConfig, validateApiKey } from '../../config/index.ts';
 import type { Config } from '../../config/schema.ts';
 import { runSetupWizard } from '../../config/wizard.ts';
+import { runPlaybookWizard } from '../../wizard/playbook-wizard.ts';
+import { runRoleWizard } from '../../wizard/role-wizard.ts';
+import { displayDefaultsPreview, WIZARD_DEFAULTS_VERSION } from '../../wizard/defaults.ts';
 
 interface SaveOptions {
   apiKey?: string;
@@ -122,5 +126,71 @@ configCommand
     }
     if (updates.defaults?.complex !== undefined) {
       console.log(`  - Complex mode: ${updates.defaults.complex ? 'enabled' : 'disabled'}`);
+    }
+  });
+
+configCommand
+  .command('defaults <type>')
+  .description('Update wizard defaults for role or playbook generation')
+  .option('-y, --yes', 'Skip confirmation prompt')
+  .action(async (type: string, options: { yes?: boolean }) => {
+    // Validate type argument
+    if (type !== 'role' && type !== 'playbook') {
+      console.error(chalk.red('Error: Type must be either "role" or "playbook"'));
+      console.error(chalk.dim('Usage: ansible-craft config defaults <role|playbook>'));
+      process.exit(1);
+    }
+
+    console.log(chalk.cyan(`\nConfiguring ${type} wizard defaults...\n`));
+
+    try {
+      // Run appropriate wizard to collect defaults
+      const context = type === 'role' ? await runRoleWizard() : await runPlaybookWizard();
+
+      // Show preview
+      displayDefaultsPreview(type, context);
+
+      // Confirm unless --yes
+      if (!options.yes) {
+        const confirmed = await confirm({
+          message: `Save these as your ${type} defaults?`,
+          default: true,
+        });
+
+        if (!confirmed) {
+          console.log(chalk.yellow('\nDefaults not saved.'));
+          return;
+        }
+      }
+
+      // Save to config with error handling
+      try {
+        const wizardDefaults = {
+          defaults_version: WIZARD_DEFAULTS_VERSION,
+          [type]: context,
+        };
+
+        await saveConfig({
+          defaults: {
+            wizard: wizardDefaults,
+          },
+        } as Partial<Config>);
+
+        console.log(chalk.green(`\n${type} defaults saved to: ${CONFIG_PATH}`));
+        console.log(chalk.dim(`\nUse --quick with 'new ${type}' to apply these defaults.`));
+      } catch (saveError) {
+        console.error(
+          chalk.red(
+            `\nFailed to save defaults: ${saveError instanceof Error ? saveError.message : String(saveError)}`,
+          ),
+        );
+        process.exit(1);
+      }
+    } catch (error) {
+      if (error instanceof ExitPromptError) {
+        console.log(chalk.yellow('\nWizard cancelled.'));
+        return;
+      }
+      throw error;
     }
   });
