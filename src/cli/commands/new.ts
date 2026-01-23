@@ -14,12 +14,21 @@ import { runRoleWizard } from '../../wizard/role-wizard.js';
 import {
   formatPlaybookContextForPrompt,
   formatRoleContextForPrompt,
+  type PlaybookWizardContext,
+  type RoleWizardContext,
 } from '../../wizard/types.js';
 import { FixerAgent, WriterAgent, validateAndLint } from '../../agents/index.js';
 import type { WriterOutput } from '../../agents/types.js';
 import { createClient } from '../../ai/client.js';
 import { displayApiError, transformApiError } from '../../ai/errors.js';
-import { loadConfig } from '../../config/index.js';
+import { loadConfig, saveConfig } from '../../config/index.js';
+import type { Config } from '../../config/schema.js';
+import {
+  displayDefaultsPreview,
+  getQuickModeDefaults,
+  hasChangedFromDefaults,
+  WIZARD_DEFAULTS_VERSION,
+} from '../../wizard/defaults.js';
 import {
   type GeneratedFile,
   type LintViolation,
@@ -76,6 +85,59 @@ function toWritePlaybookResult(output: WriterOutput, dryRun: boolean): WritePlay
     dirsCreated: [],
     dryRun,
   };
+}
+
+/**
+ * Prompt user to save wizard defaults immediately after wizard completion.
+ * Only prompts when choices differ from existing defaults.
+ *
+ * IMPORTANT: This is called right after the wizard returns, BEFORE generation starts.
+ * This ensures the user is always prompted even if generation fails later.
+ *
+ * Error handling: If saveConfig fails, we log a warning but don't crash.
+ * The generation can still proceed even if defaults couldn't be saved.
+ */
+async function promptToSaveDefaults(
+  type: 'role' | 'playbook',
+  context: RoleWizardContext | PlaybookWizardContext,
+  existingDefaults: RoleWizardContext | PlaybookWizardContext | undefined,
+  jsonMode: boolean,
+): Promise<void> {
+  // Skip in JSON mode or if no changes
+  if (jsonMode) return;
+  if (!hasChangedFromDefaults(context, existingDefaults)) return;
+
+  displayDefaultsPreview(type, context);
+
+  const save = await confirm({
+    message: 'Save these choices as defaults for future sessions?',
+    default: true,
+  });
+
+  if (save) {
+    try {
+      const wizardDefaults = {
+        defaults_version: WIZARD_DEFAULTS_VERSION,
+        [type]: context,
+      };
+
+      await saveConfig({
+        defaults: {
+          wizard: wizardDefaults,
+        },
+      } as Partial<Config>);
+
+      console.log(chalk.green(`\n${type} defaults saved successfully`));
+    } catch (error) {
+      // Log warning but don't fail - generation can still proceed
+      console.warn(
+        chalk.yellow(
+          `\nWarning: Failed to save defaults: ${error instanceof Error ? error.message : String(error)}`,
+        ),
+      );
+      console.warn(chalk.dim('Generation will continue, but your defaults were not saved.'));
+    }
+  }
 }
 
 /**
@@ -195,18 +257,41 @@ newCommand
         const skipWizard =
           options.quick || options.interactive === false || jsonMode || !process.stdin.isTTY;
 
+        // Load existing defaults for comparison and --quick mode
+        const existingDefaults = config.defaults?.wizard?.role;
+
+        let wizardContext: RoleWizardContext | undefined;
         let clarifications: Record<string, string> | undefined;
 
         if (!skipWizard) {
           try {
             const context = await runRoleWizard();
+            wizardContext = context;
             clarifications = formatRoleContextForPrompt(context);
+
+            // CRITICAL: Prompt to save defaults IMMEDIATELY after wizard completes
+            // This happens BEFORE generation starts, ensuring user is always prompted
+            // even if generation fails later (DFLT-01 requirement)
+            await promptToSaveDefaults('role', wizardContext, existingDefaults, jsonMode);
           } catch (error) {
             if (error instanceof ExitPromptError) {
               console.log(chalk.yellow('\nWizard cancelled.'));
               return;
             }
             throw error;
+          }
+        } else if (options.quick) {
+          // Use saved defaults or fall back to quick mode defaults
+          const defaults = existingDefaults ?? getQuickModeDefaults('role');
+          wizardContext = defaults;
+          clarifications = formatRoleContextForPrompt(defaults);
+
+          if (!jsonMode && !options.quiet) {
+            if (existingDefaults) {
+              console.log(chalk.dim('Using saved defaults (--quick)'));
+            } else {
+              console.log(chalk.dim('Using default settings (no saved defaults found)'));
+            }
           }
         }
 
@@ -326,9 +411,7 @@ newCommand
         // 9. Auto-fix if violations exist (using FixerAgent)
         if (lintViolations.length > 0) {
           const fixerAgent = new FixerAgent();
-          const fixableCount = lintViolations.filter(
-            (v) => fixerAgent.name && v.ruleId,
-          ).length;
+          const fixableCount = lintViolations.filter((v) => fixerAgent.name && v.ruleId).length;
 
           if (fixableCount > 0) {
             if (!jsonMode) {
@@ -701,9 +784,7 @@ newCommand
         // 9. Auto-fix if violations exist (using FixerAgent)
         if (lintViolations.length > 0) {
           const fixerAgent = new FixerAgent();
-          const fixableCount = lintViolations.filter(
-            (v) => fixerAgent.name && v.ruleId,
-          ).length;
+          const fixableCount = lintViolations.filter((v) => fixerAgent.name && v.ruleId).length;
 
           if (fixableCount > 0) {
             if (!jsonMode) {
