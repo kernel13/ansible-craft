@@ -5,11 +5,17 @@
  */
 
 import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { parse } from 'smol-toml';
 import { CLIError } from '../errors/cli-error.ts';
 import { DEFAULT_CONFIG } from './defaults.ts';
 import { CONFIG_PATH } from './paths.ts';
 import type { Config } from './schema.ts';
+
+/**
+ * Project-level config filename.
+ */
+export const PROJECT_CONFIG_FILENAME = '.ansible-craft.toml';
 
 /**
  * Check if config file exists
@@ -91,6 +97,41 @@ export async function loadConfig(): Promise<Config> {
   // Environment variable takes precedence if set
   if (envApiKey) {
     config.api.key = envApiKey;
+  }
+
+  return config;
+}
+
+/**
+ * Load configuration with project-level override support.
+ *
+ * Precedence (highest to lowest):
+ * 1. Environment variables (ANTHROPIC_API_KEY)
+ * 2. Project-level .ansible-craft.toml (current directory)
+ * 3. Global ~/.config/ansible-craft/config.toml
+ * 4. DEFAULT_CONFIG
+ *
+ * @param projectDir - Project directory to check for .ansible-craft.toml (defaults to cwd)
+ */
+export async function loadConfigWithProjectOverride(
+  projectDir: string = process.cwd(),
+): Promise<Config> {
+  // Start with global config
+  let config = await loadConfig();
+
+  // Check for project-level override
+  const projectConfigPath = join(projectDir, PROJECT_CONFIG_FILENAME);
+  if (existsSync(projectConfigPath)) {
+    try {
+      const content = readFileSync(projectConfigPath, 'utf-8');
+      const projectConfig = parse(content) as Partial<Config>;
+      config = mergeConfig(config, projectConfig);
+    } catch (error) {
+      // Log warning but don't fail - project config is optional
+      console.warn(
+        `Warning: Could not parse ${projectConfigPath}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
   }
 
   return config;
