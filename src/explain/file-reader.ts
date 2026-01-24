@@ -1,4 +1,4 @@
-import { readdir, readFile, stat } from 'node:fs/promises';
+import { readFile, readdir, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 
 export interface RoleFile {
@@ -19,11 +19,13 @@ export async function readAnsiblePath(path: string): Promise<RoleFile[]> {
     if (stats.isFile()) {
       const content = await readFile(path, 'utf-8');
       const type = inferFileType(path);
-      return [{
-        path,
-        content,
-        type,
-      }];
+      return [
+        {
+          path,
+          content,
+          type,
+        },
+      ];
     }
 
     if (stats.isDirectory()) {

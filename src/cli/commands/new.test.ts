@@ -10,8 +10,58 @@
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { ExitPromptError } from '@inquirer/core';
-import { formatPlaybookContextForPrompt, formatRoleContextForPrompt } from '../../wizard/types.js';
+import {
+  type RoleWizardContext,
+  formatPlaybookContextForPrompt,
+  formatRoleContextForPrompt,
+} from '../../wizard/types.js';
 import { newCommand } from './new.js';
+
+/**
+ * Creates a minimal valid RoleWizardContext with all required fields.
+ * Allows overriding any field via the partial parameter.
+ */
+function createRoleContext(partial: Partial<RoleWizardContext> = {}): RoleWizardContext {
+  return {
+    structure: [],
+    platforms: [],
+    handlers: [],
+    ansibleVersion: {
+      minimum: '2.14',
+      includeVersionCheck: false,
+    },
+    variableStrategy: {
+      includeDefaults: true,
+      includeVars: false,
+      naming: 'prefixed',
+    },
+    privilegeEscalation: {
+      required: 'yes',
+      becomeUser: 'root',
+    },
+    tags: {
+      strategy: 'grouped',
+      groups: ['install', 'config', 'service'],
+    },
+    idempotency: {
+      supportCheckMode: true,
+      includeChangedWhen: true,
+      includeFailedWhen: false,
+    },
+    dependencies: {
+      includeMeta: true,
+      roles: [],
+    },
+    molecule: {
+      enabled: true,
+      driver: 'docker',
+      platforms: [],
+      scenarios: ['default', 'idempotence'],
+    },
+    custom: {},
+    ...partial,
+  };
+}
 
 // Store original isTTY value
 const originalIsTTY = process.stdin.isTTY;
@@ -225,12 +275,11 @@ describe('wizard CLI integration', () => {
 describe('wizard context formatting', () => {
   describe('formatRoleContextForPrompt', () => {
     test('formats wizard context correctly for prompt', () => {
-      const context = {
-        structure: ['tasks', 'handlers'] as const,
-        platforms: ['Ubuntu'] as const,
-        handlers: ['restart'] as const,
-        custom: {},
-      };
+      const context = createRoleContext({
+        structure: ['tasks', 'handlers'],
+        platforms: ['Ubuntu'],
+        handlers: ['restart'],
+      });
 
       const clarifications = formatRoleContextForPrompt(context);
 
@@ -241,12 +290,11 @@ describe('wizard context formatting', () => {
     });
 
     test('omits empty arrays from clarifications', () => {
-      const context = {
-        structure: ['tasks'] as const,
-        platforms: ['Ubuntu'] as const,
-        handlers: [] as const,
-        custom: {},
-      };
+      const context = createRoleContext({
+        structure: ['tasks'],
+        platforms: ['Ubuntu'],
+        handlers: [],
+      });
 
       const clarifications = formatRoleContextForPrompt(context);
 
@@ -256,12 +304,12 @@ describe('wizard context formatting', () => {
     });
 
     test('includes custom fields in clarifications', () => {
-      const context = {
-        structure: ['tasks'] as const,
-        platforms: ['Ubuntu'] as const,
-        handlers: [] as const,
+      const context = createRoleContext({
+        structure: ['tasks'],
+        platforms: ['Ubuntu'],
+        handlers: [],
         custom: { additionalRequirements: 'SSL support' },
-      };
+      });
 
       const clarifications = formatRoleContextForPrompt(context);
 
@@ -424,12 +472,11 @@ describe('wizard context integration', () => {
 
   describe('context formatting edge cases', () => {
     test('formatRoleContextForPrompt handles empty structure array', () => {
-      const context = {
-        structure: [] as const,
-        platforms: ['Ubuntu'] as const,
-        handlers: [] as const,
-        custom: {},
-      };
+      const context = createRoleContext({
+        structure: [],
+        platforms: ['Ubuntu'],
+        handlers: [],
+      });
 
       const clarifications = formatRoleContextForPrompt(context);
 
@@ -438,28 +485,32 @@ describe('wizard context integration', () => {
     });
 
     test('formatRoleContextForPrompt handles all empty arrays', () => {
-      const context = {
-        structure: [] as const,
-        platforms: [] as const,
-        handlers: [] as const,
-        custom: {},
-      };
+      const context = createRoleContext({
+        structure: [],
+        platforms: [],
+        handlers: [],
+      });
 
       const clarifications = formatRoleContextForPrompt(context);
 
-      expect(Object.keys(clarifications).length).toBe(0);
+      // Empty arrays are omitted, but new fields are still present
+      expect(clarifications.structure).toBeUndefined();
+      expect(clarifications.platforms).toBeUndefined();
+      expect(clarifications.handlers).toBeUndefined();
+      // But ansible version and other settings are present
+      expect(clarifications.ansible_min_version).toBeDefined();
     });
 
     test('formatRoleContextForPrompt handles custom fields with special characters', () => {
-      const context = {
-        structure: ['tasks'] as const,
-        platforms: [] as const,
-        handlers: [] as const,
+      const context = createRoleContext({
+        structure: ['tasks'],
+        platforms: [],
+        handlers: [],
         custom: {
           requirements: 'SSL support, HTTP/2',
           note: 'Use version >= 2.0',
         },
-      };
+      });
 
       const clarifications = formatRoleContextForPrompt(context);
 

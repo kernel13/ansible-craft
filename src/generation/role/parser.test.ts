@@ -1,14 +1,9 @@
-import { describe, test, expect } from "bun:test";
-import {
-  parseGeneratedFiles,
-  hasFileMarkers,
-  countFiles,
-  type GeneratedFile,
-} from "./parser.js";
+import { describe, expect, test } from 'bun:test';
+import { type GeneratedFile, countFiles, hasFileMarkers, parseGeneratedFiles } from './parser.js';
 
-describe("parseGeneratedFiles", () => {
-  describe("valid output parsing", () => {
-    test("should parse single file block", () => {
+describe('parseGeneratedFiles', () => {
+  describe('valid output parsing', () => {
+    test('should parse single file block', () => {
       const output = `
 === PATH: tasks/main.yml ===
 ---
@@ -20,11 +15,11 @@ describe("parseGeneratedFiles", () => {
 
       const files = parseGeneratedFiles(output);
       expect(files.length).toBe(1);
-      expect(files[0].path).toBe("tasks/main.yml");
-      expect(files[0].content).toContain("Install nginx");
+      expect(files[0].path).toBe('tasks/main.yml');
+      expect(files[0].content).toContain('Install nginx');
     });
 
-    test("should parse multiple file blocks", () => {
+    test('should parse multiple file blocks', () => {
       const output = `
 === PATH: tasks/main.yml ===
 - name: Task 1
@@ -41,14 +36,14 @@ nginx_port: 80
 
       const files = parseGeneratedFiles(output);
       expect(files.length).toBe(3);
-      expect(files.map(f => f.path)).toEqual([
-        "tasks/main.yml",
-        "defaults/main.yml",
-        "handlers/main.yml",
+      expect(files.map((f) => f.path)).toEqual([
+        'tasks/main.yml',
+        'defaults/main.yml',
+        'handlers/main.yml',
       ]);
     });
 
-    test("should trim whitespace from content", () => {
+    test('should trim whitespace from content', () => {
       const output = `
 === PATH: tasks/main.yml ===
 
@@ -58,12 +53,12 @@ nginx_port: 80
 `;
 
       const files = parseGeneratedFiles(output);
-      expect(files[0].content).toBe("content here");
+      expect(files[0].content).toBe('content here');
     });
   });
 
-  describe("security filtering", () => {
-    test("should skip paths with directory traversal", () => {
+  describe('security filtering', () => {
+    test('should skip paths with directory traversal', () => {
       const output = `
 === PATH: ../../../etc/passwd ===
 malicious content
@@ -76,10 +71,10 @@ safe content
 
       const files = parseGeneratedFiles(output);
       expect(files.length).toBe(1);
-      expect(files[0].path).toBe("tasks/main.yml");
+      expect(files[0].path).toBe('tasks/main.yml');
     });
 
-    test("should skip absolute paths", () => {
+    test('should skip absolute paths', () => {
       const output = `
 === PATH: /etc/passwd ===
 malicious content
@@ -90,7 +85,7 @@ malicious content
       expect(files.length).toBe(0);
     });
 
-    test("should skip empty paths", () => {
+    test('should skip empty paths', () => {
       const output = `
 === PATH:  ===
 content
@@ -102,19 +97,19 @@ content
     });
   });
 
-  describe("edge cases", () => {
-    test("should return empty array for no markers", () => {
-      const output = "Just some text without markers";
+  describe('edge cases', () => {
+    test('should return empty array for no markers', () => {
+      const output = 'Just some text without markers';
       const files = parseGeneratedFiles(output);
       expect(files).toEqual([]);
     });
 
-    test("should return empty array for empty string", () => {
-      const files = parseGeneratedFiles("");
+    test('should return empty array for empty string', () => {
+      const files = parseGeneratedFiles('');
       expect(files).toEqual([]);
     });
 
-    test("should handle nested content with special chars", () => {
+    test('should handle nested content with special chars', () => {
       const output = `
 === PATH: templates/config.yml.j2 ===
 {{ nginx_port }}
@@ -126,27 +121,27 @@ ssl: true
 
       const files = parseGeneratedFiles(output);
       expect(files.length).toBe(1);
-      expect(files[0].content).toContain("{{ nginx_port }}");
+      expect(files[0].content).toContain('{{ nginx_port }}');
     });
   });
 });
 
-describe("hasFileMarkers", () => {
-  test("should return true for output with markers", () => {
-    expect(hasFileMarkers("=== PATH: tasks/main.yml ===")).toBe(true);
+describe('hasFileMarkers', () => {
+  test('should return true for output with markers', () => {
+    expect(hasFileMarkers('=== PATH: tasks/main.yml ===')).toBe(true);
   });
 
-  test("should return false for output without markers", () => {
-    expect(hasFileMarkers("Just regular text")).toBe(false);
+  test('should return false for output without markers', () => {
+    expect(hasFileMarkers('Just regular text')).toBe(false);
   });
 
-  test("should return false for empty string", () => {
-    expect(hasFileMarkers("")).toBe(false);
+  test('should return false for empty string', () => {
+    expect(hasFileMarkers('')).toBe(false);
   });
 });
 
-describe("countFiles", () => {
-  test("should count file markers correctly", () => {
+describe('countFiles', () => {
+  test('should count file markers correctly', () => {
     const output = `
 === PATH: file1.yml ===
 content
@@ -162,7 +157,7 @@ content
     expect(countFiles(output)).toBe(3);
   });
 
-  test("should return 0 for no markers", () => {
-    expect(countFiles("no markers here")).toBe(0);
+  test('should return 0 for no markers', () => {
+    expect(countFiles('no markers here')).toBe(0);
   });
 });

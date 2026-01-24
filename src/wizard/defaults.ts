@@ -33,14 +33,45 @@ export function displayDefaultsPreview(
 
   if (type === 'role') {
     const roleContext = context as RoleWizardContext;
-    console.log(`    Structure: ${chalk.dim(roleContext.structure.join(', ') || '(none)')}`);
-    console.log(`    Platforms: ${chalk.dim(roleContext.platforms.join(', ') || '(none)')}`);
-    console.log(`    Handlers:  ${chalk.dim(roleContext.handlers.join(', ') || '(none)')}`);
+    console.log(`    Structure:     ${chalk.dim(roleContext.structure.join(', ') || '(none)')}`);
+    console.log(`    Platforms:     ${chalk.dim(roleContext.platforms.join(', ') || '(none)')}`);
+    console.log(`    Handlers:      ${chalk.dim(roleContext.handlers.join(', ') || '(none)')}`);
+    console.log(
+      `    Ansible Ver:   ${chalk.dim(roleContext.ansibleVersion.minimum)}${roleContext.ansibleVersion.includeVersionCheck ? ' (with check)' : ''}`,
+    );
+    console.log(
+      `    Variables:     ${chalk.dim(roleContext.variableStrategy.naming)} naming${roleContext.variableStrategy.includeDefaults ? ', defaults' : ''}${roleContext.variableStrategy.includeVars ? ', vars' : ''}`,
+    );
+    console.log(
+      `    Privilege:     ${chalk.dim(roleContext.privilegeEscalation.required)}${roleContext.privilegeEscalation.becomeUser ? ` (${roleContext.privilegeEscalation.becomeUser})` : ''}`,
+    );
+    console.log(
+      `    Tags:          ${chalk.dim(roleContext.tags.strategy)}${roleContext.tags.groups?.length ? ` (${roleContext.tags.groups.join(', ')})` : ''}`,
+    );
+    console.log(
+      `    Idempotency:   ${chalk.dim(
+        [
+          roleContext.idempotency.supportCheckMode ? 'check-mode' : null,
+          roleContext.idempotency.includeChangedWhen ? 'changed_when' : null,
+          roleContext.idempotency.includeFailedWhen ? 'failed_when' : null,
+        ]
+          .filter(Boolean)
+          .join(', ') || '(none)',
+      )}`,
+    );
+    console.log(
+      `    Dependencies:  ${chalk.dim(roleContext.dependencies.includeMeta ? (roleContext.dependencies.roles.length > 0 ? roleContext.dependencies.roles.join(', ') : 'meta only') : 'no')}`,
+    );
+    console.log(
+      `    Molecule:      ${chalk.dim(roleContext.molecule.enabled ? `${roleContext.molecule.driver} (${roleContext.molecule.scenarios?.join(', ') || 'default'})` : 'disabled')}`,
+    );
   } else {
     const playbookContext = context as PlaybookWizardContext;
     console.log(`    Hosts:     ${chalk.dim(playbookContext.hosts.join(', ') || '(none)')}`);
     console.log(`    Become:    ${chalk.dim(playbookContext.become ? 'yes' : 'no')}`);
-    console.log(`    Handlers:  ${chalk.dim(playbookContext.includeHandlers ? 'include' : 'exclude')}`);
+    console.log(
+      `    Handlers:  ${chalk.dim(playbookContext.includeHandlers ? 'include' : 'exclude')}`,
+    );
   }
 }
 
@@ -59,6 +90,38 @@ export function getQuickModeDefaults(
       structure: ['tasks', 'handlers', 'defaults', 'meta'],
       platforms: ['Generic'],
       handlers: ['restart', 'reload'],
+      ansibleVersion: {
+        minimum: '2.14',
+        includeVersionCheck: false,
+      },
+      variableStrategy: {
+        includeDefaults: true,
+        includeVars: false,
+        naming: 'prefixed',
+      },
+      privilegeEscalation: {
+        required: 'yes',
+        becomeUser: 'root',
+      },
+      tags: {
+        strategy: 'grouped',
+        groups: ['install', 'config', 'service'],
+      },
+      idempotency: {
+        supportCheckMode: true,
+        includeChangedWhen: true,
+        includeFailedWhen: false,
+      },
+      dependencies: {
+        includeMeta: true,
+        roles: [],
+      },
+      molecule: {
+        enabled: true,
+        driver: 'docker',
+        platforms: ['Generic'],
+        scenarios: ['default', 'idempotence'],
+      },
       custom: {},
     };
   }
@@ -75,4 +138,4 @@ export function getQuickModeDefaults(
  * Current wizard defaults schema version.
  * Increment when adding new fields or changing structure.
  */
-export const WIZARD_DEFAULTS_VERSION = 1;
+export const WIZARD_DEFAULTS_VERSION = 2;

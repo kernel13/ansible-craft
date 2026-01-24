@@ -24,29 +24,27 @@ import chalk from 'chalk';
  * ```
  */
 export async function promptHosts(): Promise<string> {
-	return await input({
-		message: 'Enter target hosts or inventory pattern:',
-		validate: (value: string) => {
-			if (!value || value.trim().length === 0) {
-				return 'Host pattern is required';
-			}
+  return await input({
+    message: 'Enter target hosts or inventory pattern:',
+    validate: (value: string) => {
+      if (!value || value.trim().length === 0) {
+        return 'Host pattern is required';
+      }
 
-			// Warn about suspicious characters but allow submission
-			const shellMetachars = /[|;$`]/;
-			if (shellMetachars.test(value)) {
-				console.log(
-					chalk.dim(
-						'\n⚠️  Warning: Host pattern contains shell metacharacters (|, ;, $, `)',
-					),
-				);
-			}
+      // Warn about suspicious characters but allow submission
+      const shellMetachars = /[|;$`]/;
+      if (shellMetachars.test(value)) {
+        console.log(
+          chalk.dim('\n⚠️  Warning: Host pattern contains shell metacharacters (|, ;, $, `)'),
+        );
+      }
 
-			return true;
-		},
-		theme: {
-			placeholder: chalk.dim('e.g., webservers, databases, web*:&staging'),
-		},
-	});
+      return true;
+    },
+    theme: {
+      placeholder: chalk.dim('e.g., webservers, databases, web*:&staging'),
+    },
+  });
 }
 
 /**
@@ -66,32 +64,32 @@ export async function promptHosts(): Promise<string> {
  * ```
  */
 export async function promptBecome(): Promise<{
-	become: boolean;
-	becomeUser?: string;
+  become: boolean;
+  becomeUser?: string;
 }> {
-	const become = await confirm({
-		message: 'Enable privilege escalation (become)?',
-		default: false,
-	});
+  const become = await confirm({
+    message: 'Enable privilege escalation (become)?',
+    default: false,
+  });
 
-	if (!become) {
-		return { become: false };
-	}
+  if (!become) {
+    return { become: false };
+  }
 
-	// Ask for become user if privilege escalation is enabled
-	const becomeUser = await input({
-		message: 'Become user (default: root):',
-		theme: {
-			placeholder: chalk.dim('press Enter for root'),
-		},
-	});
+  // Ask for become user if privilege escalation is enabled
+  const becomeUser = await input({
+    message: 'Become user (default: root):',
+    theme: {
+      placeholder: chalk.dim('press Enter for root'),
+    },
+  });
 
-	// Empty input means use default (root)
-	const trimmedUser = becomeUser.trim();
-	return {
-		become: true,
-		becomeUser: trimmedUser.length > 0 ? trimmedUser : undefined,
-	};
+  // Empty input means use default (root)
+  const trimmedUser = becomeUser.trim();
+  return {
+    become: true,
+    becomeUser: trimmedUser.length > 0 ? trimmedUser : undefined,
+  };
 }
 
 /**
@@ -110,27 +108,23 @@ export async function promptBecome(): Promise<{
  * ```
  */
 export async function promptHandlersDescription(): Promise<string | undefined> {
-	const description = await input({
-		message: 'Describe handlers needed (or press Enter to skip):',
-		theme: {
-			placeholder: chalk.dim('e.g., restart nginx, reload config'),
-		},
-	});
+  const description = await input({
+    message: 'Describe handlers needed (or press Enter to skip):',
+    theme: {
+      placeholder: chalk.dim('e.g., restart nginx, reload config'),
+    },
+  });
 
-	const trimmed = description.trim();
-	if (trimmed.length === 0) {
-		return undefined;
-	}
+  const trimmed = description.trim();
+  if (trimmed.length === 0) {
+    return undefined;
+  }
 
-	// Warn if input looks like YAML (contains : followed by newline or starts with -)
-	const looksLikeYaml = /:\s*\n|^-/.test(trimmed);
-	if (looksLikeYaml) {
-		console.log(
-			chalk.dim(
-				'\n⚠️  Hint: Describe handlers in natural language, not YAML format',
-			),
-		);
-	}
+  // Warn if input looks like YAML (contains : followed by newline or starts with -)
+  const looksLikeYaml = /:\s*\n|^-/.test(trimmed);
+  if (looksLikeYaml) {
+    console.log(chalk.dim('\n⚠️  Hint: Describe handlers in natural language, not YAML format'));
+  }
 
-	return trimmed;
+  return trimmed;
 }

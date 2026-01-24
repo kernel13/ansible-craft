@@ -31,9 +31,7 @@ export const completionsCommand = new Command('completions')
         process.stdout.write(generateFishCompletions());
         break;
       default:
-        process.stderr.write(
-          `Error: Unknown shell '${shell}'. Supported: bash, zsh, fish\n`,
-        );
+        process.stderr.write(`Error: Unknown shell '${shell}'. Supported: bash, zsh, fish\n`);
         process.exit(1);
     }
   });

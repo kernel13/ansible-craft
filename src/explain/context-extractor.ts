@@ -1,5 +1,5 @@
 import { parse } from 'yaml';
-import { readAnsiblePath, type RoleFile } from './file-reader.js';
+import { type RoleFile, readAnsiblePath } from './file-reader.js';
 
 export interface ContextExtraction {
   variables: Record<string, unknown>; // From defaults/, vars/
@@ -17,9 +17,7 @@ export async function extractContext(playbookPath: string): Promise<ContextExtra
 
   // Extract variables from defaults/main.yml and vars/main.yml
   const variables: Record<string, unknown> = {};
-  const varFiles = files.filter(
-    f => f.type === 'defaults' || f.type === 'vars'
-  );
+  const varFiles = files.filter((f) => f.type === 'defaults' || f.type === 'vars');
 
   for (const varFile of varFiles) {
     try {
@@ -37,7 +35,7 @@ export async function extractContext(playbookPath: string): Promise<ContextExtra
 
   // Build role structure string if it's a role (has multiple file types)
   let roleStructure: string | undefined;
-  const uniqueTypes = new Set(files.map(f => f.type));
+  const uniqueTypes = new Set(files.map((f) => f.type));
   if (uniqueTypes.size > 1) {
     roleStructure = buildRoleStructure(files);
   }
@@ -56,7 +54,7 @@ export async function extractContext(playbookPath: string): Promise<ContextExtra
  */
 export async function extractFixContext(
   errorMessage: string,
-  playbookPath: string
+  playbookPath: string,
 ): Promise<ContextExtraction> {
   const files = await readAnsiblePath(playbookPath);
 
@@ -68,18 +66,13 @@ export async function extractFixContext(
   if (taskName) {
     const taskLocation = findTaskInFiles(taskName, files);
     if (taskLocation) {
-      taskContext = extractTaskContext(
-        taskLocation.file.content,
-        taskLocation.lineIndex
-      );
+      taskContext = extractTaskContext(taskLocation.file.content, taskLocation.lineIndex);
     }
   }
 
   // Extract variables
   const variables: Record<string, unknown> = {};
-  const varFiles = files.filter(
-    f => f.type === 'defaults' || f.type === 'vars'
-  );
+  const varFiles = files.filter((f) => f.type === 'defaults' || f.type === 'vars');
 
   for (const varFile of varFiles) {
     try {
@@ -131,11 +124,11 @@ export function parseTaskNameFromError(errorMessage: string): string | undefined
  */
 export function findTaskInFiles(
   taskName: string,
-  files: RoleFile[]
+  files: RoleFile[],
 ): { file: RoleFile; lineIndex: number } | undefined {
   // Search through tasks and handlers files
   const searchFiles = files.filter(
-    f => f.type === 'tasks' || f.type === 'handlers' || f.type === 'playbook'
+    (f) => f.type === 'tasks' || f.type === 'handlers' || f.type === 'playbook',
   );
 
   for (const file of searchFiles) {
@@ -177,7 +170,10 @@ function extractTaskContext(content: string, lineIndex: number): string {
 
     // Check if this is a new task (same or less indentation with name: or -)
     const currentIndent = currentLine.match(/^(\s*)/)?.[1].length || 0;
-    if (currentIndent <= taskIndent && (currentLine.includes('name:') || currentLine.trim().startsWith('- '))) {
+    if (
+      currentIndent <= taskIndent &&
+      (currentLine.includes('name:') || currentLine.trim().startsWith('- '))
+    ) {
       taskEnd = i;
       break;
     }
@@ -203,7 +199,7 @@ function extractTaskContext(content: string, lineIndex: number): string {
  */
 function extractHandlerNames(files: RoleFile[]): string[] {
   const handlers: string[] = [];
-  const handlerFiles = files.filter(f => f.type === 'handlers');
+  const handlerFiles = files.filter((f) => f.type === 'handlers');
 
   for (const handlerFile of handlerFiles) {
     const matches = handlerFile.content.matchAll(/name:\s+([^\n]+)/g);

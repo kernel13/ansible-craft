@@ -1,7 +1,7 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
-const FIXTURES_DIR = join(import.meta.dir, "fixtures");
+const FIXTURES_DIR = join(import.meta.dir, 'fixtures');
 
 /**
  * Load a fixture file as string.
@@ -9,7 +9,7 @@ const FIXTURES_DIR = join(import.meta.dir, "fixtures");
  */
 export function loadFixture(relativePath: string): string {
   const fullPath = join(FIXTURES_DIR, relativePath);
-  return readFileSync(fullPath, "utf-8");
+  return readFileSync(fullPath, 'utf-8');
 }
 
 /**

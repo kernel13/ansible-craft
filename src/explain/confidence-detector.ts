@@ -48,14 +48,10 @@ export function detectLowConfidence(response: string): boolean {
   const lowerResponse = response.toLowerCase();
 
   // Check for high certainty first - if present, likely not low confidence
-  const hasCertainty = HIGH_CERTAINTY_PHRASES.some(phrase =>
-    lowerResponse.includes(phrase)
-  );
+  const hasCertainty = HIGH_CERTAINTY_PHRASES.some((phrase) => lowerResponse.includes(phrase));
 
   // Count uncertainty markers
-  const hedgeCount = UNCERTAINTY_MARKERS.filter(marker =>
-    lowerResponse.includes(marker)
-  ).length;
+  const hedgeCount = UNCERTAINTY_MARKERS.filter((marker) => lowerResponse.includes(marker)).length;
 
   // Specific high-uncertainty phrases automatically indicate low confidence
   const hasStrongUncertainty =
@@ -82,10 +78,7 @@ export function detectLowConfidence(response: string): boolean {
  * Suggest using --complex flag if Sonnet response shows uncertainty.
  * Only suggests if --complex wasn't already used.
  */
-export function suggestComplexIfNeeded(
-  response: string,
-  usedComplex: boolean
-): void {
+export function suggestComplexIfNeeded(response: string, usedComplex: boolean): void {
   if (usedComplex) {
     return; // Already using Opus, no need to suggest
   }
@@ -93,8 +86,8 @@ export function suggestComplexIfNeeded(
   if (detectLowConfidence(response)) {
     console.log(
       chalk.yellow(
-        '\nTip: This analysis shows uncertainty. Try --complex for deeper analysis with Claude Opus.'
-      )
+        '\nTip: This analysis shows uncertainty. Try --complex for deeper analysis with Claude Opus.',
+      ),
     );
   }
 }

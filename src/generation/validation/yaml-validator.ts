@@ -1,4 +1,4 @@
-import { parse, YAMLParseError } from 'yaml';
+import { YAMLParseError, parse } from 'yaml';
 import type { GeneratedFile } from '../role/parser.js';
 
 export interface YamlValidationError {
@@ -22,9 +22,7 @@ function isYamlFile(path: string): boolean {
  * @param file - Generated file to validate
  * @returns Validation error or null if valid
  */
-export function validateYamlSyntax(
-  file: GeneratedFile
-): YamlValidationError | null {
+export function validateYamlSyntax(file: GeneratedFile): YamlValidationError | null {
   // Skip non-YAML files
   if (!isYamlFile(file.path)) {
     return null;

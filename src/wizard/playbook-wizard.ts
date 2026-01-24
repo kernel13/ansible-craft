@@ -38,43 +38,43 @@ import { playbookWizardSchema } from './types.js';
  * ```
  */
 export async function runPlaybookWizard(): Promise<PlaybookWizardContext> {
-	// Display wizard intro
-	console.log(chalk.cyan.bold('\nPlaybook Generation Wizard'));
-	console.log('Configure target hosts, privilege escalation, and handlers.');
-	console.log(chalk.dim('Press Ctrl+C at any time to cancel.'));
+  // Display wizard intro
+  console.log(chalk.cyan.bold('\nPlaybook Generation Wizard'));
+  console.log('Configure target hosts, privilege escalation, and handlers.');
+  console.log(chalk.dim('Press Ctrl+C at any time to cancel.'));
 
-	// Step 1: Target Hosts (33% complete)
-	showStepHeader(1, 3, 'Target Hosts');
-	const hostPattern = await promptHosts();
+  // Step 1: Target Hosts (33% complete)
+  showStepHeader(1, 3, 'Target Hosts');
+  const hostPattern = await promptHosts();
 
-	// Step 2: Privilege Escalation (67% complete)
-	showStepHeader(2, 3, 'Privilege Escalation');
-	const becomeResult = await promptBecome();
+  // Step 2: Privilege Escalation (67% complete)
+  showStepHeader(2, 3, 'Privilege Escalation');
+  const becomeResult = await promptBecome();
 
-	// Step 3: Handlers (100%)
-	showStepHeader(3, 3, 'Handlers');
-	const handlersDescription = await promptHandlersDescription();
+  // Step 3: Handlers (100%)
+  showStepHeader(3, 3, 'Handlers');
+  const handlersDescription = await promptHandlersDescription();
 
-	// Display completion message
-	console.log(chalk.green('\n✓ Wizard complete! Starting playbook generation...\n'));
+  // Display completion message
+  console.log(chalk.green('\n✓ Wizard complete! Starting playbook generation...\n'));
 
-	// Build custom object with optional fields
-	const custom: Record<string, string> = {};
-	if (becomeResult.becomeUser) {
-		custom.becomeUser = becomeResult.becomeUser;
-	}
-	if (handlersDescription) {
-		custom.handlersDescription = handlersDescription;
-	}
+  // Build custom object with optional fields
+  const custom: Record<string, string> = {};
+  if (becomeResult.becomeUser) {
+    custom.becomeUser = becomeResult.becomeUser;
+  }
+  if (handlersDescription) {
+    custom.handlersDescription = handlersDescription;
+  }
 
-	// Build context object
-	const context: PlaybookWizardContext = {
-		hosts: [hostPattern], // Single-element array containing the user's pattern
-		become: becomeResult.become,
-		includeHandlers: handlersDescription !== undefined,
-		custom,
-	};
+  // Build context object
+  const context: PlaybookWizardContext = {
+    hosts: [hostPattern], // Single-element array containing the user's pattern
+    become: becomeResult.become,
+    includeHandlers: handlersDescription !== undefined,
+    custom,
+  };
 
-	// Validate with Zod schema before returning
-	return playbookWizardSchema.parse(context);
+  // Validate with Zod schema before returning
+  return playbookWizardSchema.parse(context);
 }

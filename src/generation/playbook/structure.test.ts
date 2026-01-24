@@ -1,49 +1,49 @@
-import { describe, test, expect, beforeEach, afterEach } from "bun:test";
-import { mkdtemp, rm, readdir } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { mkdtemp, readdir, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import {
-  createPlaybookStructure,
-  playbookExists,
   PLAYBOOK_DIRECTORIES,
   REQUIRED_PLAYBOOK_FILES,
-} from "./structure.js";
+  createPlaybookStructure,
+  playbookExists,
+} from './structure.js';
 
-describe("createPlaybookStructure", () => {
+describe('createPlaybookStructure', () => {
   let tempDir: string;
 
   beforeEach(async () => {
-    tempDir = await mkdtemp(join(tmpdir(), "ansible-craft-test-"));
+    tempDir = await mkdtemp(join(tmpdir(), 'ansible-craft-test-'));
   });
 
   afterEach(async () => {
     await rm(tempDir, { recursive: true, force: true });
   });
 
-  describe("directory creation", () => {
-    test("should create playbook root directory", async () => {
+  describe('directory creation', () => {
+    test('should create playbook root directory', async () => {
       const result = await createPlaybookStructure({
-        playbookName: "test-playbook",
+        playbookName: 'test-playbook',
         outputDir: tempDir,
       });
 
-      expect(result.playbookDir).toBe(join(tempDir, "test-playbook"));
+      expect(result.playbookDir).toBe(join(tempDir, 'test-playbook'));
       expect(result.createdDirs).toContain(result.playbookDir);
     });
 
-    test("should create group_vars directory", async () => {
+    test('should create group_vars directory', async () => {
       const result = await createPlaybookStructure({
-        playbookName: "test-playbook",
+        playbookName: 'test-playbook',
         outputDir: tempDir,
       });
 
       const dirs = await readdir(result.playbookDir);
-      expect(dirs).toContain("group_vars");
+      expect(dirs).toContain('group_vars');
     });
 
-    test("should report all created directories", async () => {
+    test('should report all created directories', async () => {
       const result = await createPlaybookStructure({
-        playbookName: "test-playbook",
+        playbookName: 'test-playbook',
         outputDir: tempDir,
       });
 
@@ -52,32 +52,32 @@ describe("createPlaybookStructure", () => {
     });
   });
 
-  describe("dry run mode", () => {
-    test("should not create directories in dry run", async () => {
+  describe('dry run mode', () => {
+    test('should not create directories in dry run', async () => {
       const result = await createPlaybookStructure({
-        playbookName: "dry-run-playbook",
+        playbookName: 'dry-run-playbook',
         outputDir: tempDir,
         dryRun: true,
       });
 
       const dirExists = await readdir(result.playbookDir).then(
         () => true,
-        () => false
+        () => false,
       );
 
       expect(dirExists).toBe(false);
     });
 
-    test("should still report what would be created", async () => {
+    test('should still report what would be created', async () => {
       const result = await createPlaybookStructure({
-        playbookName: "dry-run-playbook",
+        playbookName: 'dry-run-playbook',
         outputDir: tempDir,
         dryRun: true,
       });
 
       // Should report root + group_vars even though not created
       expect(result.createdDirs.length).toBe(2);
-      expect(result.playbookDir).toBe(join(tempDir, "dry-run-playbook"));
+      expect(result.playbookDir).toBe(join(tempDir, 'dry-run-playbook'));
     });
   });
 });

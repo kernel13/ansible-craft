@@ -12,39 +12,79 @@ import {
   roleWizardSchema,
 } from './types.js';
 
+/**
+ * Creates a minimal valid RoleWizardContext with all required fields.
+ * Allows overriding any field via the partial parameter.
+ */
+function createRoleContext(partial: Partial<RoleWizardContext> = {}): RoleWizardContext {
+  return {
+    structure: [],
+    platforms: [],
+    handlers: [],
+    ansibleVersion: {
+      minimum: '2.14',
+      includeVersionCheck: false,
+    },
+    variableStrategy: {
+      includeDefaults: true,
+      includeVars: false,
+      naming: 'prefixed',
+    },
+    privilegeEscalation: {
+      required: 'yes',
+      becomeUser: 'root',
+    },
+    tags: {
+      strategy: 'grouped',
+      groups: ['install', 'config', 'service'],
+    },
+    idempotency: {
+      supportCheckMode: true,
+      includeChangedWhen: true,
+      includeFailedWhen: false,
+    },
+    dependencies: {
+      includeMeta: true,
+      roles: [],
+    },
+    molecule: {
+      enabled: true,
+      driver: 'docker',
+      platforms: [],
+      scenarios: ['default', 'idempotence'],
+    },
+    custom: {},
+    ...partial,
+  };
+}
+
 describe('roleWizardSchema', () => {
   describe('valid input', () => {
     test('accepts minimal valid input (empty arrays)', () => {
-      const input: RoleWizardContext = {
-        structure: [],
-        platforms: [],
-        handlers: [],
-        custom: {},
-      };
+      const input = createRoleContext();
 
       const result = roleWizardSchema.safeParse(input);
       expect(result.success).toBe(true);
     });
 
     test('accepts full valid input with all options', () => {
-      const input: RoleWizardContext = {
+      const input = createRoleContext({
         structure: ['tasks', 'handlers', 'templates', 'files', 'defaults', 'vars', 'meta'],
         platforms: ['Ubuntu', 'RHEL', 'Debian', 'Windows', 'Generic'],
         handlers: ['restart', 'reload', 'enable', 'custom'],
         custom: { key: 'value', another: 'data' },
-      };
+      });
 
       const result = roleWizardSchema.safeParse(input);
       expect(result.success).toBe(true);
     });
 
     test('accepts single items in arrays', () => {
-      const input: RoleWizardContext = {
+      const input = createRoleContext({
         structure: ['tasks'],
         platforms: ['Ubuntu'],
         handlers: ['restart'],
-        custom: {},
-      };
+      });
 
       const result = roleWizardSchema.safeParse(input);
       expect(result.success).toBe(true);
@@ -206,103 +246,161 @@ describe('playbookWizardSchema', () => {
 
 describe('formatRoleContextForPrompt', () => {
   test('formats full context with all fields', () => {
-    const context: RoleWizardContext = {
+    const context = createRoleContext({
       structure: ['tasks', 'handlers', 'templates'],
       platforms: ['Ubuntu', 'RHEL'],
       handlers: ['restart', 'reload'],
-      custom: {},
-    };
+    });
 
     const result = formatRoleContextForPrompt(context);
 
-    expect(result).toEqual({
-      structure: 'tasks, handlers, templates',
-      platforms: 'Ubuntu, RHEL',
-      handlers: 'restart, reload',
-    });
+    // Check core fields
+    expect(result.structure).toBe('tasks, handlers, templates');
+    expect(result.platforms).toBe('Ubuntu, RHEL');
+    expect(result.handlers).toBe('restart, reload');
+    // Check new fields are present
+    expect(result.ansible_min_version).toBe('2.14');
+    expect(result.variable_naming).toBe('prefixed by role name');
+    expect(result.privilege_escalation).toBe('yes');
   });
 
-  test('handles empty arrays (returns empty strings omitted)', () => {
-    const context: RoleWizardContext = {
+  test('handles empty arrays (omits empty structure/platforms/handlers)', () => {
+    const context = createRoleContext({
       structure: [],
       platforms: [],
       handlers: [],
-      custom: {},
-    };
+    });
 
     const result = formatRoleContextForPrompt(context);
 
-    expect(result).toEqual({});
+    // Empty arrays should not be included
+    expect(result.structure).toBeUndefined();
+    expect(result.platforms).toBeUndefined();
+    expect(result.handlers).toBeUndefined();
+    // But other fields should still be present
+    expect(result.ansible_min_version).toBe('2.14');
   });
 
   test('includes custom fields if non-empty', () => {
-    const context: RoleWizardContext = {
+    const context = createRoleContext({
       structure: ['tasks'],
       platforms: ['Ubuntu'],
       handlers: ['restart'],
       custom: { ssl: 'letsencrypt', version: '1.20' },
-    };
+    });
 
     const result = formatRoleContextForPrompt(context);
 
-    expect(result).toEqual({
-      structure: 'tasks',
-      platforms: 'Ubuntu',
-      handlers: 'restart',
-      ssl: 'letsencrypt',
-      version: '1.20',
-    });
+    expect(result.structure).toBe('tasks');
+    expect(result.platforms).toBe('Ubuntu');
+    expect(result.handlers).toBe('restart');
+    expect(result.ssl).toBe('letsencrypt');
+    expect(result.version).toBe('1.20');
   });
 
   test('excludes custom fields if empty', () => {
-    const context: RoleWizardContext = {
+    const context = createRoleContext({
       structure: ['tasks', 'defaults'],
       platforms: ['Debian'],
       handlers: ['enable'],
-      custom: {},
-    };
+    });
 
     const result = formatRoleContextForPrompt(context);
 
-    expect(result).toEqual({
-      structure: 'tasks, defaults',
-      platforms: 'Debian',
-      handlers: 'enable',
-    });
+    expect(result.structure).toBe('tasks, defaults');
+    expect(result.platforms).toBe('Debian');
+    expect(result.handlers).toBe('enable');
+    // No custom fields should be added
+    expect(result.ssl).toBeUndefined();
   });
 
   test('handles single items in arrays', () => {
-    const context: RoleWizardContext = {
+    const context = createRoleContext({
       structure: ['tasks'],
       platforms: ['Ubuntu'],
       handlers: ['restart'],
-      custom: {},
-    };
+    });
 
     const result = formatRoleContextForPrompt(context);
 
-    expect(result).toEqual({
-      structure: 'tasks',
-      platforms: 'Ubuntu',
-      handlers: 'restart',
-    });
+    expect(result.structure).toBe('tasks');
+    expect(result.platforms).toBe('Ubuntu');
+    expect(result.handlers).toBe('restart');
   });
 
   test('handles multiple items with comma separation', () => {
-    const context: RoleWizardContext = {
+    const context = createRoleContext({
       structure: ['tasks', 'handlers', 'templates', 'defaults'],
       platforms: ['Ubuntu', 'RHEL', 'Debian'],
       handlers: ['restart', 'reload', 'enable'],
-      custom: {},
-    };
+    });
 
     const result = formatRoleContextForPrompt(context);
 
-    expect(result).toEqual({
-      structure: 'tasks, handlers, templates, defaults',
-      platforms: 'Ubuntu, RHEL, Debian',
-      handlers: 'restart, reload, enable',
+    expect(result.structure).toBe('tasks, handlers, templates, defaults');
+    expect(result.platforms).toBe('Ubuntu, RHEL, Debian');
+    expect(result.handlers).toBe('restart, reload, enable');
+  });
+
+  test('formats molecule settings when enabled', () => {
+    const context = createRoleContext({
+      molecule: {
+        enabled: true,
+        driver: 'podman',
+        platforms: ['Ubuntu', 'Debian'],
+        scenarios: ['default', 'side_effect'],
+      },
     });
+
+    const result = formatRoleContextForPrompt(context);
+
+    expect(result.molecule_testing).toBe('enabled');
+    expect(result.molecule_driver).toBe('podman');
+    expect(result.molecule_platforms).toBe('Ubuntu, Debian');
+    expect(result.molecule_scenarios).toBe('default, side_effect');
+  });
+
+  test('formats molecule settings when disabled', () => {
+    const context = createRoleContext({
+      molecule: {
+        enabled: false,
+      },
+    });
+
+    const result = formatRoleContextForPrompt(context);
+
+    expect(result.molecule_testing).toBe('disabled');
+    expect(result.molecule_driver).toBeUndefined();
+  });
+
+  test('formats idempotency settings', () => {
+    const context = createRoleContext({
+      idempotency: {
+        supportCheckMode: true,
+        includeChangedWhen: true,
+        includeFailedWhen: true,
+      },
+    });
+
+    const result = formatRoleContextForPrompt(context);
+
+    expect(result.idempotency).toBe(
+      'check mode support, changed_when conditions, failed_when conditions',
+    );
+  });
+
+  test('formats dependencies with roles', () => {
+    const context = createRoleContext({
+      dependencies: {
+        includeMeta: true,
+        roles: ['geerlingguy.docker', 'geerlingguy.pip'],
+      },
+    });
+
+    const result = formatRoleContextForPrompt(context);
+
+    expect(result.include_meta).toBe('yes');
+    expect(result.role_dependencies).toBe('geerlingguy.docker, geerlingguy.pip');
   });
 });
 

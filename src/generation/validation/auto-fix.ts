@@ -6,8 +6,8 @@
  * for unfixable violations.
  */
 
-import type { LintViolation } from './ansible-lint.js';
 import type { GeneratedFile } from '../role/parser.js';
+import type { LintViolation } from './ansible-lint.js';
 
 /**
  * Result of applying auto-fixes to generated files.
@@ -117,9 +117,7 @@ export function canAutoFix(ruleId: string): boolean {
     return true;
   }
   // Check if any fixable rule is a prefix of the ruleId
-  return FIXABLE_RULES.some(
-    (rule) => ruleId.startsWith(rule + '[') || ruleId === rule
-  );
+  return FIXABLE_RULES.some((rule) => ruleId.startsWith(rule + '[') || ruleId === rule);
 }
 
 /**
@@ -129,10 +127,7 @@ export function canAutoFix(ruleId: string): boolean {
  * @param violations - Lint violations from ansible-lint
  * @returns Result containing fixed and unfixable violations with modified content
  */
-export function applyAutoFixes(
-  files: GeneratedFile[],
-  violations: LintViolation[]
-): AutoFixResult {
+export function applyAutoFixes(files: GeneratedFile[], violations: LintViolation[]): AutoFixResult {
   // Create deep copy of file contents
   const modifiedContent = new Map<string, string>();
   for (const file of files) {
@@ -168,9 +163,7 @@ export function applyAutoFixes(
     }
 
     // Sort violations by line number descending to avoid offset issues
-    const sortedViolations = [...fileViolations].sort(
-      (a, b) => (b.line ?? 0) - (a.line ?? 0)
-    );
+    const sortedViolations = [...fileViolations].sort((a, b) => (b.line ?? 0) - (a.line ?? 0));
 
     for (const violation of sortedViolations) {
       if (!canAutoFix(violation.ruleId)) {
@@ -257,11 +250,7 @@ function applyFix(content: string, violation: LintViolation): FixAttemptResult {
 /**
  * Fix FQCN violations by replacing short module names with fully qualified names.
  */
-function fixFqcn(
-  content: string,
-  line: number,
-  message: string
-): FixAttemptResult {
+function fixFqcn(content: string, line: number, message: string): FixAttemptResult {
   const lines = content.split('\n');
   if (line < 1 || line > lines.length) {
     return { success: false, content, original: '', replacement: '' };
@@ -411,26 +400,19 @@ function fixTaskNameCasing(content: string, line: number): FixAttemptResult {
 function getSuggestion(ruleId: string, message: string): string {
   // Common rule suggestions
   const suggestions: Record<string, string> = {
-    'risky-file-permissions':
-      "Use explicit mode with quotes: mode: '0644' instead of mode: 644",
-    'no-changed-when':
-      'Add changed_when: false for read-only commands or specify a condition',
+    'risky-file-permissions': "Use explicit mode with quotes: mode: '0644' instead of mode: 644",
+    'no-changed-when': 'Add changed_when: false for read-only commands or specify a condition',
     'command-instead-of-module':
       'Consider using a built-in module instead of command/shell (e.g., ansible.builtin.copy, ansible.builtin.file)',
-    'no-handler':
-      'Extract repeated task to a handler and use notify: handler_name',
+    'no-handler': 'Extract repeated task to a handler and use notify: handler_name',
     'yaml[line-length]':
       'Break long lines using YAML multiline syntax (| or >) or split across multiple lines',
-    'var-naming':
-      'Use snake_case for variable names (e.g., my_variable instead of myVariable)',
-    'role-name':
-      'Use lowercase letters, numbers, and underscores for role names',
-    'no-jinja-when':
-      'Remove {{ }} from when conditions - Ansible auto-evaluates when expressions',
-    'schema': 'Check YAML structure against Ansible schema - verify key names and nesting',
+    'var-naming': 'Use snake_case for variable names (e.g., my_variable instead of myVariable)',
+    'role-name': 'Use lowercase letters, numbers, and underscores for role names',
+    'no-jinja-when': 'Remove {{ }} from when conditions - Ansible auto-evaluates when expressions',
+    schema: 'Check YAML structure against Ansible schema - verify key names and nesting',
     'key-order': 'Reorder task keys: name should come first, then module, then arguments',
-    'empty-string-compare':
-      'Use `when: my_var | length > 0` instead of `when: my_var != ""`',
+    'empty-string-compare': 'Use `when: my_var | length > 0` instead of `when: my_var != ""`',
   };
 
   // Check for direct match

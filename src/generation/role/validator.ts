@@ -101,8 +101,7 @@ export function validateYaml(content: string, path: string): ValidationResult {
     parse(content);
     return { valid: true, path };
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : 'Unknown YAML error';
+    const message = error instanceof Error ? error.message : 'Unknown YAML error';
     return {
       valid: false,
       error: message,
@@ -203,10 +202,7 @@ export function checkIdempotency(content: string): IdempotencyWarning[] {
 /**
  * Check a single task for idempotency issues.
  */
-function checkTaskIdempotency(
-  task: Record<string, unknown>,
-  warnings: IdempotencyWarning[]
-): void {
+function checkTaskIdempotency(task: Record<string, unknown>, warnings: IdempotencyWarning[]): void {
   for (const { pattern, states } of STATE_REQUIRED_MODULES) {
     // Check if task uses this module
     if (task[pattern] && typeof task[pattern] === 'object') {
@@ -214,8 +210,7 @@ function checkTaskIdempotency(
 
       // Check if state is specified
       if (!('state' in moduleArgs)) {
-        const taskName =
-          typeof task.name === 'string' ? task.name : 'unnamed task';
+        const taskName = typeof task.name === 'string' ? task.name : 'unnamed task';
         warnings.push({
           module: pattern,
           message: `Task "${taskName}" uses ${pattern} without explicit state parameter. Consider adding state: ${states.slice(0, 2).join(' or ')}`,
@@ -236,9 +231,7 @@ export interface ValidationSummary {
   isValid: boolean;
 }
 
-export function validateGeneratedRole(
-  files: GeneratedFile[]
-): ValidationSummary {
+export function validateGeneratedRole(files: GeneratedFile[]): ValidationSummary {
   const yamlErrors = validateAllFiles(files);
   const fqcnWarnings: FqcnWarning[] = [];
   const idempotencyWarnings: IdempotencyWarning[] = [];

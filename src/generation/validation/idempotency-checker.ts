@@ -24,10 +24,7 @@ const STATE_REQUIRED_MODULES = new Set([
 ]);
 
 /** Modules that need creates/removes/changed_when for idempotency */
-const COMMAND_MODULES = new Set([
-  'ansible.builtin.command',
-  'ansible.builtin.shell',
-]);
+const COMMAND_MODULES = new Set(['ansible.builtin.command', 'ansible.builtin.shell']);
 
 /**
  * Check if a file is a YAML file containing tasks.
@@ -60,7 +57,7 @@ function findTaskLine(content: string, taskName: string): number {
 function checkTask(
   task: Record<string, unknown>,
   file: GeneratedFile,
-  warnings: IdempotencyWarning[]
+  warnings: IdempotencyWarning[],
 ): void {
   const taskName = typeof task.name === 'string' ? task.name : 'unnamed task';
   const line = findTaskLine(file.content, taskName);
@@ -86,12 +83,9 @@ function checkTask(
   for (const module of COMMAND_MODULES) {
     if (task[module] !== undefined) {
       // Module args can be inline or in separate 'args:' key
-      const moduleArgs = typeof task[module] === 'object'
-        ? (task[module] as Record<string, unknown>)
-        : {};
-      const argsKey = typeof task.args === 'object'
-        ? (task.args as Record<string, unknown>)
-        : {};
+      const moduleArgs =
+        typeof task[module] === 'object' ? (task[module] as Record<string, unknown>) : {};
+      const argsKey = typeof task.args === 'object' ? (task.args as Record<string, unknown>) : {};
 
       const hasIdempotencyControl =
         'creates' in moduleArgs ||
@@ -123,9 +117,7 @@ function checkTask(
  * @param file - Generated file to check
  * @returns Array of warnings
  */
-export function checkIdempotencyPatterns(
-  file: GeneratedFile
-): IdempotencyWarning[] {
+export function checkIdempotencyPatterns(file: GeneratedFile): IdempotencyWarning[] {
   // Only check task files
   if (!isTaskFile(file.path)) {
     return [];

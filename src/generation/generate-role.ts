@@ -16,15 +16,20 @@
  * const files = await generateRoleCode(client, plan, 'nginx web server with SSL');
  * ```
  */
-import Anthropic from '@anthropic-ai/sdk';
+import type Anthropic from '@anthropic-ai/sdk';
 import ora from 'ora';
 import { DEFAULT_MODEL } from '../ai/client.js';
+import { displayApiError, transformApiError } from '../ai/errors.js';
 import { withRetry } from '../ai/retry.js';
-import { transformApiError, displayApiError } from '../ai/errors.js';
-import { streamMessage, extractText } from '../ai/stream.js';
-import { ANSIBLE_EXPERT_SYSTEM_PROMPT, buildPlanPrompt, buildGeneratePrompt } from './prompts/index.js';
+import { extractText, streamMessage } from '../ai/stream.js';
+import {
+  ANSIBLE_EXPERT_SYSTEM_PROMPT,
+  buildGeneratePrompt,
+  buildPlanPrompt,
+} from './prompts/index.js';
+import type { GenerateOptions as PromptGenerateOptions } from './prompts/generate.js';
+import { type GeneratedFile, parseGeneratedFiles } from './role/index.js';
 import { PLAN_PREVIEW_SCHEMA, type PlanPreview } from './schemas/plan-preview.js';
-import { parseGeneratedFiles, type GeneratedFile } from './role/index.js';
 
 /**
  * Options for role generation.
@@ -47,6 +52,14 @@ export interface GenerateOptions {
   quiet?: boolean;
   /** No retries on failure */
   noRetry?: boolean;
+}
+
+/**
+ * Options for code generation phase.
+ */
+export interface CodeGenerateOptions extends Pick<GenerateOptions, 'quiet' | 'noRetry'> {
+  /** Prompt generation options from wizard context */
+  promptOptions?: PromptGenerateOptions;
 }
 
 /**
@@ -139,17 +152,17 @@ export async function generateRolePlan(
  * @param client - Configured Anthropic client
  * @param plan - Approved plan preview
  * @param description - Original natural language description
- * @param options - Generation options
+ * @param options - Generation options including prompt options from wizard
  * @returns Parsed generated files
  */
 export async function generateRoleCode(
   client: Anthropic,
   plan: PlanPreview,
   description: string,
-  options: Pick<GenerateOptions, 'quiet' | 'noRetry'> = {},
+  options: CodeGenerateOptions = {},
 ): Promise<GeneratedFile[]> {
-  // Build generation prompt
-  const prompt = buildGeneratePrompt(plan, description);
+  // Build generation prompt with wizard options
+  const prompt = buildGeneratePrompt(plan, description, options.promptOptions);
 
   // Use streamMessage for visual streaming
   // It handles spinner, streaming tokens, and errors

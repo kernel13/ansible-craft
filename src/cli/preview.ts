@@ -134,7 +134,7 @@ export function displayLintResults(violations: LintViolation[]): void {
  */
 export async function previewAndConfirm(
   files: GeneratedFile[],
-  lintViolations?: LintViolation[]
+  lintViolations?: LintViolation[],
 ): Promise<boolean> {
   displayFilesPreview(files);
 

@@ -5,7 +5,6 @@ src/
 
 # Development configuration
 .planning/
-.claude/
 tsup.config.ts
 biome.json
 bun.lockb

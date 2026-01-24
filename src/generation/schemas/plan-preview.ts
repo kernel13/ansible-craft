@@ -143,6 +143,14 @@ export const PLAN_PREVIEW_SCHEMA = {
       items: { type: 'string' },
     },
   },
-  required: ['role_name', 'description', 'tasks', 'variables', 'handlers', 'templates', 'platforms'],
+  required: [
+    'role_name',
+    'description',
+    'tasks',
+    'variables',
+    'handlers',
+    'templates',
+    'platforms',
+  ],
   additionalProperties: false,
 } as const;

@@ -2,27 +2,16 @@
  * Explain command for ansible-craft CLI.
  *
  * Provides AI-powered explanations of Ansible files and roles.
+ * Uses the ExplainerAgent for context-aware explanations.
  */
 
 import { stat } from 'node:fs/promises';
 import chalk from 'chalk';
 import { Command } from 'commander';
-import { createClient } from '../../ai/client.js';
+import { ExplainerAgent } from '../../agents/index.js';
 import { displayApiError, transformApiError } from '../../ai/errors.js';
-import { selectModel } from '../../ai/models.js';
-import { type MessageParams, extractText, streamMessage } from '../../ai/stream.js';
 import { loadConfig } from '../../config/index.js';
-import {
-  type ContextExtraction,
-  extractContext,
-  readAnsiblePath,
-  suggestComplexIfNeeded,
-} from '../../explain/index.js';
-import {
-  EXPLAIN_SYSTEM_PROMPT,
-  type ExplainFileType,
-  buildExplainPrompt,
-} from '../../explain/prompts/index.js';
+import { createAgentContext, displayAgentWarnings, handleAgentFailure } from '../helpers/index.js';
 import { createPhaseTracker } from '../output.js';
 
 /**
@@ -56,15 +45,7 @@ export const explainCommand = new Command('explain')
         process.exit(1);
       }
 
-      // 2. Select model (with confirmation if using Opus)
-      const modelSelection = await selectModel(options.complex ?? false);
-      if (!modelSelection.confirmed) {
-        // User declined Opus, exit gracefully
-        console.log(chalk.yellow('\nOperation cancelled.'));
-        return;
-      }
-
-      // 3. Check if path exists
+      // 2. Check if path exists
       try {
         await stat(ansiblePath);
       } catch {
@@ -75,85 +56,52 @@ export const explainCommand = new Command('explain')
       // Create phase tracker
       const tracker = createPhaseTracker(options.quiet ?? false);
 
-      // 4. Read the Ansible path
-      tracker.start('Reading Ansible code...');
-      const files = await readAnsiblePath(ansiblePath);
-
-      if (files.length === 0) {
-        tracker.fail('No Ansible files found');
-        console.error(chalk.red(`Error: No readable Ansible files found at: ${ansiblePath}`));
-        process.exit(1);
-      }
-
-      // Determine file type (single file vs role directory)
-      const fileType: ExplainFileType = files.length === 1 ? files[0].type : 'role';
-      tracker.succeed('Code loaded');
-
-      // 5. Extract context if --playbook provided
-      let context: ContextExtraction | undefined;
-      if (options.playbook) {
-        tracker.start('Extracting context...');
-        try {
-          context = await extractContext(options.playbook);
-          tracker.succeed('Context extracted');
-        } catch (error) {
-          tracker.fail('Context extraction failed');
-          console.error(
-            chalk.yellow(
-              `Warning: Could not extract context from ${options.playbook}: ${error instanceof Error ? error.message : 'Unknown error'}`,
-            ),
-          );
-          // Continue without context
-        }
-      }
-
-      // 6. Build content string
-      let content: string;
-      if (files.length === 1) {
-        // Single file - use content directly
-        content = files[0].content;
-      } else {
-        // Role directory - concatenate files with headers
-        content = files
-          .map((file) => {
-            const filename = file.path.split('/').pop() || file.path;
-            return `=== ${file.type}/${filename} ===\n${file.content}`;
-          })
-          .join('\n\n');
-      }
-
-      // 7. Build prompt and stream response
-      const prompt = buildExplainPrompt(content, fileType, context);
-
-      const client = createClient({ apiKey: config.api.key });
-
-      console.log(chalk.cyan('\n=== Explanation ===\n'));
-
-      // Capture full response for confidence check
-      let fullResponse = '';
-
-      const messageParams: MessageParams = {
-        userMessage: prompt,
-        systemPrompt: EXPLAIN_SYSTEM_PROMPT,
-        model: modelSelection.model,
-        maxTokens: 4096,
-      };
-
-      const message = await streamMessage(client, messageParams, {
+      // 3. Create agent context
+      const agentContext = createAgentContext({
+        config,
         quiet: options.quiet,
-        onText: (text) => {
-          fullResponse += text;
-        },
       });
 
-      // Extract text from message (in case streaming didn't capture all)
-      if (!fullResponse) {
-        fullResponse = extractText(message);
+      // 4. Execute ExplainerAgent
+      tracker.start('Analyzing Ansible code...');
+      const explainerAgent = new ExplainerAgent();
+      const result = await explainerAgent.execute(
+        {
+          path: ansiblePath,
+          playbookContext: options.playbook,
+          useComplex: options.complex ?? false,
+        },
+        agentContext,
+      );
+
+      // Handle agent failure
+      if (!result.success) {
+        // Check if user declined model selection
+        const modelDeclined = result.errors?.some((e) => e.code === 'MODEL_DECLINED');
+        if (modelDeclined) {
+          tracker.fail('Operation cancelled');
+          console.log(chalk.yellow('\nOperation cancelled.'));
+          return;
+        }
+
+        handleAgentFailure(result, {
+          jsonMode: false,
+          tracker,
+          phaseName: 'Analysis failed',
+        });
       }
 
-      // 8. Suggest --complex if low confidence detected (only if not already using Opus)
-      if (!options.complex) {
-        suggestComplexIfNeeded(fullResponse, options.complex ?? false);
+      tracker.succeed('Analysis complete');
+
+      // 5. Display the explanation
+      console.log(chalk.cyan('\n=== Explanation ===\n'));
+      console.log(result.data!.explanation);
+
+      // 6. Display warnings (e.g., suggest --complex if low confidence)
+      displayAgentWarnings(result.warnings, options.quiet ?? false);
+
+      if (result.data!.suggestComplex && !options.complex) {
+        console.log(chalk.dim('\nTip: Use --complex for deeper analysis with Claude Opus.'));
       }
     } catch (error) {
       // Handle API errors

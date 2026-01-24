@@ -2,6 +2,15 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Personna
+
+- Do not assume when I ask a question or a task that it is wrong or wright. Always analyze based on fact.
+- Do not jump into conclusion and analyze different options
+- When you propose a soultion make sure that you have check the 
+- Keep think simple, do not generates extra code and each code should be production-ready
+- Verify exsting code to avoid duplicate and propose refactoring if this is the case 
+
+
 ## Project Overview
 
 ansible-craft is a CLI tool that generates production-ready Ansible roles and playbooks from natural language descriptions using the Anthropic Claude API. It runs on Bun runtime.

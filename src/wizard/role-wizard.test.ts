@@ -10,17 +10,26 @@ import { ExitPromptError } from '@inquirer/core';
 
 // Module-level mocks must be declared before importing the modules under test
 const mockCheckbox = mock(() => Promise.resolve([]));
+const mockSelect = mock(() => Promise.resolve(''));
+const mockConfirm = mock(() => Promise.resolve(true));
+const mockInput = mock(() => Promise.resolve(''));
 const mockSeparator = class Separator {
   type = 'separator' as const;
   separator = '──────────────';
   constructor(separator?: string) {
     if (separator) this.separator = separator;
   }
+  static isSeparator(item: unknown): boolean {
+    return item instanceof Separator;
+  }
 };
 
 // Mock @inquirer/prompts before importing modules that use it
 mock.module('@inquirer/prompts', () => ({
   checkbox: mockCheckbox,
+  select: mockSelect,
+  confirm: mockConfirm,
+  input: mockInput,
   Separator: mockSeparator,
   ExitPromptError: ExitPromptError,
 }));
@@ -255,11 +264,96 @@ describe('promptHandlers', () => {
   });
 });
 
+/**
+ * Helper function to set up all wizard prompts for complete flow.
+ * The enhanced wizard has 11 steps with many prompts:
+ * 1. Directories (checkbox)
+ * 2. Platforms (checkbox)
+ * 3. Ansible version (select, confirm)
+ * 4. Variable strategy (confirm x2, select)
+ * 5. Privilege escalation (select, select)
+ * 6. Handlers (checkbox)
+ * 7. Tags (select, input)
+ * 8. Idempotency (confirm x3)
+ * 9. Dependencies (confirm, input)
+ * 10. Molecule (confirm, select, checkbox, checkbox)
+ * 11. Complete
+ */
+function setupWizardMocks(
+  options: {
+    directories?: string[];
+    platforms?: string[];
+    handlers?: string[];
+    moleculeEnabled?: boolean;
+    dependenciesEnabled?: boolean;
+  } = {},
+) {
+  const {
+    directories = ['handlers'],
+    platforms = ['Ubuntu'],
+    handlers = ['restart'],
+    moleculeEnabled = true,
+    dependenciesEnabled = true,
+  } = options;
+
+  // Step 1: Directories
+  mockCheckbox.mockResolvedValueOnce(directories);
+
+  // Step 2: Platforms
+  mockCheckbox.mockResolvedValueOnce(platforms);
+
+  // Step 3: Ansible version
+  mockSelect.mockResolvedValueOnce('2.14'); // minimum version
+  mockConfirm.mockResolvedValueOnce(false); // include version check
+
+  // Step 4: Variable strategy
+  mockConfirm.mockResolvedValueOnce(true); // include defaults
+  mockConfirm.mockResolvedValueOnce(false); // include vars
+  mockSelect.mockResolvedValueOnce('prefixed'); // naming convention
+
+  // Step 5: Privilege escalation
+  mockSelect.mockResolvedValueOnce('yes'); // required
+  mockSelect.mockResolvedValueOnce('root'); // become user
+
+  // Step 6: Handlers
+  mockCheckbox.mockResolvedValueOnce(handlers);
+
+  // Step 7: Tags
+  mockSelect.mockResolvedValueOnce('grouped'); // strategy
+  mockInput.mockResolvedValueOnce('install,config,service'); // tag groups
+
+  // Step 8: Idempotency
+  mockConfirm.mockResolvedValueOnce(true); // support check mode
+  mockConfirm.mockResolvedValueOnce(true); // include changed_when
+  mockConfirm.mockResolvedValueOnce(false); // include failed_when
+
+  // Step 9: Dependencies
+  mockConfirm.mockResolvedValueOnce(dependenciesEnabled); // include meta
+  if (dependenciesEnabled) {
+    mockInput.mockResolvedValueOnce(''); // role dependencies (empty)
+  }
+
+  // Step 10: Molecule
+  mockConfirm.mockResolvedValueOnce(moleculeEnabled); // enabled
+  if (moleculeEnabled) {
+    mockSelect.mockResolvedValueOnce('docker'); // driver
+    // Platforms checkbox - filter out Generic
+    const moleculePlatforms = platforms.filter((p) => p !== 'Generic');
+    if (moleculePlatforms.length > 0) {
+      mockCheckbox.mockResolvedValueOnce(moleculePlatforms); // test platforms
+    }
+    mockCheckbox.mockResolvedValueOnce(['default', 'idempotence']); // scenarios
+  }
+}
+
 describe('runRoleWizard', () => {
   let consoleLogSpy: ReturnType<typeof spyOn>;
 
   beforeEach(() => {
     mockCheckbox.mockReset();
+    mockSelect.mockReset();
+    mockConfirm.mockReset();
+    mockInput.mockReset();
     consoleLogSpy = spyOn(console, 'log').mockImplementation(() => {});
   });
 
@@ -268,29 +362,34 @@ describe('runRoleWizard', () => {
   });
 
   test('returns validated RoleWizardContext on complete flow', async () => {
-    // Mock the three checkbox prompts in sequence
-    // Note: disabled items (tasks) are excluded from checkbox answer
-    mockCheckbox
-      .mockResolvedValueOnce(['handlers']) // directories (tasks excluded, will be prepended)
-      .mockResolvedValueOnce(['Ubuntu']) // platforms
-      .mockResolvedValueOnce(['restart']); // handlers
+    setupWizardMocks({
+      directories: ['handlers'],
+      platforms: ['Ubuntu'],
+      handlers: ['restart'],
+    });
 
     const result = await runRoleWizard();
 
-    expect(result).toEqual({
-      structure: ['tasks', 'handlers'], // tasks prepended
-      platforms: ['Ubuntu'],
-      handlers: ['restart'],
-      custom: {},
-    });
+    // Verify core structure
+    expect(result.structure).toEqual(['tasks', 'handlers']); // tasks prepended
+    expect(result.platforms).toEqual(['Ubuntu']);
+    expect(result.handlers).toEqual(['restart']);
+    expect(result.custom).toEqual({});
+
+    // Verify new fields
+    expect(result.ansibleVersion.minimum).toBe('2.14');
+    expect(result.variableStrategy.naming).toBe('prefixed');
+    expect(result.privilegeEscalation.required).toBe('yes');
+    expect(result.molecule.enabled).toBe(true);
   });
 
   test('result is validated by Zod schema', async () => {
-    // Note: disabled items (tasks) are excluded from checkbox answer
-    mockCheckbox
-      .mockResolvedValueOnce(['templates', 'defaults']) // tasks excluded, will be prepended
-      .mockResolvedValueOnce(['Generic'])
-      .mockResolvedValueOnce([]);
+    setupWizardMocks({
+      directories: ['templates', 'defaults'],
+      platforms: ['Generic'],
+      handlers: [],
+      moleculeEnabled: false, // Generic platform means no molecule platforms
+    });
 
     const result = await runRoleWizard();
 
@@ -299,22 +398,10 @@ describe('runRoleWizard', () => {
     expect(validation.success).toBe(true);
   });
 
-  test('calls prompts in correct order', async () => {
-    mockCheckbox
-      .mockResolvedValueOnce(['tasks'])
-      .mockResolvedValueOnce(['Ubuntu'])
-      .mockResolvedValueOnce([]);
-
-    await runRoleWizard();
-
-    expect(mockCheckbox).toHaveBeenCalledTimes(3);
-  });
-
   test('returns empty handlers when none selected', async () => {
-    mockCheckbox
-      .mockResolvedValueOnce(['tasks'])
-      .mockResolvedValueOnce(['Ubuntu'])
-      .mockResolvedValueOnce([]);
+    setupWizardMocks({
+      handlers: [],
+    });
 
     const result = await runRoleWizard();
 
@@ -323,10 +410,9 @@ describe('runRoleWizard', () => {
 
   test('includes all structure directories when all selected', async () => {
     const allDirs = ['tasks', 'handlers', 'templates', 'files', 'defaults', 'vars', 'meta'];
-    mockCheckbox
-      .mockResolvedValueOnce(allDirs)
-      .mockResolvedValueOnce(['Ubuntu'])
-      .mockResolvedValueOnce([]);
+    setupWizardMocks({
+      directories: allDirs,
+    });
 
     const result = await runRoleWizard();
 
@@ -334,14 +420,22 @@ describe('runRoleWizard', () => {
   });
 
   test('includes custom as empty object', async () => {
-    mockCheckbox
-      .mockResolvedValueOnce(['tasks'])
-      .mockResolvedValueOnce(['Ubuntu'])
-      .mockResolvedValueOnce([]);
+    setupWizardMocks();
 
     const result = await runRoleWizard();
 
     expect(result.custom).toEqual({});
+  });
+
+  test('molecule disabled when user chooses no', async () => {
+    setupWizardMocks({
+      moleculeEnabled: false,
+    });
+
+    const result = await runRoleWizard();
+
+    expect(result.molecule.enabled).toBe(false);
+    expect(result.molecule.driver).toBeUndefined();
   });
 });
 
@@ -350,6 +444,9 @@ describe('ExitPromptError handling', () => {
 
   beforeEach(() => {
     mockCheckbox.mockReset();
+    mockSelect.mockReset();
+    mockConfirm.mockReset();
+    mockInput.mockReset();
     consoleLogSpy = spyOn(console, 'log').mockImplementation(() => {});
   });
 
@@ -363,7 +460,7 @@ describe('ExitPromptError handling', () => {
 
     await expect(runRoleWizard()).rejects.toThrow(ExitPromptError);
 
-    // Verify only one prompt was called (step 1)
+    // Verify only one checkbox was called (step 1)
     expect(mockCheckbox).toHaveBeenCalledTimes(1);
   });
 
@@ -375,21 +472,22 @@ describe('ExitPromptError handling', () => {
 
     await expect(runRoleWizard()).rejects.toThrow(ExitPromptError);
 
-    // Verify two prompts were called (steps 1 and 2)
+    // Verify two checkboxes were called (steps 1 and 2)
     expect(mockCheckbox).toHaveBeenCalledTimes(2);
   });
 
-  test('throws ExitPromptError when user cancels at step 3 (handlers)', async () => {
+  test('throws ExitPromptError when user cancels at step 3 (ansible version)', async () => {
     const exitError = new ExitPromptError();
     mockCheckbox
       .mockResolvedValueOnce(['tasks']) // Step 1 succeeds
-      .mockResolvedValueOnce(['Ubuntu']) // Step 2 succeeds
-      .mockRejectedValueOnce(exitError); // Step 3 cancelled
+      .mockResolvedValueOnce(['Ubuntu']); // Step 2 succeeds
+    mockSelect.mockRejectedValueOnce(exitError); // Step 3 cancelled
 
     await expect(runRoleWizard()).rejects.toThrow(ExitPromptError);
 
-    // Verify three prompts were called (steps 1, 2, and 3)
-    expect(mockCheckbox).toHaveBeenCalledTimes(3);
+    // Verify prompts were called correctly
+    expect(mockCheckbox).toHaveBeenCalledTimes(2);
+    expect(mockSelect).toHaveBeenCalledTimes(1);
   });
 
   test('no subsequent prompts called after cancellation at step 1', async () => {
@@ -404,6 +502,7 @@ describe('ExitPromptError handling', () => {
 
     // Only the first prompt should be called
     expect(mockCheckbox).toHaveBeenCalledTimes(1);
+    expect(mockSelect).toHaveBeenCalledTimes(0);
   });
 
   test('no subsequent prompts called after cancellation at step 2', async () => {
@@ -419,7 +518,8 @@ describe('ExitPromptError handling', () => {
       // Expected to throw
     }
 
-    // Only two prompts should be called
+    // Only two checkboxes should be called
     expect(mockCheckbox).toHaveBeenCalledTimes(2);
+    expect(mockSelect).toHaveBeenCalledTimes(0);
   });
 });

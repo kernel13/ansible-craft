@@ -16,22 +16,19 @@
  * const files = await generatePlaybookCode(client, plan, 'deploy LAMP stack');
  * ```
  */
-import Anthropic from '@anthropic-ai/sdk';
+import type Anthropic from '@anthropic-ai/sdk';
 import ora from 'ora';
 import { DEFAULT_MODEL } from '../ai/client.js';
+import { displayApiError, transformApiError } from '../ai/errors.js';
 import { withRetry } from '../ai/retry.js';
-import { transformApiError, displayApiError } from '../ai/errors.js';
-import { streamMessage, extractText } from '../ai/stream.js';
+import { extractText, streamMessage } from '../ai/stream.js';
 import {
   ANSIBLE_PLAYBOOK_SYSTEM_PROMPT,
-  buildPlaybookPlanPrompt,
   buildPlaybookGeneratePrompt,
+  buildPlaybookPlanPrompt,
 } from './prompts/index.js';
-import {
-  PLAYBOOK_PLAN_SCHEMA,
-  type PlaybookPlanPreview,
-} from './schemas/playbook-plan.js';
-import { parseGeneratedFiles, type GeneratedFile } from './role/index.js';
+import { type GeneratedFile, parseGeneratedFiles } from './role/index.js';
+import { PLAYBOOK_PLAN_SCHEMA, type PlaybookPlanPreview } from './schemas/playbook-plan.js';
 
 /**
  * Options for playbook generation.

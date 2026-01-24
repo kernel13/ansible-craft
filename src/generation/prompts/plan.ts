@@ -29,12 +29,46 @@ export function buildPlanPrompt(
 ): string {
   const clarificationSection = clarifications
     ? `
-## Additional Context (from clarifying questions)
+## Additional Context (from wizard configuration)
 
 ${Object.entries(clarifications)
   .map(([key, value]) => `- **${key}**: ${value}`)
   .join('\n')}
 `
+    : '';
+
+  // Extract specific wizard settings for specialized instructions
+  const variableNaming = clarifications?.variable_naming;
+  const tagStrategy = clarifications?.tag_strategy;
+  const moleculeTesting = clarifications?.molecule_testing;
+  const ansibleVersion = clarifications?.ansible_min_version;
+  const privilegeEscalation = clarifications?.privilege_escalation;
+
+  const variableNamingInstruction =
+    variableNaming === 'prefixed by role name'
+      ? 'Use role name as prefix for all variables (e.g., nginx_port, nginx_user)'
+      : 'Use flat variable names without role prefix (e.g., port, user)';
+
+  const tagInstruction = tagStrategy
+    ? {
+        none: 'Do not add tags to tasks.',
+        'per-task': 'Add a unique, descriptive tag to each task.',
+        grouped: `Group tasks with logical tags (${clarifications?.tag_groups || 'install, config, service'}).`,
+        always: 'Use "always" tag on critical tasks that must run.',
+      }[tagStrategy] || ''
+    : '';
+
+  const moleculeInstruction =
+    moleculeTesting === 'enabled'
+      ? `Include Molecule testing with ${clarifications?.molecule_driver || 'docker'} driver.`
+      : 'Do not include Molecule tests.';
+
+  const privilegeInstruction = privilegeEscalation
+    ? {
+        yes: `Role requires privilege escalation (become: true, become_user: ${clarifications?.become_user || 'root'}).`,
+        no: 'Role does not require privilege escalation.',
+        sometimes: `Some tasks require privilege escalation (become_user: ${clarifications?.become_user || 'root'}).`,
+      }[privilegeEscalation] || ''
     : '';
 
   return `Create a detailed plan for an Ansible role based on this request.
@@ -64,9 +98,16 @@ For each task, specify:
 ## Variable Format
 
 For each variable, specify:
-- **name**: Variable name with role prefix (e.g., nginx_port)
+- **name**: ${variableNamingInstruction}
 - **default**: Default value (as a string representation)
 - **description**: What this variable controls
+
+## Configuration Guidelines
+
+${ansibleVersion ? `- Minimum Ansible version: ${ansibleVersion}` : ''}
+${privilegeInstruction ? `- ${privilegeInstruction}` : ''}
+${tagInstruction ? `- Tagging: ${tagInstruction}` : ''}
+${moleculeInstruction ? `- Testing: ${moleculeInstruction}` : ''}
 
 ## Output
 

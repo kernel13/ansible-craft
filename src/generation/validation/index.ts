@@ -1,19 +1,10 @@
 import chalk from 'chalk';
 import type { GeneratedFile } from '../role/parser.js';
-import {
-  validateYamlSyntax,
-  type YamlValidationError,
-} from './yaml-validator.js';
-import { checkFqcnCompliance, type FqcnWarning } from './fqcn-checker.js';
-import {
-  checkIdempotencyPatterns,
-  type IdempotencyWarning,
-} from './idempotency-checker.js';
+import { type FqcnWarning, checkFqcnCompliance } from './fqcn-checker.js';
+import { type IdempotencyWarning, checkIdempotencyPatterns } from './idempotency-checker.js';
+import { type YamlValidationError, validateYamlSyntax } from './yaml-validator.js';
 
-export type ValidationIssue =
-  | YamlValidationError
-  | FqcnWarning
-  | IdempotencyWarning;
+export type ValidationIssue = YamlValidationError | FqcnWarning | IdempotencyWarning;
 
 export interface ValidationReport {
   /** Blocking errors (YAML syntax) */
@@ -71,9 +62,7 @@ export function displayValidationReport(report: ValidationReport): void {
     for (const error of report.errors) {
       const location = error.line ? `:${error.line}` : '';
       const column = error.column ? `:${error.column}` : '';
-      console.error(
-        chalk.red(`  ${error.path}${location}${column}: ${error.message}`)
-      );
+      console.error(chalk.red(`  ${error.path}${location}${column}: ${error.message}`));
     }
   }
 
@@ -83,13 +72,11 @@ export function displayValidationReport(report: ValidationReport): void {
       if (warning.type === 'fqcn') {
         console.warn(
           chalk.yellow(
-            `  ${warning.path}:${warning.line}: Use ${warning.suggestion} instead of ${warning.module}`
-          )
+            `  ${warning.path}:${warning.line}: Use ${warning.suggestion} instead of ${warning.module}`,
+          ),
         );
       } else {
-        console.warn(
-          chalk.yellow(`  ${warning.path}:${warning.line}: ${warning.issue}`)
-        );
+        console.warn(chalk.yellow(`  ${warning.path}:${warning.line}: ${warning.issue}`));
       }
     }
   }

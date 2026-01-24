@@ -13,11 +13,12 @@
       "default": "./dist/cli/index.js"
     }
   },
-  "files": ["dist", "README.md", "LICENSE"],
+  "files": ["dist", "skills", "agents", "scripts/install-skills.ts", "README.md", "LICENSE"],
   "scripts": {
     "dev": "bun run src/cli/index.ts",
     "build": "tsup",
     "prepublishOnly": "bun run build",
+    "postinstall": "bun run scripts/install-skills.ts --quiet || true",
     "lint": "biome check .",
     "format": "biome format . --write",
     "test": "bun test",

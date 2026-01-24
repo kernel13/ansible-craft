@@ -2,5 +2,6 @@
   "mode": "yolo",
   "depth": "comprehensive",
   "parallelization": true,
-  "created": "2025-01-18"
+  "created": "2025-01-18",
+  "model_profile": "balanced"
 }

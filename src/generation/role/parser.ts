@@ -49,7 +49,7 @@ export function parseGeneratedFiles(output: string): GeneratedFile[] {
 
   if (files.length === 0 && output.length > 0) {
     console.warn(
-      'No file markers found in output. Expected format: === PATH: <path> === ... === END ==='
+      'No file markers found in output. Expected format: === PATH: <path> === ... === END ===',
     );
   }
 

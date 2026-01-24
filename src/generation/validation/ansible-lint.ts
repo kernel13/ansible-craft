@@ -94,9 +94,7 @@ export async function isAnsibleLintAvailable(): Promise<boolean> {
  * @param targetPath - Path to file or directory to lint
  * @returns Lint result with violations, exit code, and availability status
  */
-export async function runAnsibleLint(
-  targetPath: string
-): Promise<AnsibleLintResult> {
+export async function runAnsibleLint(targetPath: string): Promise<AnsibleLintResult> {
   // First check if ansible-lint is available
   const available = await isAnsibleLintAvailable();
   if (!available) {
@@ -108,13 +106,10 @@ export async function runAnsibleLint(
   }
 
   try {
-    const proc = Bun.spawn(
-      ['ansible-lint', '--format', 'sarif', '--nocolor', targetPath],
-      {
-        stdout: 'pipe',
-        stderr: 'pipe',
-      }
-    );
+    const proc = Bun.spawn(['ansible-lint', '--format', 'sarif', '--nocolor', targetPath], {
+      stdout: 'pipe',
+      stderr: 'pipe',
+    });
 
     const stdout = await new Response(proc.stdout).text();
     await proc.exited;

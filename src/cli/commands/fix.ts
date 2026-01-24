@@ -2,29 +2,16 @@
  * Fix command for ansible-craft CLI.
  *
  * Interprets Ansible errors and provides corrected code with optional apply workflow.
+ * Uses the DebuggerAgent for error diagnosis and fix suggestions.
  */
 
 import chalk from 'chalk';
 import { Command } from 'commander';
-import { createClient } from '../../ai/client.js';
+import { DebuggerAgent } from '../../agents/index.js';
 import { displayApiError, transformApiError } from '../../ai/errors.js';
-import { selectModel } from '../../ai/models.js';
-import { type MessageParams, extractText, streamMessage } from '../../ai/stream.js';
 import { loadConfig } from '../../config/index.js';
-import {
-  type ContextExtraction,
-  extractFixContext,
-  suggestComplexIfNeeded,
-} from '../../explain/index.js';
-import {
-  FIX_SYSTEM_PROMPT,
-  buildFixPrompt,
-} from '../../explain/prompts/index.js';
-import {
-  applyFix,
-  extractYamlFromResponse,
-  locateTargetFile,
-} from '../../explain/fix-applier.js';
+import { applyFix } from '../../explain/fix-applier.js';
+import { createAgentContext, displayAgentWarnings, handleAgentFailure } from '../helpers/index.js';
 import { createPhaseTracker } from '../output.js';
 
 /**
@@ -61,81 +48,61 @@ export const fixCommand = new Command('fix')
         process.exit(1);
       }
 
-      // 2. Select model (with confirmation if using Opus)
-      const modelSelection = await selectModel(options.complex ?? false);
-      if (!modelSelection.confirmed) {
-        // User declined Opus, exit gracefully
-        console.log(chalk.yellow('\nOperation cancelled.'));
-        return;
-      }
-
       // Create phase tracker
       const tracker = createPhaseTracker(options.quiet ?? false);
 
-      // 3. Extract context if --playbook provided
-      let context: ContextExtraction | undefined;
-      let targetFile: string | undefined;
-
-      if (options.playbook) {
-        tracker.start('Extracting context from playbook...');
-        try {
-          context = await extractFixContext(errorMessage, options.playbook);
-          tracker.succeed('Context extracted');
-        } catch (error) {
-          tracker.fail('Context extraction failed');
-          console.error(
-            chalk.yellow(
-              `Warning: Could not extract context from ${options.playbook}: ${error instanceof Error ? error.message : 'Unknown error'}`,
-            ),
-          );
-          // Continue without context
-        }
-      }
-
-      // Try to locate target file from error message
-      targetFile = locateTargetFile(errorMessage);
-      if (targetFile) {
-        console.log(chalk.dim(`Detected file: ${targetFile}`));
-      }
-
-      // 4. Build prompt and stream response
-      const prompt = buildFixPrompt(errorMessage, context);
-      const client = createClient({ apiKey: config.api.key });
-
-      tracker.start('Analyzing error...');
-
-      let fullResponse = '';
-
-      const messageParams: MessageParams = {
-        userMessage: prompt,
-        systemPrompt: FIX_SYSTEM_PROMPT,
-        model: modelSelection.model,
-        maxTokens: 4096,
-      };
-
-      const message = await streamMessage(client, messageParams, {
+      // 2. Create agent context
+      const agentContext = createAgentContext({
+        config,
         quiet: options.quiet,
-        onFirstToken: () => {
-          tracker.succeed('Analysis received');
-          console.log(chalk.cyan('\n=== Error Analysis ===\n'));
-        },
-        onText: (text) => {
-          fullResponse += text;
-        },
       });
 
-      // Extract text from message (in case streaming didn't capture all)
-      if (!fullResponse) {
-        fullResponse = extractText(message);
+      // 3. Execute DebuggerAgent
+      tracker.start('Analyzing error...');
+      const debuggerAgent = new DebuggerAgent();
+      const result = await debuggerAgent.execute(
+        {
+          errorMessage,
+          playbookContext: options.playbook,
+          useComplex: options.complex ?? false,
+        },
+        agentContext,
+      );
+
+      // Handle agent failure
+      if (!result.success) {
+        // Check if user declined model selection
+        const modelDeclined = result.errors?.some((e) => e.code === 'MODEL_DECLINED');
+        if (modelDeclined) {
+          tracker.fail('Operation cancelled');
+          console.log(chalk.yellow('\nOperation cancelled.'));
+          return;
+        }
+
+        handleAgentFailure(result, {
+          jsonMode: false,
+          tracker,
+          phaseName: 'Analysis failed',
+        });
       }
 
-      // 5. Try to extract and apply fix if possible
-      const fixedYaml = extractYamlFromResponse(fullResponse);
+      tracker.succeed('Analysis received');
 
-      if (fixedYaml && targetFile) {
+      // 4. Display the diagnosis
+      console.log(chalk.cyan('\n=== Error Analysis ===\n'));
+      console.log(result.data!.diagnosis);
+
+      // 5. Display warnings
+      displayAgentWarnings(result.warnings, options.quiet ?? false);
+
+      // 6. Try to apply fix if possible
+      const { suggestedFix, targetFile } = result.data!;
+
+      if (suggestedFix && targetFile) {
         // We have both YAML and target file - offer to apply
+        console.log(chalk.dim(`\nDetected file: ${targetFile}`));
         try {
-          await applyFix(targetFile, fixedYaml, { skipConfirm: options.apply });
+          await applyFix(targetFile, suggestedFix, { skipConfirm: options.apply });
         } catch (error) {
           console.error(
             chalk.yellow(
@@ -143,14 +110,14 @@ export const fixCommand = new Command('fix')
             ),
           );
         }
-      } else if (fixedYaml && !targetFile) {
+      } else if (suggestedFix && !targetFile) {
         // Have YAML but no target file
         console.log(chalk.dim('\nTip: Specify --playbook to enable automatic fix application.'));
       }
 
-      // 6. Suggest --complex if low confidence detected (only if not already using Opus)
-      if (!options.complex) {
-        suggestComplexIfNeeded(fullResponse, options.complex ?? false);
+      // 7. Suggest --complex if low confidence detected (only if not already using Opus)
+      if (result.data!.confidence === 'low' && !options.complex) {
+        console.log(chalk.dim('\nTip: Use --complex for deeper analysis with Claude Opus.'));
       }
     } catch (error) {
       // Handle API errors

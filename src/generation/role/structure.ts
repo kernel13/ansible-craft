@@ -1,5 +1,5 @@
-import { mkdir, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 /** Galaxy-standard role directories */
@@ -42,7 +42,7 @@ export interface RoleStructureResult {
  * Creates all directories with .gitkeep files for empty ones.
  */
 export async function createRoleStructure(
-  options: RoleStructureOptions
+  options: RoleStructureOptions,
 ): Promise<RoleStructureResult> {
   const { roleName, outputDir, dryRun = false } = options;
   const roleDir = join(outputDir, roleName);

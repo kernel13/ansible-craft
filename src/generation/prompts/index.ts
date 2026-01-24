@@ -25,7 +25,7 @@
 export { ANSIBLE_EXPERT_SYSTEM_PROMPT } from './system.ts';
 export { buildClarifyPrompt } from './clarify.ts';
 export { buildPlanPrompt } from './plan.ts';
-export { buildGeneratePrompt } from './generate.ts';
+export { buildGeneratePrompt, type GenerateOptions as PromptGenerateOptions } from './generate.ts';
 
 // Playbook generation prompts
 export { ANSIBLE_PLAYBOOK_SYSTEM_PROMPT } from './playbook-system.ts';
