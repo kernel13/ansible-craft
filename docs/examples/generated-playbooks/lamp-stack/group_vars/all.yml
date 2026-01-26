@@ -1,0 +1,18 @@
+---
+# group_vars/all.yml - Variables for all hosts
+
+# Environment
+deploy_environment: production  # development, staging, production
+
+# Application settings
+app_name: myapp
+app_domain: myapp.example.com
+app_database: myapp_db
+app_db_user: myapp_user
+app_db_password: "{{ vault_app_db_password }}"  # Store in vault.yml
+
+# PHP version
+php_version: "8.2"
+
+# Document root
+document_root: /var/www/{{ app_domain }}

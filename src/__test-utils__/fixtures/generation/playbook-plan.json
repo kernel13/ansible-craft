@@ -1,0 +1,48 @@
+{
+  "playbook_name": "deploy-lamp-stack",
+  "description": "Playbook to deploy a complete LAMP stack",
+  "plays": [
+    {
+      "name": "Configure database servers",
+      "hosts": "databases",
+      "tasks": [
+        {
+          "name": "Install MySQL server",
+          "module": "ansible.builtin.package"
+        },
+        {
+          "name": "Configure MySQL",
+          "module": "ansible.builtin.template"
+        },
+        {
+          "name": "Start MySQL service",
+          "module": "ansible.builtin.service"
+        }
+      ]
+    },
+    {
+      "name": "Configure web servers",
+      "hosts": "webservers",
+      "tasks": [
+        {
+          "name": "Install Apache and PHP",
+          "module": "ansible.builtin.package"
+        },
+        {
+          "name": "Deploy application code",
+          "module": "ansible.builtin.copy"
+        },
+        {
+          "name": "Configure Apache virtual host",
+          "module": "ansible.builtin.template"
+        },
+        {
+          "name": "Start Apache service",
+          "module": "ansible.builtin.service"
+        }
+      ]
+    }
+  ],
+  "group_vars": ["databases", "webservers", "all"],
+  "inventory_groups": ["databases", "webservers"]
+}

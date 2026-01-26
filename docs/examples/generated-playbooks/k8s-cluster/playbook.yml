@@ -1,0 +1,230 @@
+---
+# playbook.yml - Deploy Kubernetes cluster with kubeadm
+
+- name: Prepare all Kubernetes nodes
+  hosts: k8s_control_plane:k8s_workers
+  become: true
+  vars_files:
+    - group_vars/all.yml
+  tasks:
+    - name: Disable swap
+      ansible.builtin.command: swapoff -a
+      changed_when: false
+
+    - name: Remove swap from fstab
+      ansible.builtin.lineinfile:
+        path: /etc/fstab
+        regexp: '\sswap\s'
+        state: absent
+
+    - name: Load required kernel modules
+      ansible.builtin.modprobe:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - overlay
+        - br_netfilter
+
+    - name: Ensure kernel modules load on boot
+      ansible.builtin.copy:
+        content: |
+          overlay
+          br_netfilter
+        dest: /etc/modules-load.d/kubernetes.conf
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Set kernel parameters for Kubernetes
+      ansible.posix.sysctl:
+        name: "{{ item.key }}"
+        value: "{{ item.value }}"
+        sysctl_file: /etc/sysctl.d/kubernetes.conf
+        reload: true
+      loop:
+        - { key: "net.bridge.bridge-nf-call-iptables", value: "1" }
+        - { key: "net.bridge.bridge-nf-call-ip6tables", value: "1" }
+        - { key: "net.ipv4.ip_forward", value: "1" }
+
+    - name: Install containerd
+      ansible.builtin.apt:
+        name:
+          - containerd
+        state: present
+        update_cache: true
+
+    - name: Create containerd configuration directory
+      ansible.builtin.file:
+        path: /etc/containerd
+        state: directory
+        mode: "0755"
+
+    - name: Generate default containerd configuration
+      ansible.builtin.shell:
+        cmd: containerd config default > /etc/containerd/config.toml
+        creates: /etc/containerd/config.toml
+
+    - name: Enable SystemdCgroup in containerd
+      ansible.builtin.replace:
+        path: /etc/containerd/config.toml
+        regexp: 'SystemdCgroup = false'
+        replace: 'SystemdCgroup = true'
+      notify: Restart containerd
+
+    - name: Start and enable containerd
+      ansible.builtin.systemd:
+        name: containerd
+        state: started
+        enabled: true
+
+    - name: Add Kubernetes apt key
+      ansible.builtin.apt_key:
+        url: https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_major_version }}/deb/Release.key
+        state: present
+
+    - name: Add Kubernetes repository
+      ansible.builtin.apt_repository:
+        repo: "deb https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_major_version }}/deb/ /"
+        state: present
+        filename: kubernetes
+
+    - name: Install Kubernetes packages
+      ansible.builtin.apt:
+        name:
+          - kubelet={{ kubernetes_version }}-*
+          - kubeadm={{ kubernetes_version }}-*
+          - kubectl={{ kubernetes_version }}-*
+        state: present
+        update_cache: true
+
+    - name: Hold Kubernetes packages
+      ansible.builtin.dpkg_selections:
+        name: "{{ item }}"
+        selection: hold
+      loop:
+        - kubelet
+        - kubeadm
+        - kubectl
+
+  handlers:
+    - name: Restart containerd
+      ansible.builtin.systemd:
+        name: containerd
+        state: restarted
+
+- name: Initialize first control plane node
+  hosts: k8s_control_plane[0]
+  become: true
+  vars_files:
+    - group_vars/all.yml
+  tags:
+    - control-plane
+  tasks:
+    - name: Check if cluster is already initialized
+      ansible.builtin.stat:
+        path: /etc/kubernetes/admin.conf
+      register: kubeadm_init
+
+    - name: Initialize Kubernetes cluster
+      ansible.builtin.command:
+        cmd: >
+          kubeadm init
+          --control-plane-endpoint="{{ control_plane_endpoint }}"
+          --upload-certs
+          --pod-network-cidr="{{ pod_network_cidr }}"
+          --service-cidr="{{ service_cidr }}"
+      register: kubeadm_init_output
+      when: not kubeadm_init.stat.exists
+
+    - name: Create .kube directory for root
+      ansible.builtin.file:
+        path: /root/.kube
+        state: directory
+        mode: "0700"
+
+    - name: Copy admin.conf to root's .kube
+      ansible.builtin.copy:
+        src: /etc/kubernetes/admin.conf
+        dest: /root/.kube/config
+        remote_src: true
+        mode: "0600"
+
+    - name: Install Calico network plugin
+      ansible.builtin.command:
+        cmd: kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.26.1/manifests/calico.yaml
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf
+      when: not kubeadm_init.stat.exists
+
+    - name: Get join command for control plane
+      ansible.builtin.command:
+        cmd: kubeadm token create --print-join-command
+      register: join_command
+      changed_when: false
+
+    - name: Get certificate key
+      ansible.builtin.command:
+        cmd: kubeadm init phase upload-certs --upload-certs
+      register: cert_key_output
+      changed_when: false
+
+    - name: Set join command facts
+      ansible.builtin.set_fact:
+        kubeadm_join_command: "{{ join_command.stdout }}"
+        kubeadm_cert_key: "{{ cert_key_output.stdout_lines[-1] }}"
+      run_once: true
+
+- name: Join additional control plane nodes
+  hosts: k8s_control_plane[1:]
+  become: true
+  serial: 1
+  vars_files:
+    - group_vars/all.yml
+  tags:
+    - control-plane
+  tasks:
+    - name: Check if node is already joined
+      ansible.builtin.stat:
+        path: /etc/kubernetes/kubelet.conf
+      register: kubelet_conf
+
+    - name: Join control plane node to cluster
+      ansible.builtin.command:
+        cmd: "{{ hostvars[groups['k8s_control_plane'][0]]['kubeadm_join_command'] }} --control-plane --certificate-key {{ hostvars[groups['k8s_control_plane'][0]]['kubeadm_cert_key'] }}"
+      when: not kubelet_conf.stat.exists
+
+- name: Join worker nodes
+  hosts: k8s_workers
+  become: true
+  vars_files:
+    - group_vars/all.yml
+  tags:
+    - workers
+  tasks:
+    - name: Check if node is already joined
+      ansible.builtin.stat:
+        path: /etc/kubernetes/kubelet.conf
+      register: kubelet_conf
+
+    - name: Join worker node to cluster
+      ansible.builtin.command:
+        cmd: "{{ hostvars[groups['k8s_control_plane'][0]]['kubeadm_join_command'] }}"
+      when: not kubelet_conf.stat.exists
+
+- name: Verify cluster status
+  hosts: k8s_control_plane[0]
+  become: true
+  tags:
+    - verify
+  tasks:
+    - name: Get node status
+      ansible.builtin.command:
+        cmd: kubectl get nodes -o wide
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf
+      register: node_status
+      changed_when: false
+
+    - name: Display cluster status
+      ansible.builtin.debug:
+        msg: "{{ node_status.stdout_lines }}"

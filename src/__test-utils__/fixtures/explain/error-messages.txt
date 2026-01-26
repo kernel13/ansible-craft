@@ -1,0 +1,48 @@
+# Sample Ansible Error Messages for Testing
+
+## Undefined Variable Error
+TASK [nginx : Template nginx configuration] ************************************
+fatal: [web01]: FAILED! => {"changed": false, "msg": "AnsibleUndefinedVariable: 'nginx_port' is undefined"}
+
+## Module Not Found
+TASK [Install package] *********************************************************
+fatal: [server01]: FAILED! => {"msg": "The module copy was not found in configured module paths"}
+
+## Connection Error
+fatal: [db01]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: ssh: connect to host 192.168.1.10 port 22: Connection refused", "unreachable": true}
+
+## Permission Denied
+TASK [Create directory] ********************************************************
+fatal: [web01]: FAILED! => {"changed": false, "msg": "Permission denied"}
+
+## Syntax Error in Task
+ERROR! Syntax Error while loading YAML.
+  mapping values are not allowed in this context
+
+The error appears to be in '/playbooks/site.yml': line 15, column 10
+
+## Template Error
+TASK [Template config] *********************************************************
+fatal: [app01]: FAILED! => {"changed": false, "msg": "AnsibleError: template error while templating string: unexpected '}'"}
+
+## JSON Parse Error
+{
+  "task": "Install nginx",
+  "host": "web01",
+  "result": {
+    "failed": true,
+    "msg": "undefined variable: nginx_port"
+  }
+}
+
+## Handler Error
+RUNNING HANDLER [restart nginx] ************************************************
+fatal: [web01]: FAILED! => {"changed": false, "msg": "Unable to restart service nginx: Job for nginx.service failed"}
+
+## Variable Type Error
+TASK [Set port] ****************************************************************
+fatal: [server01]: FAILED! => {"msg": "Unexpected templating type error occurred on ({{ nginx_port | int }}): int() argument must be a string"}
+
+## File Not Found
+TASK [Copy application files] **************************************************
+fatal: [app01]: FAILED! => {"changed": false, "msg": "Could not find or access 'files/app.tar.gz'"}

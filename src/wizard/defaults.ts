@@ -62,9 +62,10 @@ export function displayDefaultsPreview(
     console.log(
       `    Dependencies:  ${chalk.dim(roleContext.dependencies.includeMeta ? (roleContext.dependencies.roles.length > 0 ? roleContext.dependencies.roles.join(', ') : 'meta only') : 'no')}`,
     );
-    console.log(
-      `    Molecule:      ${chalk.dim(roleContext.molecule.enabled ? `${roleContext.molecule.driver} (${roleContext.molecule.scenarios?.join(', ') || 'default'})` : 'disabled')}`,
-    );
+    const moleculeInfo = roleContext.molecule.enabled
+      ? `${roleContext.molecule.level || 'basic'} ${roleContext.molecule.driver}${roleContext.molecule.verifier === 'testinfra' ? ' (testinfra)' : ''}`
+      : 'disabled';
+    console.log(`    Molecule:      ${chalk.dim(moleculeInfo)}`);
   } else {
     const playbookContext = context as PlaybookWizardContext;
     console.log(`    Hosts:     ${chalk.dim(playbookContext.hosts.join(', ') || '(none)')}`);
@@ -118,7 +119,12 @@ export function getQuickModeDefaults(
       },
       molecule: {
         enabled: true,
+        level: 'basic',
         driver: 'docker',
+        useAnsibleImages: true,
+        privileged: false,
+        testSequence: ['create', 'converge', 'idempotence', 'verify', 'destroy'],
+        verifier: 'ansible',
         platforms: ['Generic'],
         scenarios: ['default', 'idempotence'],
       },
@@ -138,4 +144,4 @@ export function getQuickModeDefaults(
  * Current wizard defaults schema version.
  * Increment when adding new fields or changing structure.
  */
-export const WIZARD_DEFAULTS_VERSION = 2;
+export const WIZARD_DEFAULTS_VERSION = 3;

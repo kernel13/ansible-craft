@@ -1,0 +1,57 @@
+# {{ ansible_managed }}
+# Virtual host configuration for {{ nginx_domains[0] }}
+
+{% if nginx_ssl_enabled and nginx_letsencrypt_enabled %}
+# Redirect HTTP to HTTPS
+server {
+    listen 80;
+    listen [::]:80;
+    server_name {{ nginx_domains | join(' ') }};
+
+    # Let's Encrypt challenge
+    location /.well-known/acme-challenge/ {
+        root {{ nginx_letsencrypt_webroot }};
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+{% endif %}
+
+server {
+{% if nginx_ssl_enabled %}
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+
+    ssl_certificate /etc/letsencrypt/live/{{ nginx_domains[0] }}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/{{ nginx_domains[0] }}/privkey.pem;
+{% else %}
+    listen 80;
+    listen [::]:80;
+{% endif %}
+
+    server_name {{ nginx_domains | join(' ') }};
+
+    root /var/www/{{ nginx_domains[0] }};
+    index index.html index.htm;
+
+{% if nginx_security_headers_enabled %}
+    # Security headers
+{% if nginx_hsts_enabled %}
+    add_header Strict-Transport-Security "max-age={{ nginx_hsts_max_age }}; includeSubDomains" always;
+{% endif %}
+    add_header X-Frame-Options "{{ nginx_x_frame_options }}" always;
+    add_header X-Content-Type-Options "{{ nginx_x_content_type_options }}" always;
+    add_header X-XSS-Protection "{{ nginx_x_xss_protection }}" always;
+{% endif %}
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+
+    # Deny access to hidden files
+    location ~ /\. {
+        deny all;
+    }
+}

@@ -17,8 +17,8 @@ import {
   type PlaybookWizardContext,
   type RoleWizardContext,
 } from '../../wizard/types.js';
-import { FixerAgent, WriterAgent, validateAndLint } from '../../agents/index.js';
-import type { WriterOutput } from '../../agents/types.js';
+import { FixerAgent, WriterAgent, validateAndLint } from '../../core/index.js';
+import type { WriterOutput } from '../../core/types.js';
 import { createClient } from '../../ai/client.js';
 import { displayApiError, transformApiError } from '../../ai/errors.js';
 import { loadConfig, saveConfig } from '../../config/index.js';

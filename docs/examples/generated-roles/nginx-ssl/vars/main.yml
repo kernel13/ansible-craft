@@ -1,0 +1,8 @@
+---
+# vars/main.yml - Role variables (rarely need modification)
+# These variables are less likely to be overridden than defaults
+
+# Package dependencies for Debian/Ubuntu
+nginx_dependencies:
+  - openssl
+  - ca-certificates

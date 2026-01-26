@@ -15,16 +15,68 @@ import type {
   IdempotencyConfig,
   MoleculeConfig,
   MoleculeDriver,
+  MoleculePlatformConfig,
   MoleculeScenario,
+  MoleculeTestLevel,
+  MoleculeTestStage,
+  MoleculeVerifier,
   PrivilegeEscalationConfig,
   RoleHandler,
   RolePlatform,
   RoleStructureDirectory,
   TagStrategy,
   TagsConfig,
+  VagrantProvider,
+  VagrantResourcePreset,
   VariableNaming,
   VariableStrategyConfig,
 } from './types.js';
+
+// ============================================
+// Molecule Default Constants
+// ============================================
+
+/**
+ * Pre-built Ansible test images by platform.
+ */
+export const ANSIBLE_TEST_IMAGES: Record<RolePlatform, string> = {
+  Ubuntu: 'geerlingguy/docker-ubuntu2204-ansible',
+  Debian: 'geerlingguy/docker-debian12-ansible',
+  RHEL: 'geerlingguy/docker-rockylinux9-ansible',
+  Windows: 'mcr.microsoft.com/windows/servercore:ltsc2022',
+  Generic: 'geerlingguy/docker-ubuntu2204-ansible',
+};
+
+/**
+ * Standard Vagrant boxes by platform.
+ */
+export const VAGRANT_BOXES: Record<RolePlatform, string> = {
+  Ubuntu: 'generic/ubuntu2204',
+  Debian: 'generic/debian12',
+  RHEL: 'generic/rocky9',
+  Windows: 'gusztavvargadr/windows-server-2022-standard',
+  Generic: 'generic/ubuntu2204',
+};
+
+/**
+ * Vagrant resource presets.
+ */
+export const VAGRANT_RESOURCES: Record<VagrantResourcePreset, { memory: number; cpus: number }> = {
+  minimal: { memory: 512, cpus: 1 },
+  standard: { memory: 1024, cpus: 2 },
+  powerful: { memory: 2048, cpus: 4 },
+};
+
+/**
+ * Default test sequence for basic mode.
+ */
+const BASIC_TEST_SEQUENCE: MoleculeTestStage[] = [
+  'create',
+  'converge',
+  'idempotence',
+  'verify',
+  'destroy',
+];
 
 /**
  * Display a styled step header with progress indication.
@@ -410,74 +462,350 @@ export async function promptDependencies(): Promise<DependenciesConfig> {
 }
 
 /**
- * Prompt user to configure Molecule testing.
+ * Prompt user for Docker-specific advanced options.
+ *
+ * @param rolePlatforms - Platforms selected in step 2
+ * @returns Docker-specific config options
+ */
+async function promptMoleculeDocker(
+  rolePlatforms: RolePlatform[],
+): Promise<Partial<MoleculeConfig>> {
+  const useAnsibleImages = await confirm({
+    message: 'Use pre-built Ansible test images? (geerlingguy/*-ansible)',
+    default: true,
+  });
+
+  let platformConfigs: MoleculePlatformConfig[] | undefined;
+  if (!useAnsibleImages) {
+    platformConfigs = [];
+    for (const platform of rolePlatforms.filter((p) => p !== 'Generic')) {
+      const image = await input({
+        message: `Enter Docker image for ${platform}:`,
+        default: ANSIBLE_TEST_IMAGES[platform],
+        validate: (value) => (value.trim() ? true : 'Image cannot be empty'),
+      });
+      platformConfigs.push({ platform, image });
+    }
+  }
+
+  const privileged = await confirm({
+    message: 'Enable privileged mode for systemd support?',
+    default: false,
+  });
+
+  return { useAnsibleImages, platformConfigs, privileged };
+}
+
+/**
+ * Prompt user for Podman-specific advanced options.
+ *
+ * @param rolePlatforms - Platforms selected in step 2
+ * @returns Podman-specific config options
+ */
+async function promptMoleculePodman(
+  rolePlatforms: RolePlatform[],
+): Promise<Partial<MoleculeConfig>> {
+  // Podman shares Docker's image options
+  const dockerConfig = await promptMoleculeDocker(rolePlatforms);
+
+  const rootless = await confirm({
+    message: 'Run in rootless mode?',
+    default: true,
+  });
+
+  return { ...dockerConfig, rootless };
+}
+
+/**
+ * Prompt user for Vagrant-specific advanced options.
+ *
+ * @param rolePlatforms - Platforms selected in step 2
+ * @returns Vagrant-specific config options
+ */
+async function promptMoleculeVagrant(
+  rolePlatforms: RolePlatform[],
+): Promise<Partial<MoleculeConfig>> {
+  const vagrantProvider = (await select({
+    message: 'Vagrant provider:',
+    choices: [
+      { name: 'virtualbox (Recommended)', value: 'virtualbox' as VagrantProvider },
+      { name: 'libvirt - KVM/QEMU', value: 'libvirt' as VagrantProvider },
+      { name: 'parallels - macOS', value: 'parallels' as VagrantProvider },
+    ],
+    default: 'virtualbox',
+  })) as VagrantProvider;
+
+  const useStandardBoxes = await confirm({
+    message: 'Use standard Vagrant boxes? (generic/{distro})',
+    default: true,
+  });
+
+  let platformConfigs: MoleculePlatformConfig[] | undefined;
+  if (!useStandardBoxes) {
+    platformConfigs = [];
+    for (const platform of rolePlatforms.filter((p) => p !== 'Generic')) {
+      const box = await input({
+        message: `Enter Vagrant box for ${platform}:`,
+        default: VAGRANT_BOXES[platform],
+        validate: (value) => (value.trim() ? true : 'Box cannot be empty'),
+      });
+      platformConfigs.push({ platform, image: box });
+    }
+  }
+
+  const resourcePreset = (await select({
+    message: 'VM resources:',
+    choices: [
+      { name: 'minimal - 512MB RAM, 1 CPU', value: 'minimal' as VagrantResourcePreset },
+      { name: 'standard - 1GB RAM, 2 CPUs (Recommended)', value: 'standard' as VagrantResourcePreset },
+      { name: 'powerful - 2GB RAM, 4 CPUs', value: 'powerful' as VagrantResourcePreset },
+    ],
+    default: 'standard',
+  })) as VagrantResourcePreset;
+
+  const resources = VAGRANT_RESOURCES[resourcePreset];
+
+  return {
+    vagrantProvider,
+    platformConfigs,
+    vagrantMemory: resources.memory,
+    vagrantCpus: resources.cpus,
+    useAnsibleImages: useStandardBoxes,
+  };
+}
+
+/**
+ * Prompt user for delegated driver advanced options.
+ *
+ * @returns Delegated-specific config options
+ */
+async function promptMoleculeDelegated(): Promise<Partial<MoleculeConfig>> {
+  const managedChoice = (await select({
+    message: 'Instance management:',
+    choices: [
+      { name: 'external - instances managed outside Molecule (CI/CD)', value: 'external' },
+      { name: 'managed - Molecule manages instance lifecycle', value: 'managed' },
+    ],
+    default: 'external',
+  })) as 'external' | 'managed';
+
+  return { delegatedManaged: managedChoice === 'managed' };
+}
+
+/**
+ * Prompt user for common advanced Molecule options (all drivers).
+ *
+ * @returns Common advanced config options
+ */
+async function promptMoleculeAdvancedCommon(): Promise<Partial<MoleculeConfig>> {
+  // Test sequence selection
+  const testSequence = (await checkbox({
+    message: 'Select test sequence stages:',
+    choices: [
+      { name: 'dependency - Install role dependencies', value: 'dependency' as MoleculeTestStage },
+      { name: 'cleanup - Pre-test cleanup', value: 'cleanup' as MoleculeTestStage },
+      { name: 'destroy - Remove existing instances', value: 'destroy' as MoleculeTestStage },
+      {
+        name: 'create - Instantiate test instances',
+        value: 'create' as MoleculeTestStage,
+        checked: true,
+      },
+      { name: 'prepare - Pre-convergence setup', value: 'prepare' as MoleculeTestStage },
+      {
+        name: 'converge - Run the role (required)',
+        value: 'converge' as MoleculeTestStage,
+        checked: true,
+        disabled: true,
+      },
+      {
+        name: 'idempotence - Verify no changes on re-run',
+        value: 'idempotence' as MoleculeTestStage,
+        checked: true,
+      },
+      { name: 'side_effect - Test side effects', value: 'side_effect' as MoleculeTestStage },
+      {
+        name: 'verify - Run verification tests',
+        value: 'verify' as MoleculeTestStage,
+        checked: true,
+      },
+    ],
+    pageSize: 12,
+  })) as MoleculeTestStage[];
+
+  // Always include converge (it's required and disabled in UI)
+  const finalSequence: MoleculeTestStage[] = testSequence.includes('converge')
+    ? testSequence
+    : [...testSequence.slice(0, testSequence.indexOf('idempotence')), 'converge' as MoleculeTestStage, ...testSequence.slice(testSequence.indexOf('idempotence'))];
+
+  // Verifier selection
+  const verifier = (await select({
+    message: 'Verifier type:',
+    choices: [
+      {
+        name: 'ansible - verify.yml playbook (Recommended)',
+        value: 'ansible' as MoleculeVerifier,
+      },
+      {
+        name: 'testinfra - Python tests with pytest',
+        value: 'testinfra' as MoleculeVerifier,
+      },
+    ],
+    default: 'ansible',
+  })) as MoleculeVerifier;
+
+  return { testSequence: finalSequence, verifier };
+}
+
+/**
+ * Build basic mode defaults for a driver.
+ *
+ * @param driver - Selected driver
+ * @param rolePlatforms - Platforms selected in step 2
+ * @returns Basic mode config
+ */
+function buildBasicModeDefaults(
+  driver: MoleculeDriver,
+  rolePlatforms: RolePlatform[],
+): Partial<MoleculeConfig> {
+  const platforms = rolePlatforms.filter((p) => p !== 'Generic');
+  const platformConfigs: MoleculePlatformConfig[] = platforms.map((p) => ({
+    platform: p,
+    image: driver === 'vagrant' ? VAGRANT_BOXES[p] : ANSIBLE_TEST_IMAGES[p],
+  }));
+
+  const base: Partial<MoleculeConfig> = {
+    useAnsibleImages: true,
+    platformConfigs: platformConfigs.length > 0 ? platformConfigs : undefined,
+    testSequence: BASIC_TEST_SEQUENCE,
+    verifier: 'ansible',
+  };
+
+  switch (driver) {
+    case 'docker':
+      return { ...base, privileged: false };
+    case 'podman':
+      return { ...base, privileged: false, rootless: true };
+    case 'vagrant':
+      return {
+        ...base,
+        vagrantProvider: 'virtualbox',
+        vagrantMemory: VAGRANT_RESOURCES.standard.memory,
+        vagrantCpus: VAGRANT_RESOURCES.standard.cpus,
+      };
+    case 'delegated':
+      return { ...base, delegatedManaged: false };
+  }
+}
+
+/**
+ * Derive backward-compatible scenarios from test sequence.
+ *
+ * @param testSequence - Selected test stages
+ * @returns Derived MoleculeScenario array
+ */
+function deriveScenarios(testSequence: MoleculeTestStage[]): MoleculeScenario[] {
+  const scenarios: MoleculeScenario[] = ['default'];
+  if (testSequence.includes('idempotence')) {
+    scenarios.push('idempotence');
+  }
+  if (testSequence.includes('side_effect')) {
+    scenarios.push('side_effect');
+  }
+  return scenarios;
+}
+
+/**
+ * Prompt user to configure Molecule testing with tiered levels.
+ *
+ * Flow:
+ * - none: disabled immediately
+ * - basic: driver selection only, apply sensible defaults
+ * - advanced: driver selection + driver-specific + common questions
  *
  * @param rolePlatforms - Platforms selected in step 2 for platform options
  * @returns Molecule configuration
  */
 export async function promptMolecule(rolePlatforms: RolePlatform[]): Promise<MoleculeConfig> {
-  const enabled = await confirm({
-    message: 'Include Molecule tests?',
-    default: true,
-  });
+  // Q1: Testing level
+  const level = (await select({
+    message: 'Molecule testing level:',
+    choices: [
+      {
+        name: 'basic - quick setup with sensible defaults (Recommended)',
+        value: 'basic' as MoleculeTestLevel,
+      },
+      {
+        name: 'advanced - full control over driver, images, and test sequence',
+        value: 'advanced' as MoleculeTestLevel,
+      },
+      { name: 'none - skip Molecule tests', value: 'none' as MoleculeTestLevel },
+    ],
+    default: 'basic',
+  })) as MoleculeTestLevel;
 
-  if (!enabled) {
-    return { enabled: false };
+  // Handle 'none' immediately
+  if (level === 'none') {
+    return { enabled: false, level: 'none' };
   }
 
-  // Driver selection (no default, user must choose)
+  // Q2: Driver selection (all modes)
   const driver = (await select({
     message: 'Select Molecule test driver:',
     choices: [
       { name: 'docker - container-based testing (most common)', value: 'docker' as MoleculeDriver },
       { name: 'podman - rootless container testing', value: 'podman' as MoleculeDriver },
-      { name: 'vagrant - VM-based testing', value: 'vagrant' as MoleculeDriver },
-      { name: 'delegated - custom/external testing', value: 'delegated' as MoleculeDriver },
+      { name: 'vagrant - VM-based testing (full OS)', value: 'vagrant' as MoleculeDriver },
+      { name: 'delegated - custom/external testing (CI/CD)', value: 'delegated' as MoleculeDriver },
     ],
   })) as MoleculeDriver;
 
-  // Platform selection based on role platforms
-  const platformChoices = rolePlatforms
-    .filter((p) => p !== 'Generic')
-    .map((p) => ({
-      name: p,
-      value: p,
-      checked: true,
-    }));
+  // Basic mode: apply defaults and return
+  if (level === 'basic') {
+    const defaults = buildBasicModeDefaults(driver, rolePlatforms);
+    const platforms = rolePlatforms.filter((p) => p !== 'Generic');
+    const scenarios = deriveScenarios(defaults.testSequence || BASIC_TEST_SEQUENCE);
 
-  let platforms: RolePlatform[] = [];
-  if (platformChoices.length > 0) {
-    platforms = (await checkbox({
-      message: 'Select platforms for Molecule testing:',
-      choices: platformChoices,
-      pageSize: 8,
-    })) as RolePlatform[];
+    return {
+      enabled: true,
+      level,
+      driver,
+      ...defaults,
+      platforms: platforms.length > 0 ? platforms : undefined,
+      scenarios,
+    };
   }
 
-  // Scenario selection
-  const scenarios = (await checkbox({
-    message: 'Select Molecule test scenarios:',
-    choices: [
-      {
-        name: 'default - standard convergence test',
-        value: 'default' as MoleculeScenario,
-        checked: true,
-      },
-      { name: 'side_effect - test side effects', value: 'side_effect' as MoleculeScenario },
-      {
-        name: 'idempotence - verify idempotent behavior',
-        value: 'idempotence' as MoleculeScenario,
-        checked: true,
-      },
-    ],
-    pageSize: 5,
-    validate: (answer: readonly MoleculeScenario[]) => {
-      if (answer.length === 0) {
-        return 'Select at least one scenario';
-      }
-      return true;
-    },
-  })) as MoleculeScenario[];
+  // Advanced mode: driver-specific questions
+  let driverConfig: Partial<MoleculeConfig> = {};
+  switch (driver) {
+    case 'docker':
+      driverConfig = await promptMoleculeDocker(rolePlatforms);
+      break;
+    case 'podman':
+      driverConfig = await promptMoleculePodman(rolePlatforms);
+      break;
+    case 'vagrant':
+      driverConfig = await promptMoleculeVagrant(rolePlatforms);
+      break;
+    case 'delegated':
+      driverConfig = await promptMoleculeDelegated();
+      break;
+  }
 
-  return { enabled, driver, platforms, scenarios };
+  // Advanced mode: common questions
+  const commonConfig = await promptMoleculeAdvancedCommon();
+
+  // Build final config
+  const platforms = rolePlatforms.filter((p) => p !== 'Generic');
+  const scenarios = deriveScenarios(commonConfig.testSequence || BASIC_TEST_SEQUENCE);
+
+  return {
+    enabled: true,
+    level,
+    driver,
+    ...driverConfig,
+    ...commonConfig,
+    platforms: platforms.length > 0 ? platforms : undefined,
+    scenarios,
+  };
 }

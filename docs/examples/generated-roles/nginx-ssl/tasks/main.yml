@@ -1,0 +1,106 @@
+---
+# tasks/main.yml - Main tasks for nginx-ssl role
+
+- name: Install nginx package
+  ansible.builtin.apt:
+    name: "{{ nginx_package_name }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  become: true
+
+- name: Install certbot for Let's Encrypt
+  ansible.builtin.apt:
+    name:
+      - certbot
+      - python3-certbot-nginx
+    state: present
+  become: true
+  when: nginx_letsencrypt_enabled
+
+- name: Create required directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop:
+    - "{{ nginx_ssl_dir }}"
+    - "{{ nginx_letsencrypt_webroot }}"
+    - "{{ nginx_sites_available_dir }}"
+    - "{{ nginx_sites_enabled_dir }}"
+  become: true
+
+- name: Deploy nginx main configuration
+  ansible.builtin.template:
+    src: nginx.conf.j2
+    dest: "{{ nginx_conf_dir }}/nginx.conf"
+    owner: root
+    group: root
+    mode: "0644"
+    validate: nginx -t -c %s
+  become: true
+  notify: Reload nginx
+
+- name: Deploy virtual host configuration
+  ansible.builtin.template:
+    src: vhost.conf.j2
+    dest: "{{ nginx_sites_available_dir }}/{{ nginx_domains[0] }}.conf"
+    owner: root
+    group: root
+    mode: "0644"
+  become: true
+  notify: Reload nginx
+  when: nginx_domains | length > 0
+
+- name: Enable virtual host
+  ansible.builtin.file:
+    src: "{{ nginx_sites_available_dir }}/{{ nginx_domains[0] }}.conf"
+    dest: "{{ nginx_sites_enabled_dir }}/{{ nginx_domains[0] }}.conf"
+    state: link
+  become: true
+  notify: Reload nginx
+  when: nginx_domains | length > 0
+
+- name: Remove default site
+  ansible.builtin.file:
+    path: "{{ nginx_sites_enabled_dir }}/default"
+    state: absent
+  become: true
+  notify: Reload nginx
+
+- name: Obtain Let's Encrypt certificate
+  ansible.builtin.command:
+    cmd: >
+      certbot certonly
+      --nginx
+      --non-interactive
+      --agree-tos
+      --email {{ nginx_letsencrypt_email }}
+      {% if nginx_letsencrypt_staging %}--staging{% endif %}
+      -d {{ nginx_domains | join(' -d ') }}
+    creates: /etc/letsencrypt/live/{{ nginx_domains[0] }}/fullchain.pem
+  become: true
+  when:
+    - nginx_letsencrypt_enabled
+    - nginx_letsencrypt_email | length > 0
+    - nginx_domains | length > 0
+  notify: Reload nginx
+
+- name: Configure certbot auto-renewal
+  ansible.builtin.cron:
+    name: "Renew Let's Encrypt certificates"
+    job: "certbot renew --quiet --post-hook 'systemctl reload nginx'"
+    hour: "3"
+    minute: "30"
+    weekday: "1"
+  become: true
+  when: nginx_letsencrypt_enabled
+
+- name: Ensure nginx service is enabled and started
+  ansible.builtin.systemd:
+    name: "{{ nginx_service_name }}"
+    enabled: "{{ nginx_service_enabled }}"
+    state: "{{ nginx_service_state }}"
+  become: true

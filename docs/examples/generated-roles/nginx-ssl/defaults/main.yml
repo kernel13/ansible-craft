@@ -1,0 +1,63 @@
+---
+# defaults/main.yml - Default variables for nginx-ssl role
+
+# Nginx package and service
+nginx_package_name: nginx
+nginx_service_name: nginx
+nginx_service_enabled: true
+nginx_service_state: started
+
+# Worker configuration
+nginx_worker_processes: auto
+nginx_worker_connections: 1024
+nginx_multi_accept: true
+
+# SSL configuration
+nginx_ssl_enabled: true
+nginx_ssl_protocols: "TLSv1.2 TLSv1.3"
+nginx_ssl_ciphers: "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256"
+nginx_ssl_prefer_server_ciphers: true
+nginx_ssl_session_cache: "shared:SSL:10m"
+nginx_ssl_session_timeout: "1d"
+
+# Let's Encrypt configuration
+nginx_letsencrypt_enabled: true
+nginx_letsencrypt_email: ""  # Required when letsencrypt_enabled
+nginx_letsencrypt_staging: false
+nginx_letsencrypt_webroot: /var/www/letsencrypt
+
+# Domains (required)
+nginx_domains: []
+
+# Gzip configuration
+nginx_gzip_enabled: true
+nginx_gzip_comp_level: 6
+nginx_gzip_min_length: 256
+nginx_gzip_types:
+  - text/plain
+  - text/css
+  - text/javascript
+  - application/json
+  - application/javascript
+  - application/xml
+  - application/xml+rss
+  - image/svg+xml
+
+# Security headers
+nginx_security_headers_enabled: true
+nginx_hsts_enabled: true
+nginx_hsts_max_age: 31536000
+nginx_x_frame_options: "SAMEORIGIN"
+nginx_x_content_type_options: "nosniff"
+nginx_x_xss_protection: "1; mode=block"
+
+# Logging
+nginx_access_log: /var/log/nginx/access.log
+nginx_error_log: /var/log/nginx/error.log
+nginx_log_format: combined
+
+# Directories
+nginx_conf_dir: /etc/nginx
+nginx_sites_available_dir: /etc/nginx/sites-available
+nginx_sites_enabled_dir: /etc/nginx/sites-enabled
+nginx_ssl_dir: /etc/nginx/ssl

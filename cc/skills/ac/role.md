@@ -118,7 +118,7 @@ Use AskUserQuestion to gather requirements. Combine questions efficiently (max 4
 - Variables: prefixed (e.g., nginx_port)
 - Privilege: yes (become: true)
 - Handlers: restart, reload
-- Tags: grouped (install, config, service)
+- Tags: namespaced format `rolename:action` (e.g., `nginx:install`, `nginx:config`)
 - Idempotency: check mode + changed_when
 - Molecule: basic level, docker driver, ansible verifier
 
@@ -135,21 +135,6 @@ Use AskUserQuestion to gather requirements. Combine questions efficiently (max 4
 - **Web servers** (Apache, Nginx): SSL/TLS, virtual hosts, reverse proxy, caching
 - **Databases** (MySQL, PostgreSQL): DB creation, user management, backups, replication
 - **Windows roles**: Add installation method question (Chocolatey, MSI, ZIP)
-
-### Role Naming Conventions
-
-**Windows roles MUST use the `win_` prefix:**
-- `win_apache` (not `apache_windows` or `apache`)
-- `win_iis`
-- `win_sqlserver`
-- `win_chocolatey`
-
-**Linux/Generic roles use descriptive names:**
-- `nginx`
-- `postgresql`
-- `docker`
-
-When the user selects Windows as the platform, automatically apply the `win_` prefix to the role name. If the user provides a name without the prefix, add it (e.g., "apache" → "win_apache").
 
 ## Step 1b: Advanced Molecule Configuration (Conditional)
 
@@ -296,7 +281,7 @@ After gathering requirements, **invoke the Task tool** with ac-planner:
   "parameters": {
     "subagent_type": "ac-planner",
     "description": "Plan [role_name] role",
-    "prompt": "Generate a role plan for: [user description]\n\nRequirements:\n- Platforms: [value]\n- Ansible: [version]\n- Variables: [naming]\n- Handlers: [list]\n- Tags: [strategy]\n- Molecule: [none/basic/advanced]\n\n[If Molecule is basic - include this block:]\nMolecule config: basic\n  Driver: docker\n  Images: pre-built (geerlingguy/*-ansible)\n  Sequence: standard\n  Verifier: ansible\n\n[If Molecule is advanced - include all collected options from Step 1b:]\nMolecule config: advanced\n  Driver: [docker/podman/vagrant/delegated]\n  Images: [pre-built/custom]               (Docker/Podman only)\n  Options: [standard/privileged/rootless]  (Docker/Podman only)\n  Provider: [virtualbox/libvirt/parallels] (Vagrant only)\n  Resources: [minimal/standard/powerful]   (Vagrant only)\n  Sequence: [standard/with-prepare/with-side-effect/minimal]\n  Verifier: [ansible/testinfra]\n\nService-specific: [answers]\n\nNaming convention:\n- Windows roles MUST use 'win_' prefix (e.g., win_apache, win_iis)\n- Variables MUST use role name prefix (e.g., win_apache_port)\n\nRead these references:\n- cc/common/references/role-structure.md\n- cc/common/references/fqcn.md\n- cc/common/references/patterns.md\n- cc/common/references/molecule.md\n\nReturn complete plan with: config summary, variables, tasks with FQCN, handlers, templates, file tree, and Molecule configuration details"
+    "prompt": "Generate a role plan for: [user description]\n\nRequirements:\n- Platforms: [value]\n- Ansible: [version]\n- Variables: [naming]\n- Handlers: [list]\n- Tags: [strategy]\n- Molecule: [none/basic/advanced]\n\n[If Molecule is basic - include this block:]\nMolecule config: basic\n  Driver: docker\n  Images: pre-built (geerlingguy/*-ansible)\n  Sequence: standard\n  Verifier: ansible\n\n[If Molecule is advanced - include all collected options from Step 1b:]\nMolecule config: advanced\n  Driver: [docker/podman/vagrant/delegated]\n  Images: [pre-built/custom]               (Docker/Podman only)\n  Options: [standard/privileged/rootless]  (Docker/Podman only)\n  Provider: [virtualbox/libvirt/parallels] (Vagrant only)\n  Resources: [minimal/standard/powerful]   (Vagrant only)\n  Sequence: [standard/with-prepare/with-side-effect/minimal]\n  Verifier: [ansible/testinfra]\n\nService-specific: [answers]\n\nNaming convention:\n- Variables MUST use role name prefix (e.g., nginx_port, apache_user)\n\nRead these references:\n- cc/common/references/role-structure.md\n- cc/common/references/fqcn.md\n- cc/common/references/patterns.md\n- cc/common/references/molecule.md\n\nReturn complete plan with: config summary, variables, tasks with FQCN, handlers, templates, file tree, and Molecule configuration details"
   }
 }
 ```
@@ -335,7 +320,7 @@ Use AskUserQuestion for approval with these options:
 }
 ```
 
-**Important:** The "Other" option is always available, allowing users to type specific modifications directly (e.g., "rename to win_apache"). Treat any non-"Yes" response as a modification request.
+**Important:** The "Other" option is always available, allowing users to type specific modifications directly (e.g., "add backup feature"). Treat any non-"Yes" response as a modification request.
 
 ### CRITICAL: Modification Loop
 
@@ -351,7 +336,7 @@ Use AskUserQuestion for approval with these options:
   "parameters": {
     "subagent_type": "ac-planner",
     "description": "Re-plan [role_name] with changes",
-    "prompt": "Regenerate role plan with these modifications:\n\nORIGINAL REQUIREMENTS:\n[original requirements from Step 1]\n\nUSER MODIFICATIONS:\n[changes requested by user, e.g., 'rename to win_apache', 'add backup feature']\n\n[rest of planner prompt...]"
+    "prompt": "Regenerate role plan with these modifications:\n\nORIGINAL REQUIREMENTS:\n[original requirements from Step 1]\n\nUSER MODIFICATIONS:\n[changes requested by user, e.g., 'add backup feature', 'change variable names']\n\n[rest of planner prompt...]"
   }
 }
 ```
@@ -496,8 +481,6 @@ win_service:
 - Prefix variables: `role_name_varname`
 
 ### Windows Considerations
-- **Role name MUST start with `win_`** (e.g., `win_apache`, `win_iis`, `win_sqlserver`)
-- **Variables MUST use role prefix** (e.g., `win_apache_port`, `win_iis_site_name`)
 - Use `ansible.windows.*` modules
 - Use `chocolatey.chocolatey.win_chocolatey` for packages
 - Molecule requires `delegated` driver (not docker)

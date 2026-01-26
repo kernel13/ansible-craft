@@ -1,0 +1,116 @@
+=== FILE: tasks/main.yml ===
+---
+# Main tasks file for nginx role
+
+- name: Install nginx package
+  ansible.builtin.package:
+    name: nginx
+    state: present
+  become: true
+  tags:
+    - nginx
+    - install
+
+- name: Create nginx configuration directory
+  ansible.builtin.file:
+    path: /etc/nginx/conf.d
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: true
+
+- name: Template nginx main configuration
+  ansible.builtin.template:
+    src: nginx.conf.j2
+    dest: /etc/nginx/nginx.conf
+    owner: root
+    group: root
+    mode: '0644'
+    validate: nginx -t -c %s
+  become: true
+  notify:
+    - reload nginx
+
+- name: Configure SSL certificates
+  ansible.builtin.copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: root
+    group: root
+    mode: '0600'
+  loop:
+    - { src: ssl/cert.pem, dest: /etc/nginx/ssl/cert.pem }
+    - { src: ssl/key.pem, dest: /etc/nginx/ssl/key.pem }
+  when: nginx_enable_ssl | bool
+  become: true
+  notify:
+    - restart nginx
+
+- name: Start and enable nginx service
+  ansible.builtin.service:
+    name: nginx
+    state: started
+    enabled: true
+  become: true
+
+=== FILE: defaults/main.yml ===
+---
+# Default variables for nginx role
+
+nginx_port: 80
+nginx_ssl_port: 443
+nginx_user: www-data
+nginx_enable_ssl: false
+nginx_worker_processes: auto
+nginx_worker_connections: 1024
+
+=== FILE: handlers/main.yml ===
+---
+# Handlers for nginx role
+
+- name: reload nginx
+  ansible.builtin.service:
+    name: nginx
+    state: reloaded
+  become: true
+
+- name: restart nginx
+  ansible.builtin.service:
+    name: nginx
+    state: restarted
+  become: true
+
+=== FILE: templates/nginx.conf.j2 ===
+user {{ nginx_user }};
+worker_processes {{ nginx_worker_processes }};
+error_log /var/log/nginx/error.log warn;
+pid /var/run/nginx.pid;
+
+events {
+    worker_connections {{ nginx_worker_connections }};
+}
+
+http {
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+    sendfile on;
+    keepalive_timeout 65;
+
+    server {
+        listen {{ nginx_port }};
+        server_name localhost;
+
+{% if nginx_enable_ssl | bool %}
+        listen {{ nginx_ssl_port }} ssl;
+        ssl_certificate /etc/nginx/ssl/cert.pem;
+        ssl_certificate_key /etc/nginx/ssl/key.pem;
+{% endif %}
+
+        location / {
+            root /usr/share/nginx/html;
+            index index.html;
+        }
+    }
+}

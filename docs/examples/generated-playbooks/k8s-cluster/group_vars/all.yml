@@ -1,0 +1,20 @@
+---
+# group_vars/all.yml - Variables for all Kubernetes hosts
+
+# Kubernetes version
+kubernetes_version: "1.29"
+kubernetes_major_version: "1.29"
+
+# Control plane endpoint (load balancer or VIP)
+control_plane_endpoint: "k8s-api.example.com:6443"
+
+# Network configuration
+pod_network_cidr: "10.244.0.0/16"
+service_cidr: "10.96.0.0/12"
+
+# Container runtime
+container_runtime: containerd
+
+# DNS
+cluster_dns: "10.96.0.10"
+cluster_domain: "cluster.local"

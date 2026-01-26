@@ -1,0 +1,51 @@
+# {{ ansible_managed }}
+# Nginx main configuration
+
+user www-data;
+worker_processes {{ nginx_worker_processes }};
+pid /run/nginx.pid;
+include /etc/nginx/modules-enabled/*.conf;
+
+events {
+    worker_connections {{ nginx_worker_connections }};
+    multi_accept {{ 'on' if nginx_multi_accept else 'off' }};
+}
+
+http {
+    # Basic settings
+    sendfile on;
+    tcp_nopush on;
+    tcp_nodelay on;
+    keepalive_timeout 65;
+    types_hash_max_size 2048;
+    server_tokens off;
+
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+{% if nginx_ssl_enabled %}
+    # SSL settings
+    ssl_protocols {{ nginx_ssl_protocols }};
+    ssl_ciphers {{ nginx_ssl_ciphers }};
+    ssl_prefer_server_ciphers {{ 'on' if nginx_ssl_prefer_server_ciphers else 'off' }};
+    ssl_session_cache {{ nginx_ssl_session_cache }};
+    ssl_session_timeout {{ nginx_ssl_session_timeout }};
+{% endif %}
+
+    # Logging
+    access_log {{ nginx_access_log }} {{ nginx_log_format }};
+    error_log {{ nginx_error_log }};
+
+{% if nginx_gzip_enabled %}
+    # Gzip settings
+    gzip on;
+    gzip_vary on;
+    gzip_proxied any;
+    gzip_comp_level {{ nginx_gzip_comp_level }};
+    gzip_min_length {{ nginx_gzip_min_length }};
+    gzip_types {{ nginx_gzip_types | join(' ') }};
+{% endif %}
+
+    # Virtual host configs
+    include {{ nginx_sites_enabled_dir }}/*;
+}

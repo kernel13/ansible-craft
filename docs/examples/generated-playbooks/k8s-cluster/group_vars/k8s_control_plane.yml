@@ -1,0 +1,12 @@
+---
+# group_vars/k8s_control_plane.yml - Variables for control plane nodes
+
+# Taint control plane nodes (no workload scheduling)
+control_plane_taint: true
+
+# API server configuration
+api_server_advertise_address: "{{ ansible_default_ipv4.address }}"
+api_server_bind_port: 6443
+
+# etcd configuration
+etcd_data_dir: /var/lib/etcd

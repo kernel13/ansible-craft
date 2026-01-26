@@ -1,0 +1,14 @@
+---
+# handlers/main.yml - Handlers for nginx-ssl role
+
+- name: Reload nginx
+  ansible.builtin.systemd:
+    name: "{{ nginx_service_name }}"
+    state: reloaded
+  become: true
+
+- name: Restart nginx
+  ansible.builtin.systemd:
+    name: "{{ nginx_service_name }}"
+    state: restarted
+  become: true

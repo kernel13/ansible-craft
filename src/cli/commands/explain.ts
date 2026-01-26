@@ -8,7 +8,7 @@
 import { stat } from 'node:fs/promises';
 import chalk from 'chalk';
 import { Command } from 'commander';
-import { ExplainerAgent } from '../../agents/index.js';
+import { ExplainerAgent } from '../../core/index.js';
 import { displayApiError, transformApiError } from '../../ai/errors.js';
 import { loadConfig } from '../../config/index.js';
 import { createAgentContext, displayAgentWarnings, handleAgentFailure } from '../helpers/index.js';

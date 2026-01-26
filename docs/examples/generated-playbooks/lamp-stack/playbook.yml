@@ -1,0 +1,143 @@
+---
+# playbook.yml - Deploy LAMP stack
+
+- name: Configure database servers
+  hosts: databases
+  become: true
+  vars_files:
+    - group_vars/all.yml
+    - group_vars/databases.yml
+  tasks:
+    - name: Install MySQL server
+      ansible.builtin.apt:
+        name:
+          - mysql-server
+          - mysql-client
+          - python3-mysqldb
+        state: present
+        update_cache: true
+
+    - name: Ensure MySQL is started and enabled
+      ansible.builtin.systemd:
+        name: mysql
+        state: started
+        enabled: true
+
+    - name: Set MySQL root password
+      community.mysql.mysql_user:
+        name: root
+        password: "{{ mysql_root_password }}"
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+        state: present
+
+    - name: Remove anonymous MySQL users
+      community.mysql.mysql_user:
+        name: ""
+        host_all: true
+        state: absent
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+
+    - name: Create application database
+      community.mysql.mysql_db:
+        name: "{{ app_database }}"
+        state: present
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+
+    - name: Create application database user
+      community.mysql.mysql_user:
+        name: "{{ app_db_user }}"
+        password: "{{ app_db_password }}"
+        priv: "{{ app_database }}.*:ALL"
+        host: "%"
+        state: present
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+
+- name: Configure web servers
+  hosts: webservers
+  become: true
+  vars_files:
+    - group_vars/all.yml
+    - group_vars/webservers.yml
+  tasks:
+    - name: Install Apache and PHP packages
+      ansible.builtin.apt:
+        name:
+          - apache2
+          - libapache2-mod-php
+          - php{{ php_version }}
+          - php{{ php_version }}-mysql
+          - php{{ php_version }}-curl
+          - php{{ php_version }}-gd
+          - php{{ php_version }}-mbstring
+          - php{{ php_version }}-xml
+          - php{{ php_version }}-zip
+        state: present
+        update_cache: true
+
+    - name: Enable Apache modules
+      ansible.builtin.apache2_module:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - rewrite
+        - ssl
+        - headers
+      notify: Restart apache
+
+    - name: Create document root
+      ansible.builtin.file:
+        path: "{{ document_root }}"
+        state: directory
+        owner: www-data
+        group: www-data
+        mode: "0755"
+
+    - name: Deploy Apache virtual host
+      ansible.builtin.template:
+        src: templates/vhost.conf.j2
+        dest: /etc/apache2/sites-available/{{ app_domain }}.conf
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Reload apache
+
+    - name: Enable virtual host
+      ansible.builtin.command:
+        cmd: a2ensite {{ app_domain }}.conf
+        creates: /etc/apache2/sites-enabled/{{ app_domain }}.conf
+      notify: Reload apache
+
+    - name: Disable default site
+      ansible.builtin.command:
+        cmd: a2dissite 000-default.conf
+        removes: /etc/apache2/sites-enabled/000-default.conf
+      notify: Reload apache
+
+    - name: Deploy PHP info page (development only)
+      ansible.builtin.copy:
+        content: "<?php phpinfo(); ?>"
+        dest: "{{ document_root }}/info.php"
+        owner: www-data
+        group: www-data
+        mode: "0644"
+      when: deploy_environment == 'development'
+
+    - name: Ensure Apache is started and enabled
+      ansible.builtin.systemd:
+        name: apache2
+        state: started
+        enabled: true
+
+  handlers:
+    - name: Restart apache
+      ansible.builtin.systemd:
+        name: apache2
+        state: restarted
+
+    - name: Reload apache
+      ansible.builtin.systemd:
+        name: apache2
+        state: reloaded

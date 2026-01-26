@@ -1,0 +1,55 @@
+---
+# defaults/main.yml - Default variables for docker role
+
+# Docker edition (ce or ee)
+docker_edition: ce
+docker_version: ""  # Empty means latest
+
+# Docker Compose
+docker_compose_install: true
+docker_compose_version: "2.24.0"
+docker_compose_path: /usr/local/bin/docker-compose
+
+# Service configuration
+docker_service_enabled: true
+docker_service_state: started
+
+# Users to add to docker group
+docker_users: []
+
+# Docker daemon configuration
+docker_daemon_options:
+  storage-driver: overlay2
+  log-driver: json-file
+  log-opts:
+    max-size: "10m"
+    max-file: "3"
+
+# Docker data directory
+docker_data_dir: /var/lib/docker
+
+# Enable experimental features
+docker_experimental: false
+
+# Live restore (keep containers running during daemon downtime)
+docker_live_restore: true
+
+# Default address pools for networks
+docker_default_address_pools: []
+# Example:
+# docker_default_address_pools:
+#   - base: "172.80.0.0/16"
+#     size: 24
+
+# Insecure registries (use with caution)
+docker_insecure_registries: []
+
+# Registry mirrors
+docker_registry_mirrors: []
+
+# DNS servers for containers
+docker_dns: []
+docker_dns_search: []
+
+# Configure containerd
+docker_containerd_enabled: true

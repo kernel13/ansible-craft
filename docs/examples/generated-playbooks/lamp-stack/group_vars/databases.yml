@@ -1,0 +1,13 @@
+---
+# group_vars/databases.yml - Variables for database servers
+
+# MySQL settings
+mysql_root_password: "{{ vault_mysql_root_password }}"  # Store in vault.yml
+mysql_bind_address: 0.0.0.0
+mysql_max_connections: 150
+mysql_innodb_buffer_pool_size: 256M
+
+# Backup settings
+mysql_backup_enabled: true
+mysql_backup_dir: /var/backups/mysql
+mysql_backup_retention_days: 7

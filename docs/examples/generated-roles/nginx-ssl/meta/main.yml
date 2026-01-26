@@ -1,0 +1,28 @@
+---
+# meta/main.yml - Role metadata
+
+galaxy_info:
+  author: ansible-craft
+  description: Nginx web server with SSL/TLS support using Let's Encrypt
+  license: MIT
+  min_ansible_version: "2.14"
+
+  platforms:
+    - name: Ubuntu
+      versions:
+        - focal
+        - jammy
+    - name: Debian
+      versions:
+        - bullseye
+        - bookworm
+
+  galaxy_tags:
+    - nginx
+    - ssl
+    - tls
+    - letsencrypt
+    - webserver
+    - reverse_proxy
+
+dependencies: []

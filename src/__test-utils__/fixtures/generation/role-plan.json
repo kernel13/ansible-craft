@@ -1,0 +1,55 @@
+{
+  "role_name": "nginx",
+  "description": "Production-ready Ansible role for nginx web server with SSL support",
+  "tasks": [
+    {
+      "name": "Install nginx package",
+      "description": "Install nginx from package manager",
+      "module": "ansible.builtin.package"
+    },
+    {
+      "name": "Create nginx configuration directory",
+      "description": "Ensure the nginx configuration directory exists",
+      "module": "ansible.builtin.file"
+    },
+    {
+      "name": "Template nginx main configuration",
+      "description": "Deploy the main nginx configuration file",
+      "module": "ansible.builtin.template"
+    },
+    {
+      "name": "Configure SSL certificates",
+      "description": "Copy SSL certificates to the server",
+      "module": "ansible.builtin.copy"
+    },
+    {
+      "name": "Start and enable nginx service",
+      "description": "Ensure nginx service is started and enabled on boot",
+      "module": "ansible.builtin.service"
+    }
+  ],
+  "handlers": ["reload nginx", "restart nginx"],
+  "templates": ["nginx.conf.j2", "default.conf.j2"],
+  "variables": [
+    {
+      "name": "nginx_port",
+      "default": "80",
+      "description": "HTTP port for nginx to listen on"
+    },
+    {
+      "name": "nginx_ssl_port",
+      "default": "443",
+      "description": "HTTPS port for nginx to listen on"
+    },
+    {
+      "name": "nginx_user",
+      "default": "www-data",
+      "description": "User to run nginx process"
+    },
+    {
+      "name": "nginx_enable_ssl",
+      "default": "false",
+      "description": "Enable SSL/TLS configuration"
+    }
+  ]
+}

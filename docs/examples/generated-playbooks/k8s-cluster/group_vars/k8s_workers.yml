@@ -1,0 +1,13 @@
+---
+# group_vars/k8s_workers.yml - Variables for worker nodes
+
+# Kubelet configuration
+kubelet_max_pods: 110
+kubelet_image_gc_high_threshold: 85
+kubelet_image_gc_low_threshold: 80
+
+# Resource reservations
+system_reserved_cpu: "100m"
+system_reserved_memory: "256Mi"
+kube_reserved_cpu: "100m"
+kube_reserved_memory: "256Mi"

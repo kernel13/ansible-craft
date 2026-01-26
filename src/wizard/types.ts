@@ -40,6 +40,40 @@ export type MoleculeDriver = 'docker' | 'podman' | 'vagrant' | 'delegated';
 export type MoleculeScenario = 'default' | 'side_effect' | 'idempotence';
 
 /**
+ * Molecule testing level options.
+ */
+export type MoleculeTestLevel = 'none' | 'basic' | 'advanced';
+
+/**
+ * Molecule verifier options.
+ */
+export type MoleculeVerifier = 'ansible' | 'testinfra';
+
+/**
+ * Vagrant provider options.
+ */
+export type VagrantProvider = 'virtualbox' | 'libvirt' | 'parallels';
+
+/**
+ * Vagrant resource preset options.
+ */
+export type VagrantResourcePreset = 'minimal' | 'standard' | 'powerful';
+
+/**
+ * Molecule test stage options (full test sequence).
+ */
+export type MoleculeTestStage =
+  | 'dependency'
+  | 'cleanup'
+  | 'destroy'
+  | 'create'
+  | 'prepare'
+  | 'converge'
+  | 'idempotence'
+  | 'side_effect'
+  | 'verify';
+
+/**
  * Variable naming convention options.
  */
 export type VariableNaming = 'flat' | 'prefixed';
@@ -133,16 +167,60 @@ export interface DependenciesConfig {
 }
 
 /**
+ * Platform-specific Molecule image/box configuration.
+ */
+export interface MoleculePlatformConfig {
+  /** Target platform */
+  platform: RolePlatform;
+  /** Container image or Vagrant box */
+  image: string;
+}
+
+/**
  * Molecule testing configuration.
  */
 export interface MoleculeConfig {
   /** Whether molecule testing is enabled */
   enabled: boolean;
+  /** Testing level (none, basic, advanced) */
+  level?: MoleculeTestLevel;
   /** Test driver (when enabled) */
   driver?: MoleculeDriver;
-  /** Test platforms (when enabled) */
+
+  // Platform-specific image/box configuration
+  /** Platform configurations with custom images/boxes */
+  platformConfigs?: MoleculePlatformConfig[];
+  /** Whether to use pre-built Ansible test images */
+  useAnsibleImages?: boolean;
+
+  // Container options (docker/podman)
+  /** Enable privileged mode for systemd */
+  privileged?: boolean;
+  /** Run in rootless mode (podman only) */
+  rootless?: boolean;
+
+  // Vagrant options
+  /** Vagrant provider (virtualbox/libvirt/parallels) */
+  vagrantProvider?: VagrantProvider;
+  /** Vagrant VM memory in MB */
+  vagrantMemory?: number;
+  /** Vagrant VM CPU count */
+  vagrantCpus?: number;
+
+  // Delegated options
+  /** Whether instances are managed by Molecule */
+  delegatedManaged?: boolean;
+
+  // Test execution options
+  /** Custom test sequence stages */
+  testSequence?: MoleculeTestStage[];
+  /** Verifier type (ansible or testinfra) */
+  verifier?: MoleculeVerifier;
+
+  // Backward compatibility (derived from new fields)
+  /** Test platforms (when enabled) - derived from platformConfigs */
   platforms?: RolePlatform[];
-  /** Test scenarios (when enabled) */
+  /** Test scenarios (when enabled) - derived from testSequence */
   scenarios?: MoleculeScenario[];
 }
 
@@ -224,6 +302,49 @@ export const moleculeDriverSchema = z.enum(['docker', 'podman', 'vagrant', 'dele
  * Zod schema for molecule scenario validation.
  */
 export const moleculeScenarioSchema = z.enum(['default', 'side_effect', 'idempotence']);
+
+/**
+ * Zod schema for molecule test level validation.
+ */
+export const moleculeTestLevelSchema = z.enum(['none', 'basic', 'advanced']);
+
+/**
+ * Zod schema for molecule verifier validation.
+ */
+export const moleculeVerifierSchema = z.enum(['ansible', 'testinfra']);
+
+/**
+ * Zod schema for vagrant provider validation.
+ */
+export const vagrantProviderSchema = z.enum(['virtualbox', 'libvirt', 'parallels']);
+
+/**
+ * Zod schema for vagrant resource preset validation.
+ */
+export const vagrantResourcePresetSchema = z.enum(['minimal', 'standard', 'powerful']);
+
+/**
+ * Zod schema for molecule test stage validation.
+ */
+export const moleculeTestStageSchema = z.enum([
+  'dependency',
+  'cleanup',
+  'destroy',
+  'create',
+  'prepare',
+  'converge',
+  'idempotence',
+  'side_effect',
+  'verify',
+]);
+
+/**
+ * Zod schema for molecule platform config validation.
+ */
+export const moleculePlatformConfigSchema = z.object({
+  platform: rolePlatformSchema,
+  image: z.string(),
+});
 
 /**
  * Zod schema for variable naming convention validation.
@@ -310,7 +431,30 @@ export const dependenciesConfigSchema = z.object({
  */
 export const moleculeConfigSchema = z.object({
   enabled: z.boolean(),
+  level: moleculeTestLevelSchema.optional(),
   driver: moleculeDriverSchema.optional(),
+
+  // Platform-specific configuration
+  platformConfigs: z.array(moleculePlatformConfigSchema).optional(),
+  useAnsibleImages: z.boolean().optional(),
+
+  // Container options
+  privileged: z.boolean().optional(),
+  rootless: z.boolean().optional(),
+
+  // Vagrant options
+  vagrantProvider: vagrantProviderSchema.optional(),
+  vagrantMemory: z.number().optional(),
+  vagrantCpus: z.number().optional(),
+
+  // Delegated options
+  delegatedManaged: z.boolean().optional(),
+
+  // Test execution options
+  testSequence: z.array(moleculeTestStageSchema).optional(),
+  verifier: moleculeVerifierSchema.optional(),
+
+  // Backward compatibility
   platforms: z.array(rolePlatformSchema).optional(),
   scenarios: z.array(moleculeScenarioSchema).optional(),
 });
@@ -447,6 +591,9 @@ export function formatRoleContextForPrompt(context: RoleWizardContext): Record<s
   // Molecule testing
   if (context.molecule.enabled) {
     result.molecule_testing = 'enabled';
+    if (context.molecule.level) {
+      result.molecule_level = context.molecule.level;
+    }
     if (context.molecule.driver) {
       result.molecule_driver = context.molecule.driver;
     }
@@ -455,6 +602,43 @@ export function formatRoleContextForPrompt(context: RoleWizardContext): Record<s
     }
     if (context.molecule.scenarios && context.molecule.scenarios.length > 0) {
       result.molecule_scenarios = context.molecule.scenarios.join(', ');
+    }
+    // Platform configs with custom images/boxes
+    if (context.molecule.platformConfigs && context.molecule.platformConfigs.length > 0) {
+      result.molecule_platform_images = context.molecule.platformConfigs
+        .map((pc) => `${pc.platform}: ${pc.image}`)
+        .join('; ');
+    }
+    // Container options
+    if (context.molecule.useAnsibleImages !== undefined) {
+      result.molecule_ansible_images = context.molecule.useAnsibleImages ? 'yes' : 'no';
+    }
+    if (context.molecule.privileged !== undefined) {
+      result.molecule_privileged = context.molecule.privileged ? 'yes' : 'no';
+    }
+    if (context.molecule.rootless !== undefined) {
+      result.molecule_rootless = context.molecule.rootless ? 'yes' : 'no';
+    }
+    // Vagrant options
+    if (context.molecule.vagrantProvider) {
+      result.molecule_vagrant_provider = context.molecule.vagrantProvider;
+    }
+    if (context.molecule.vagrantMemory) {
+      result.molecule_vagrant_memory = `${context.molecule.vagrantMemory}MB`;
+    }
+    if (context.molecule.vagrantCpus) {
+      result.molecule_vagrant_cpus = String(context.molecule.vagrantCpus);
+    }
+    // Delegated options
+    if (context.molecule.delegatedManaged !== undefined) {
+      result.molecule_delegated_managed = context.molecule.delegatedManaged ? 'yes' : 'no';
+    }
+    // Test execution options
+    if (context.molecule.testSequence && context.molecule.testSequence.length > 0) {
+      result.molecule_test_sequence = context.molecule.testSequence.join(', ');
+    }
+    if (context.molecule.verifier) {
+      result.molecule_verifier = context.molecule.verifier;
     }
   } else {
     result.molecule_testing = 'disabled';

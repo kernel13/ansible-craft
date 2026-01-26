@@ -7,7 +7,7 @@
 
 import chalk from 'chalk';
 import { Command } from 'commander';
-import { DebuggerAgent } from '../../agents/index.js';
+import { DebuggerAgent } from '../../core/index.js';
 import { displayApiError, transformApiError } from '../../ai/errors.js';
 import { loadConfig } from '../../config/index.js';
 import { applyFix } from '../../explain/fix-applier.js';

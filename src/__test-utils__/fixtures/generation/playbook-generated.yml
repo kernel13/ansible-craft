@@ -1,0 +1,139 @@
+=== FILE: playbook.yml ===
+---
+# LAMP Stack Deployment Playbook
+
+- name: Configure database servers
+  hosts: databases
+  become: true
+  vars_files:
+    - group_vars/databases.yml
+  tasks:
+    - name: Install MySQL server
+      ansible.builtin.package:
+        name:
+          - mysql-server
+          - python3-mysqldb
+        state: present
+
+    - name: Configure MySQL
+      ansible.builtin.template:
+        src: templates/my.cnf.j2
+        dest: /etc/mysql/my.cnf
+        owner: root
+        group: root
+        mode: '0644'
+      notify: restart mysql
+
+    - name: Start MySQL service
+      ansible.builtin.service:
+        name: mysql
+        state: started
+        enabled: true
+
+  handlers:
+    - name: restart mysql
+      ansible.builtin.service:
+        name: mysql
+        state: restarted
+
+- name: Configure web servers
+  hosts: webservers
+  become: true
+  vars_files:
+    - group_vars/webservers.yml
+  tasks:
+    - name: Install Apache and PHP
+      ansible.builtin.package:
+        name:
+          - apache2
+          - php
+          - php-mysql
+          - libapache2-mod-php
+        state: present
+
+    - name: Deploy application code
+      ansible.builtin.copy:
+        src: files/app/
+        dest: /var/www/html/
+        owner: www-data
+        group: www-data
+        mode: '0644'
+
+    - name: Configure Apache virtual host
+      ansible.builtin.template:
+        src: templates/vhost.conf.j2
+        dest: /etc/apache2/sites-available/app.conf
+        owner: root
+        group: root
+        mode: '0644'
+      notify: restart apache
+
+    - name: Enable site
+      ansible.builtin.command: a2ensite app.conf
+      notify: restart apache
+
+    - name: Start Apache service
+      ansible.builtin.service:
+        name: apache2
+        state: started
+        enabled: true
+
+  handlers:
+    - name: restart apache
+      ansible.builtin.service:
+        name: apache2
+        state: restarted
+
+=== FILE: inventory.ini ===
+[databases]
+db01 ansible_host=192.168.1.10
+
+[webservers]
+web01 ansible_host=192.168.1.20
+web02 ansible_host=192.168.1.21
+
+[all:vars]
+ansible_user=deploy
+ansible_become=true
+
+=== FILE: group_vars/databases.yml ===
+---
+# Database server variables
+mysql_root_password: "{{ vault_mysql_root_password }}"
+mysql_bind_address: 0.0.0.0
+mysql_port: 3306
+
+=== FILE: group_vars/webservers.yml ===
+---
+# Web server variables
+apache_port: 80
+php_memory_limit: 256M
+app_database_host: "{{ hostvars['db01']['ansible_host'] }}"
+
+=== FILE: group_vars/all.yml ===
+---
+# Common variables for all hosts
+timezone: UTC
+ntp_servers:
+  - 0.pool.ntp.org
+  - 1.pool.ntp.org
+
+=== FILE: README.md ===
+# LAMP Stack Deployment
+
+This playbook deploys a complete LAMP (Linux, Apache, MySQL, PHP) stack.
+
+## Requirements
+
+- Ansible 2.9+
+- Target hosts running Ubuntu 20.04 or Debian 11
+
+## Usage
+
+```bash
+ansible-playbook -i inventory.ini playbook.yml
+```
+
+## Variables
+
+See `group_vars/` for configurable variables.

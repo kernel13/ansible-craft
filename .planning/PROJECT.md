@@ -37,7 +37,7 @@ Generate complete, production-ready Ansible roles from natural language descript
 ### Out of Scope
 
 - Web application — future milestone after CLI validated
-- Rails API backend — future milestone, not needed for standalone CLI
+- Backend API — future milestone, not needed for standalone CLI
 - User authentication/accounts — requires backend
 - Billing/subscriptions — requires backend
 - Template library — future feature requiring persistence

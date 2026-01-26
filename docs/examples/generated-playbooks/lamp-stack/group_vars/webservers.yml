@@ -1,0 +1,12 @@
+---
+# group_vars/webservers.yml - Variables for web servers
+
+# Apache settings
+apache_server_admin: admin@example.com
+apache_log_level: warn
+
+# PHP settings
+php_memory_limit: 256M
+php_max_execution_time: 60
+php_upload_max_filesize: 64M
+php_post_max_size: 64M

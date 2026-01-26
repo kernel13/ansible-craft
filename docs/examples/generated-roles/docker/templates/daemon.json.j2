@@ -1,0 +1,29 @@
+{
+{% set options = {} %}
+{% set _ = options.update(docker_daemon_options) %}
+{% if docker_data_dir != '/var/lib/docker' %}
+{% set _ = options.update({'data-root': docker_data_dir}) %}
+{% endif %}
+{% if docker_experimental %}
+{% set _ = options.update({'experimental': true}) %}
+{% endif %}
+{% if docker_live_restore %}
+{% set _ = options.update({'live-restore': true}) %}
+{% endif %}
+{% if docker_insecure_registries | length > 0 %}
+{% set _ = options.update({'insecure-registries': docker_insecure_registries}) %}
+{% endif %}
+{% if docker_registry_mirrors | length > 0 %}
+{% set _ = options.update({'registry-mirrors': docker_registry_mirrors}) %}
+{% endif %}
+{% if docker_dns | length > 0 %}
+{% set _ = options.update({'dns': docker_dns}) %}
+{% endif %}
+{% if docker_dns_search | length > 0 %}
+{% set _ = options.update({'dns-search': docker_dns_search}) %}
+{% endif %}
+{% if docker_default_address_pools | length > 0 %}
+{% set _ = options.update({'default-address-pools': docker_default_address_pools}) %}
+{% endif %}
+{{ options | to_nice_json(indent=2) }}
+}

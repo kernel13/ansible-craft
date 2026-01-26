@@ -1,0 +1,12 @@
+---
+# Default variables for sample role
+
+packages:
+  - curl
+  - wget
+
+app_dir: /opt/myapp
+app_user: app
+app_group: app
+app_service: myapp
+app_port: 8080

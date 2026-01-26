@@ -276,7 +276,7 @@ describe('promptHandlers', () => {
  * 7. Tags (select, input)
  * 8. Idempotency (confirm x3)
  * 9. Dependencies (confirm, input)
- * 10. Molecule (confirm, select, checkbox, checkbox)
+ * 10. Molecule (tiered: level select, driver select, [advanced questions])
  * 11. Complete
  */
 function setupWizardMocks(
@@ -284,7 +284,8 @@ function setupWizardMocks(
     directories?: string[];
     platforms?: string[];
     handlers?: string[];
-    moleculeEnabled?: boolean;
+    moleculeLevel?: 'none' | 'basic' | 'advanced';
+    moleculeDriver?: 'docker' | 'podman' | 'vagrant' | 'delegated';
     dependenciesEnabled?: boolean;
   } = {},
 ) {
@@ -292,7 +293,8 @@ function setupWizardMocks(
     directories = ['handlers'],
     platforms = ['Ubuntu'],
     handlers = ['restart'],
-    moleculeEnabled = true,
+    moleculeLevel = 'basic',
+    moleculeDriver = 'docker',
     dependenciesEnabled = true,
   } = options;
 
@@ -333,16 +335,38 @@ function setupWizardMocks(
     mockInput.mockResolvedValueOnce(''); // role dependencies (empty)
   }
 
-  // Step 10: Molecule
-  mockConfirm.mockResolvedValueOnce(moleculeEnabled); // enabled
-  if (moleculeEnabled) {
-    mockSelect.mockResolvedValueOnce('docker'); // driver
-    // Platforms checkbox - filter out Generic
-    const moleculePlatforms = platforms.filter((p) => p !== 'Generic');
-    if (moleculePlatforms.length > 0) {
-      mockCheckbox.mockResolvedValueOnce(moleculePlatforms); // test platforms
+  // Step 10: Molecule (new tiered flow)
+  mockSelect.mockResolvedValueOnce(moleculeLevel); // Q1: level
+
+  if (moleculeLevel !== 'none') {
+    mockSelect.mockResolvedValueOnce(moleculeDriver); // Q2: driver
+
+    if (moleculeLevel === 'advanced') {
+      // Driver-specific questions for advanced mode
+      switch (moleculeDriver) {
+        case 'docker':
+          mockConfirm.mockResolvedValueOnce(true); // use ansible images
+          mockConfirm.mockResolvedValueOnce(false); // privileged mode
+          break;
+        case 'podman':
+          mockConfirm.mockResolvedValueOnce(true); // use ansible images
+          mockConfirm.mockResolvedValueOnce(false); // privileged mode
+          mockConfirm.mockResolvedValueOnce(true); // rootless mode
+          break;
+        case 'vagrant':
+          mockSelect.mockResolvedValueOnce('virtualbox'); // provider
+          mockConfirm.mockResolvedValueOnce(true); // use standard boxes
+          mockSelect.mockResolvedValueOnce('standard'); // resources
+          break;
+        case 'delegated':
+          mockSelect.mockResolvedValueOnce('external'); // instance management
+          break;
+      }
+
+      // Common advanced questions
+      mockCheckbox.mockResolvedValueOnce(['create', 'converge', 'idempotence', 'verify']); // test sequence
+      mockSelect.mockResolvedValueOnce('ansible'); // verifier
     }
-    mockCheckbox.mockResolvedValueOnce(['default', 'idempotence']); // scenarios
   }
 }
 
@@ -427,15 +451,74 @@ describe('runRoleWizard', () => {
     expect(result.custom).toEqual({});
   });
 
-  test('molecule disabled when user chooses no', async () => {
+  test('molecule disabled when user chooses none level', async () => {
     setupWizardMocks({
-      moleculeEnabled: false,
+      moleculeLevel: 'none',
     });
 
     const result = await runRoleWizard();
 
     expect(result.molecule.enabled).toBe(false);
+    expect(result.molecule.level).toBe('none');
     expect(result.molecule.driver).toBeUndefined();
+  });
+
+  test('molecule basic mode applies defaults', async () => {
+    setupWizardMocks({
+      moleculeLevel: 'basic',
+      moleculeDriver: 'docker',
+    });
+
+    const result = await runRoleWizard();
+
+    expect(result.molecule.enabled).toBe(true);
+    expect(result.molecule.level).toBe('basic');
+    expect(result.molecule.driver).toBe('docker');
+    expect(result.molecule.verifier).toBe('ansible');
+    expect(result.molecule.testSequence).toBeDefined();
+  });
+
+  test('molecule advanced mode with docker driver', async () => {
+    setupWizardMocks({
+      moleculeLevel: 'advanced',
+      moleculeDriver: 'docker',
+    });
+
+    const result = await runRoleWizard();
+
+    expect(result.molecule.enabled).toBe(true);
+    expect(result.molecule.level).toBe('advanced');
+    expect(result.molecule.driver).toBe('docker');
+    expect(result.molecule.useAnsibleImages).toBe(true);
+    expect(result.molecule.privileged).toBe(false);
+  });
+
+  test('molecule advanced mode with podman driver includes rootless', async () => {
+    setupWizardMocks({
+      moleculeLevel: 'advanced',
+      moleculeDriver: 'podman',
+    });
+
+    const result = await runRoleWizard();
+
+    expect(result.molecule.enabled).toBe(true);
+    expect(result.molecule.driver).toBe('podman');
+    expect(result.molecule.rootless).toBe(true);
+  });
+
+  test('molecule advanced mode with vagrant driver includes provider', async () => {
+    setupWizardMocks({
+      moleculeLevel: 'advanced',
+      moleculeDriver: 'vagrant',
+    });
+
+    const result = await runRoleWizard();
+
+    expect(result.molecule.enabled).toBe(true);
+    expect(result.molecule.driver).toBe('vagrant');
+    expect(result.molecule.vagrantProvider).toBe('virtualbox');
+    expect(result.molecule.vagrantMemory).toBeDefined();
+    expect(result.molecule.vagrantCpus).toBeDefined();
   });
 });
 
