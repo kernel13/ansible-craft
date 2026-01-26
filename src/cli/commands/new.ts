@@ -10,11 +10,13 @@ import { confirm, input, select } from '@inquirer/prompts';
 import chalk from 'chalk';
 import { Command } from 'commander';
 import { runPlaybookWizard } from '../../wizard/playbook-wizard.js';
+import { runProjectWizard } from '../../wizard/project-wizard.js';
 import { runRoleWizard } from '../../wizard/role-wizard.js';
 import {
   formatPlaybookContextForPrompt,
   formatRoleContextForPrompt,
   type PlaybookWizardContext,
+  type ProjectWizardContext,
   type RoleWizardContext,
 } from '../../wizard/types.js';
 import { FixerAgent, WriterAgent, validateAndLint } from '../../core/index.js';
@@ -36,16 +38,19 @@ import {
   type PlaybookPlanPreview,
   type WritePlaybookResult,
   type WriteResult,
+  createProjectStructure,
   displayPlaybookTree,
   displayRoleTree,
   displayValidationReport,
   formatInstallInstructions,
   generatePlaybookCode,
   generatePlaybookPlan,
+  generateProjectFiles,
   generateRoleCode,
   generateRolePlan,
   inferPlaybookName,
   inferRoleName,
+  projectExists,
   sanitizeRoleName,
 } from '../../generation/index.js';
 import { createAgentContext, displayAgentWarnings, handleAgentFailure } from '../helpers/index.js';
@@ -98,9 +103,9 @@ function toWritePlaybookResult(output: WriterOutput, dryRun: boolean): WritePlay
  * The generation can still proceed even if defaults couldn't be saved.
  */
 async function promptToSaveDefaults(
-  type: 'role' | 'playbook',
-  context: RoleWizardContext | PlaybookWizardContext,
-  existingDefaults: RoleWizardContext | PlaybookWizardContext | undefined,
+  type: 'role' | 'playbook' | 'project',
+  context: RoleWizardContext | PlaybookWizardContext | ProjectWizardContext,
+  existingDefaults: RoleWizardContext | PlaybookWizardContext | ProjectWizardContext | undefined,
   jsonMode: boolean,
 ): Promise<void> {
   // Skip in JSON mode or if no changes
@@ -920,6 +925,213 @@ newCommand
         if (apiError) {
           displayApiError(apiError);
           process.exit(1);
+        }
+
+        console.error(
+          chalk.red(`\nError: ${error instanceof Error ? error.message : 'Unknown error'}`),
+        );
+        process.exit(1);
+      }
+    },
+  );
+
+/**
+ * Display project structure tree.
+ */
+function displayProjectTree(
+  projectDir: string,
+  filesWritten: string[],
+  dirsCreated: string[],
+  dryRun: boolean,
+): void {
+  const prefix = dryRun ? chalk.yellow('[DRY RUN] ') : '';
+  console.log(`\n${prefix}${chalk.cyan('Project structure:')}`);
+  console.log(chalk.dim(`  ${projectDir}/`));
+
+  // Sort files for consistent display
+  const sortedFiles = [...filesWritten].sort();
+
+  for (const file of sortedFiles) {
+    const parts = file.split('/');
+    const indent = '  '.repeat(parts.length);
+    const name = parts[parts.length - 1];
+    console.log(chalk.dim(`${indent}${name}`));
+  }
+}
+
+/**
+ * New project subcommand.
+ */
+newCommand
+  .command('project <name>')
+  .description('Create a new Ansible project directory structure')
+  .option('-o, --output <dir>', 'Output directory (default: current directory)')
+  .option('--dry-run', 'Preview without writing files')
+  .option('--force', 'Overwrite existing directory without prompting')
+  .option('-Q, --quick', 'Skip wizard and use defaults')
+  .option('-q, --quiet', 'Suppress progress output')
+  .option('--json', 'Output results in JSON format')
+  .action(
+    async (
+      name: string,
+      options: {
+        output?: string;
+        dryRun?: boolean;
+        force?: boolean;
+        quick?: boolean;
+        quiet?: boolean;
+        json?: boolean;
+      },
+    ) => {
+      const startTime = Date.now();
+      const jsonMode = options.json ?? false;
+
+      // In JSON mode: quiet=true for all operations, no interactive prompts
+      if (jsonMode) {
+        options.quiet = true;
+        options.force = true; // Don't prompt for overwrite in JSON mode
+      }
+
+      try {
+        // Load config (no API key required for project creation)
+        const config = await loadConfig();
+        const outputDir = options.output ?? process.cwd();
+
+        // Sanitize project name
+        const projectName = sanitizeRoleName(name);
+
+        if (!jsonMode) {
+          console.log(chalk.cyan(`\nCreating project: ${chalk.bold(projectName)}`));
+        }
+
+        // Check if project already exists
+        if (!options.force && !options.dryRun) {
+          const exists = await projectExists(outputDir, projectName);
+          if (exists) {
+            if (jsonMode) {
+              outputJson(
+                formatJsonError('EXISTS_ERROR', `Project directory already exists: ${projectName}`),
+              );
+              process.exit(1);
+            }
+
+            const overwrite = await confirm({
+              message: `Project "${projectName}" already exists. Overwrite?`,
+              default: false,
+            });
+
+            if (!overwrite) {
+              console.log(chalk.yellow('\nOperation cancelled.'));
+              return;
+            }
+          }
+        }
+
+        // Determine wizard skip conditions
+        const skipWizard = options.quick || jsonMode || !process.stdin.isTTY;
+
+        // Load existing defaults for comparison and --quick mode
+        const existingDefaults = config.defaults?.wizard?.project;
+
+        let wizardContext: ProjectWizardContext;
+
+        if (!skipWizard) {
+          try {
+            const context = await runProjectWizard();
+            wizardContext = context;
+
+            // Prompt to save defaults after wizard
+            await promptToSaveDefaults('project', wizardContext, existingDefaults, jsonMode);
+          } catch (error) {
+            if (error instanceof ExitPromptError) {
+              console.log(chalk.yellow('\nWizard cancelled.'));
+              return;
+            }
+            throw error;
+          }
+        } else if (options.quick) {
+          // Use saved defaults or fall back to quick mode defaults
+          const defaults = existingDefaults ?? getQuickModeDefaults('project');
+          wizardContext = defaults;
+
+          if (!jsonMode && !options.quiet) {
+            if (existingDefaults) {
+              console.log(chalk.dim('Using saved defaults (--quick)'));
+            } else {
+              console.log(chalk.dim('Using default settings (no saved defaults found)'));
+            }
+          }
+        } else {
+          // Non-interactive without --quick: use quick mode defaults
+          wizardContext = getQuickModeDefaults('project');
+        }
+
+        // Create phase tracker for progress display
+        const tracker = createPhaseTracker(options.quiet ?? false);
+
+        // Generate project structure
+        tracker.start('Creating project structure...');
+        const result = await createProjectStructure(wizardContext, {
+          outputDir,
+          name: projectName,
+          force: options.force ?? false,
+          dryRun: options.dryRun ?? false,
+        });
+        tracker.succeed('Project structure created');
+
+        // Generate files list for JSON output
+        const files = generateProjectFiles(wizardContext, projectName);
+
+        // Output result
+        if (jsonMode) {
+          const jsonResult = formatJsonSuccess(
+            'project',
+            projectName,
+            result.projectDir,
+            files,
+            [], // No warnings for project creation
+            `ansible-craft new project "${name}"`,
+            startTime,
+          );
+          outputJson(jsonResult);
+          return;
+        }
+
+        // Display project tree
+        displayProjectTree(
+          result.projectDir,
+          result.filesWritten,
+          result.dirsCreated,
+          result.dryRun,
+        );
+
+        if (result.dryRun) {
+          console.log(chalk.yellow('\n[DRY RUN] No files were written.'));
+        } else {
+          console.log(chalk.green(`\nProject created successfully at: ${result.projectDir}`));
+        }
+
+        console.log(chalk.dim('\nNext steps:'));
+        console.log(chalk.dim(`  cd ${result.projectDir}`));
+        console.log(chalk.dim('  # Update inventory files with your hosts'));
+        console.log(chalk.dim('  # Configure variables in group_vars/'));
+        console.log(chalk.dim('  ansible-playbook -i production site.yml --check'));
+      } catch (error) {
+        // Handle JSON mode errors
+        if (jsonMode) {
+          const code =
+            error instanceof Error && 'code' in error
+              ? (error as Error & { code: string }).code
+              : 'UNKNOWN_ERROR';
+          outputJson(
+            formatJsonError(code, error instanceof Error ? error.message : 'Unknown error'),
+          );
+          process.exit(1);
+        }
+
+        if (error instanceof Error && error.message === 'Operation cancelled by user') {
+          console.log(chalk.yellow('\nOperation cancelled.'));
+          return;
         }
 
         console.error(

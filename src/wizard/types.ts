@@ -494,6 +494,76 @@ export const playbookWizardSchema = z
 export type RoleWizardContextValidated = z.infer<typeof roleWizardSchema>;
 export type PlaybookWizardContextValidated = z.infer<typeof playbookWizardSchema>;
 
+// ============================================
+// Project Wizard Types
+// ============================================
+
+/**
+ * Ansible project layout type.
+ * - single: Inventories at root level (production, staging files)
+ * - multi: Separate inventory directories (inventories/production/, etc.)
+ */
+export type ProjectLayout = 'single' | 'multi';
+
+/**
+ * Optional directories that can be included in the project.
+ */
+export type ProjectOptionalDir = 'library' | 'module_utils' | 'filter_plugins';
+
+/**
+ * Project wizard context collected through interactive prompts.
+ */
+export interface ProjectWizardContext {
+  /** Project layout type (single or multi-environment) */
+  layout: ProjectLayout;
+  /** Environment names (e.g., production, staging) */
+  environments: string[];
+  /** Initial inventory groups (e.g., webservers, databases) */
+  groups: string[];
+  /** Optional directories to include */
+  optionalDirs: ProjectOptionalDir[];
+  /** Whether to include ansible.cfg */
+  includeAnsibleCfg: boolean;
+  /** Whether to include sample files with placeholder content */
+  includeSampleFiles: boolean;
+  /** Extensibility field for future wizard data */
+  custom: Record<string, string>;
+}
+
+// ============================================
+// Project Wizard Zod Schemas
+// ============================================
+
+/**
+ * Zod schema for project layout validation.
+ */
+export const projectLayoutSchema = z.enum(['single', 'multi']);
+
+/**
+ * Zod schema for optional directory validation.
+ */
+export const projectOptionalDirSchema = z.enum(['library', 'module_utils', 'filter_plugins']);
+
+/**
+ * Zod schema for project wizard context validation with strict mode.
+ */
+export const projectWizardSchema = z
+  .object({
+    layout: projectLayoutSchema,
+    environments: z.array(z.string()).min(1),
+    groups: z.array(z.string()),
+    optionalDirs: z.array(projectOptionalDirSchema),
+    includeAnsibleCfg: z.boolean(),
+    includeSampleFiles: z.boolean(),
+    custom: z.record(z.string(), z.string()),
+  })
+  .strict();
+
+/**
+ * Export inferred type from Zod schema for consistency.
+ */
+export type ProjectWizardContextValidated = z.infer<typeof projectWizardSchema>;
+
 /**
  * Convert role wizard context to clarifications format for prompt builders.
  *

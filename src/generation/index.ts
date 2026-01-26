@@ -107,3 +107,13 @@ export {
   displayLintResults,
   previewAndConfirm,
 } from '../cli/preview.js';
+
+// Project structure generation
+export {
+  createProjectStructure,
+  generateProjectFiles,
+  getProjectDirectories,
+  projectExists,
+  type CreateProjectOptions,
+  type ProjectStructureResult,
+} from './project/index.js';

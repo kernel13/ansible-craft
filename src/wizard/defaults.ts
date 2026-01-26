@@ -6,7 +6,7 @@
  */
 
 import chalk from 'chalk';
-import type { PlaybookWizardContext, RoleWizardContext } from './types.ts';
+import type { PlaybookWizardContext, ProjectWizardContext, RoleWizardContext } from './types.ts';
 
 /**
  * Check if wizard context has changed from stored defaults.
@@ -14,10 +14,9 @@ import type { PlaybookWizardContext, RoleWizardContext } from './types.ts';
  * Uses JSON comparison for deep equality check.
  * Returns true if contexts differ or if no existing defaults.
  */
-export function hasChangedFromDefaults<T extends RoleWizardContext | PlaybookWizardContext>(
-  current: T,
-  existing?: T,
-): boolean {
+export function hasChangedFromDefaults<
+  T extends RoleWizardContext | PlaybookWizardContext | ProjectWizardContext,
+>(current: T, existing?: T): boolean {
   if (!existing) return true;
   return JSON.stringify(current) !== JSON.stringify(existing);
 }
@@ -26,10 +25,11 @@ export function hasChangedFromDefaults<T extends RoleWizardContext | PlaybookWiz
  * Display wizard defaults preview before saving.
  */
 export function displayDefaultsPreview(
-  type: 'role' | 'playbook',
-  context: RoleWizardContext | PlaybookWizardContext,
+  type: 'role' | 'playbook' | 'project',
+  context: RoleWizardContext | PlaybookWizardContext | ProjectWizardContext,
 ): void {
-  console.log(chalk.cyan(`\n  ${type === 'role' ? 'Role' : 'Playbook'} wizard choices:`));
+  const typeLabel = type === 'role' ? 'Role' : type === 'playbook' ? 'Playbook' : 'Project';
+  console.log(chalk.cyan(`\n  ${typeLabel} wizard choices:`));
 
   if (type === 'role') {
     const roleContext = context as RoleWizardContext;
@@ -66,12 +66,26 @@ export function displayDefaultsPreview(
       ? `${roleContext.molecule.level || 'basic'} ${roleContext.molecule.driver}${roleContext.molecule.verifier === 'testinfra' ? ' (testinfra)' : ''}`
       : 'disabled';
     console.log(`    Molecule:      ${chalk.dim(moleculeInfo)}`);
-  } else {
+  } else if (type === 'playbook') {
     const playbookContext = context as PlaybookWizardContext;
     console.log(`    Hosts:     ${chalk.dim(playbookContext.hosts.join(', ') || '(none)')}`);
     console.log(`    Become:    ${chalk.dim(playbookContext.become ? 'yes' : 'no')}`);
     console.log(
       `    Handlers:  ${chalk.dim(playbookContext.includeHandlers ? 'include' : 'exclude')}`,
+    );
+  } else {
+    const projectContext = context as ProjectWizardContext;
+    console.log(`    Layout:        ${chalk.dim(projectContext.layout)}`);
+    console.log(
+      `    Environments:  ${chalk.dim(projectContext.environments.join(', ') || '(none)')}`,
+    );
+    console.log(`    Groups:        ${chalk.dim(projectContext.groups.join(', ') || '(none)')}`);
+    console.log(
+      `    Optional dirs: ${chalk.dim(projectContext.optionalDirs.join(', ') || '(none)')}`,
+    );
+    console.log(`    ansible.cfg:   ${chalk.dim(projectContext.includeAnsibleCfg ? 'yes' : 'no')}`);
+    console.log(
+      `    Sample files:  ${chalk.dim(projectContext.includeSampleFiles ? 'yes' : 'no')}`,
     );
   }
 }
@@ -83,9 +97,10 @@ export function displayDefaultsPreview(
  */
 export function getQuickModeDefaults(type: 'role'): RoleWizardContext;
 export function getQuickModeDefaults(type: 'playbook'): PlaybookWizardContext;
+export function getQuickModeDefaults(type: 'project'): ProjectWizardContext;
 export function getQuickModeDefaults(
-  type: 'role' | 'playbook',
-): RoleWizardContext | PlaybookWizardContext {
+  type: 'role' | 'playbook' | 'project',
+): RoleWizardContext | PlaybookWizardContext | ProjectWizardContext {
   if (type === 'role') {
     return {
       structure: ['tasks', 'handlers', 'defaults', 'meta'],
@@ -132,10 +147,23 @@ export function getQuickModeDefaults(
     };
   }
 
+  if (type === 'playbook') {
+    return {
+      hosts: ['all'],
+      become: false,
+      includeHandlers: true,
+      custom: {},
+    };
+  }
+
+  // Project defaults
   return {
-    hosts: ['all'],
-    become: false,
-    includeHandlers: true,
+    layout: 'single',
+    environments: ['production', 'staging'],
+    groups: ['webservers', 'databases'],
+    optionalDirs: [],
+    includeAnsibleCfg: true,
+    includeSampleFiles: true,
     custom: {},
   };
 }

@@ -2,7 +2,11 @@
  * Configuration type definitions for ansible-craft
  */
 
-import type { PlaybookWizardContext, RoleWizardContext } from '../wizard/types.ts';
+import type {
+  PlaybookWizardContext,
+  ProjectWizardContext,
+  RoleWizardContext,
+} from '../wizard/types.ts';
 
 export interface ApiConfig {
   key?: string;
@@ -18,6 +22,8 @@ export interface WizardDefaults {
   role?: RoleWizardContext;
   /** Saved playbook wizard preferences */
   playbook?: PlaybookWizardContext;
+  /** Saved project wizard preferences */
+  project?: ProjectWizardContext;
 }
 
 export interface DefaultsConfig {

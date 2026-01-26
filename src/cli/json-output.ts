@@ -43,7 +43,7 @@ export interface GenerationResult {
   /** Success status */
   success: true;
   /** Type of generated content */
-  type: 'role' | 'playbook';
+  type: 'role' | 'playbook' | 'project';
   /** Name of generated resource */
   name: string;
   /** Output directory path */
@@ -86,7 +86,7 @@ export interface ErrorResult {
  * Format successful generation as JSON.
  */
 export function formatJsonSuccess(
-  type: 'role' | 'playbook',
+  type: 'role' | 'playbook' | 'project',
   name: string,
   outputPath: string,
   files: Array<{ path: string; content: string }>,
