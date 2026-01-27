@@ -35,3 +35,10 @@ export {
   type IdempotencyWarning,
   type ValidationSummary,
 } from './validator.js';
+
+// Existing role reading
+export {
+  readExistingRole,
+  formatExistingRoleForPrompt,
+  type ExistingRoleContent,
+} from './reader.js';

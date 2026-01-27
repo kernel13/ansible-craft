@@ -6,6 +6,8 @@
  */
 
 import type { PlanPreview } from '../schemas/plan-preview.ts';
+import type { ExistingRoleContent } from '../role/reader.js';
+import { formatExistingRoleForPrompt } from '../role/reader.js';
 
 /**
  * Build generation options from wizard clarifications.
@@ -46,6 +48,7 @@ export interface GenerateOptions {
  * @param plan - The approved plan preview
  * @param userDescription - Original natural language description
  * @param options - Generation options from wizard context
+ * @param existingRole - Optional existing role content to improve
  * @returns Prompt string for the AI to generate role code
  *
  * @example
@@ -61,6 +64,7 @@ export function buildGeneratePrompt(
   plan: PlanPreview,
   userDescription: string,
   options: GenerateOptions = {},
+  existingRole?: ExistingRoleContent,
 ): string {
   const tasksSection = plan.tasks
     .map((t, i) => `${i + 1}. ${t.name} (${t.module}) - ${t.purpose}`)
@@ -113,11 +117,14 @@ export function buildGeneratePrompt(
     ? `- Include an Ansible version check task at the start (min version: ${options.ansibleMinVersion || '2.14'})`
     : '';
 
+  // Format existing role content if provided
+  const existingRoleSection = existingRole ? formatExistingRoleForPrompt(existingRole) : '';
+
   return `Generate a complete Ansible role based on this approved plan.
 
 ## Original Request
 "${userDescription}"
-
+${existingRoleSection}
 ## Approved Plan
 
 **Role Name:** ${plan.role_name}

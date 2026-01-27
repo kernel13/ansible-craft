@@ -5,6 +5,73 @@
  * plan of what the role will contain before generating code.
  */
 
+import type { ResearchFindings } from '../../research/index.js';
+import type { ExistingRoleContent } from '../role/reader.js';
+import { formatExistingRoleForPrompt } from '../role/reader.js';
+
+/**
+ * Format research findings for inclusion in planner prompt.
+ *
+ * @param findings - Research findings to format
+ * @returns Formatted research context string
+ */
+export function formatResearchForPlanner(findings?: ResearchFindings): string {
+  if (!findings) return '';
+
+  const sections: string[] = [];
+
+  // Features
+  if (findings.features.length > 0) {
+    sections.push('**Discovered Features:**');
+    for (const feature of findings.features.slice(0, 5)) {
+      sections.push(`- ${feature.name} (${feature.category}): ${feature.description}`);
+    }
+    sections.push('');
+  }
+
+  // Packages
+  if (findings.packages.length > 0) {
+    sections.push('**Available Packages:**');
+    for (const pkg of findings.packages.slice(0, 3)) {
+      const desc = pkg.description ? `: ${pkg.description}` : '';
+      sections.push(`- ${pkg.name} (${pkg.source})${desc}`);
+    }
+    sections.push('');
+  }
+
+  // Best Practices
+  if (findings.bestPractices.length > 0) {
+    sections.push('**Best Practices:**');
+    for (const practice of findings.bestPractices.slice(0, 5)) {
+      sections.push(`- ${practice.practice} (${practice.priority})`);
+      sections.push(`  Rationale: ${practice.rationale}`);
+    }
+    sections.push('');
+  }
+
+  // Galaxy Roles
+  if (findings.galaxyRoles.length > 0) {
+    sections.push('**Reference Galaxy Roles:**');
+    for (const role of findings.galaxyRoles.slice(0, 3)) {
+      const features = role.keyFeatures.length > 0 ? ` - Features: ${role.keyFeatures.join(', ')}` : '';
+      sections.push(`- ${role.namespace}.${role.name} (${role.downloads} downloads)${features}`);
+    }
+    sections.push('');
+  }
+
+  if (sections.length === 0) return '';
+
+  return `
+## Research Findings
+
+The following information was discovered through research and should inform your plan:
+
+${sections.join('\n')}
+
+Consider these findings when planning the role structure, but adapt them to the specific user requirements.
+`;
+}
+
 /**
  * Build a prompt for generating a plan preview.
  *
@@ -13,6 +80,8 @@
  *
  * @param userDescription - Natural language description of the desired role
  * @param clarifications - Optional answers to clarifying questions
+ * @param researchFindings - Optional research findings
+ * @param existingRole - Optional existing role content to improve
  * @returns Prompt string for the AI to generate a plan preview
  *
  * @example
@@ -26,6 +95,8 @@
 export function buildPlanPrompt(
   userDescription: string,
   clarifications?: Record<string, string>,
+  researchFindings?: ResearchFindings,
+  existingRole?: ExistingRoleContent,
 ): string {
   const clarificationSection = clarifications
     ? `
@@ -36,6 +107,9 @@ ${Object.entries(clarifications)
   .join('\n')}
 `
     : '';
+
+  const researchSection = formatResearchForPlanner(researchFindings);
+  const existingRoleSection = existingRole ? formatExistingRoleForPrompt(existingRole) : '';
 
   // Extract specific wizard settings for specialized instructions
   const variableNaming = clarifications?.variable_naming;
@@ -75,7 +149,7 @@ ${Object.entries(clarifications)
 
 ## User Request
 "${userDescription}"
-${clarificationSection}
+${clarificationSection}${researchSection}${existingRoleSection}
 ## Plan Requirements
 
 Create a comprehensive plan that includes:

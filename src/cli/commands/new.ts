@@ -12,6 +12,7 @@ import { Command } from 'commander';
 import { runPlaybookWizard } from '../../wizard/playbook-wizard.js';
 import { runProjectWizard } from '../../wizard/project-wizard.js';
 import { runRoleWizard } from '../../wizard/role-wizard.js';
+import { confirmDeepDive } from '../../wizard/prompts.js';
 import {
   formatPlaybookContextForPrompt,
   formatRoleContextForPrompt,
@@ -25,6 +26,13 @@ import { createClient } from '../../ai/client.js';
 import { displayApiError, transformApiError } from '../../ai/errors.js';
 import { loadConfig, saveConfig } from '../../config/index.js';
 import type { Config } from '../../config/schema.js';
+import {
+  runInitialResearch,
+  runDeepDive,
+  displayResearchSummary,
+  mergeFindings,
+  type ResearchFindings,
+} from '../../research/index.js';
 import {
   displayDefaultsPreview,
   getQuickModeDefaults,
@@ -51,6 +59,7 @@ import {
   inferPlaybookName,
   inferRoleName,
   projectExists,
+  readExistingRole,
   sanitizeRoleName,
 } from '../../generation/index.js';
 import { createAgentContext, displayAgentWarnings, handleAgentFailure } from '../helpers/index.js';
@@ -265,12 +274,43 @@ newCommand
         // Load existing defaults for comparison and --quick mode
         const existingDefaults = config.defaults?.wizard?.role;
 
+        // Research phase (before wizard)
+        let researchFindings: ResearchFindings | undefined;
+
+        // Skip research in quick/non-interactive mode
+        if (!skipWizard) {
+          try {
+            // Phase 1: Parallel initial research
+            tracker.start('Researching best practices and implementations...');
+
+            const agentContext = createAgentContext({
+              config,
+              quiet: options.quiet,
+              json: jsonMode,
+            });
+
+            researchFindings = await runInitialResearch(description, roleName, agentContext);
+            tracker.succeed('Research complete');
+
+            // Phase 2: Display research summary
+            displayResearchSummary(researchFindings);
+          } catch (error) {
+            // Research failure is non-fatal
+            console.warn(
+              chalk.yellow(
+                `\nWarning: Research failed (${error instanceof Error ? error.message : 'Unknown error'}), continuing without`,
+              ),
+            );
+            researchFindings = undefined;
+          }
+        }
+
         let wizardContext: RoleWizardContext | undefined;
         let clarifications: Record<string, string> | undefined;
 
         if (!skipWizard) {
           try {
-            const context = await runRoleWizard();
+            const context = await runRoleWizard(researchFindings);
             wizardContext = context;
             clarifications = formatRoleContextForPrompt(context);
 
@@ -278,6 +318,43 @@ newCommand
             // This happens BEFORE generation starts, ensuring user is always prompted
             // even if generation fails later (DFLT-01 requirement)
             await promptToSaveDefaults('role', wizardContext, existingDefaults, jsonMode);
+
+            // Optional deep dive on wizard-selected features
+            if (
+              researchFindings &&
+              wizardContext.selectedFeatures &&
+              wizardContext.selectedFeatures.length > 0 &&
+              (await confirmDeepDive())
+            ) {
+              try {
+                tracker.start('Deep dive research on selected features...');
+
+                const agentContext = createAgentContext({
+                  config,
+                  quiet: options.quiet,
+                  json: jsonMode,
+                });
+
+                const deepdiveFindings = await runDeepDive(
+                  description,
+                  roleName,
+                  wizardContext.selectedFeatures,
+                  agentContext,
+                );
+
+                tracker.succeed('Deep dive complete');
+
+                // Merge deep dive findings into research
+                researchFindings = mergeFindings(researchFindings, deepdiveFindings);
+              } catch (error) {
+                // Deep dive failure is non-fatal
+                console.warn(
+                  chalk.yellow(
+                    `\nWarning: Deep dive failed (${error instanceof Error ? error.message : 'Unknown error'}), continuing`,
+                  ),
+                );
+              }
+            }
           } catch (error) {
             if (error instanceof ExitPromptError) {
               console.log(chalk.yellow('\nWizard cancelled.'));
@@ -300,23 +377,35 @@ newCommand
           }
         }
 
+        // 3. Check for existing role and load content
+        const outputDir = options.output ?? process.cwd();
+        const existingRole = await readExistingRole(outputDir, roleName);
+        if (existingRole.exists && !jsonMode && !options.quiet) {
+          console.log(chalk.blue(`\nℹ Found existing role at ${outputDir}/${roleName}`));
+          console.log(
+            chalk.blue('  Will generate improvements based on current implementation\n'),
+          );
+        }
+
         // Create phase tracker for progress display
         const tracker = createPhaseTracker(options.quiet ?? false);
 
-        // 3. Generate plan preview
+        // 4. Generate plan preview
         tracker.start('Planning role structure...');
         const plan = await generateRolePlan(client, description, clarifications, {
           quiet: true, // Suppress inner spinner - tracker handles progress
+          researchFindings,
+          existingRole: existingRole.exists ? existingRole : undefined,
         });
         tracker.succeed('Planning complete');
 
-        // 4. Display plan preview and confirm (skip in JSON mode)
+        // 5. Display plan preview and confirm (skip in JSON mode)
         let currentPlan = plan;
 
         if (!jsonMode) {
           displayPlanPreview(plan);
 
-          // 5. Confirm or modify plan
+          // 6. Confirm or modify plan
           let confirmed = false;
 
           while (!confirmed) {
@@ -353,10 +442,11 @@ newCommand
           }
         }
 
-        // 6. Generate code
+        // 7. Generate code
         tracker.start('Generating role code...');
         let files = await generateRoleCode(client, currentPlan, description, {
           quiet: true, // Suppress inner spinner - tracker handles progress
+          existingRole: existingRole.exists ? existingRole : undefined,
         });
         tracker.succeed('Code generation complete');
 
@@ -367,7 +457,7 @@ newCommand
           json: jsonMode,
         });
 
-        // 7. Validate and lint in parallel (using agents)
+        // 8. Validate and lint in parallel (using agents)
         tracker.start('Validating and linting...');
         const { validation, lint } = await validateAndLint(files, agentContext);
         tracker.succeed('Quality checks complete');
@@ -405,7 +495,7 @@ newCommand
           process.exit(1);
         }
 
-        // 8. Process lint results
+        // 9. Process lint results
         let lintViolations: LintViolation[] = lint.data?.violations ?? [];
         const lintAvailable = lint.data?.available ?? false;
 
@@ -413,7 +503,7 @@ newCommand
           console.log(chalk.dim(`\nNote: ansible-lint not found. ${formatInstallInstructions()}`));
         }
 
-        // 9. Auto-fix if violations exist (using FixerAgent)
+        // 10. Auto-fix if violations exist (using FixerAgent)
         if (lintViolations.length > 0) {
           const fixerAgent = new FixerAgent();
           const fixableCount = lintViolations.filter((v) => fixerAgent.name && v.ruleId).length;
@@ -451,7 +541,7 @@ newCommand
           }
         }
 
-        // 10. Dry-run preview or write files (skip in JSON mode)
+        // 11. Dry-run preview or write files (skip in JSON mode)
         if (options.dryRun && !jsonMode) {
           const proceed = await previewAndConfirm(files, lintViolations);
           if (!proceed) {
@@ -460,7 +550,7 @@ newCommand
           }
         }
 
-        // 11. Write files (using WriterAgent for parallel I/O)
+        // 12. Write files (using WriterAgent for parallel I/O)
         const writerAgent = new WriterAgent();
         const writeResult = await writerAgent.execute(
           {
@@ -480,7 +570,7 @@ newCommand
 
         const result = toWriteResult(writeResult.data!, options.dryRun ?? false);
 
-        // 12. Display result or output JSON
+        // 13. Display result or output JSON
         if (jsonMode) {
           const warnings = lintViolationsToWarnings(lintViolations);
           const jsonResult = formatJsonSuccess(
@@ -805,7 +895,7 @@ newCommand
           process.exit(1);
         }
 
-        // 8. Process lint results
+        // 9. Process lint results
         let lintViolations: LintViolation[] = lint.data?.violations ?? [];
         const lintAvailable = lint.data?.available ?? false;
 
@@ -813,7 +903,7 @@ newCommand
           console.log(chalk.dim(`\nNote: ansible-lint not found. ${formatInstallInstructions()}`));
         }
 
-        // 9. Auto-fix if violations exist (using FixerAgent)
+        // 10. Auto-fix if violations exist (using FixerAgent)
         if (lintViolations.length > 0) {
           const fixerAgent = new FixerAgent();
           const fixableCount = lintViolations.filter((v) => fixerAgent.name && v.ruleId).length;
@@ -851,7 +941,7 @@ newCommand
           }
         }
 
-        // 10. Dry-run preview or write files (skip in JSON mode)
+        // 11. Dry-run preview or write files (skip in JSON mode)
         if (options.dryRun && !jsonMode) {
           const proceed = await previewAndConfirm(files, lintViolations);
           if (!proceed) {
@@ -860,7 +950,7 @@ newCommand
           }
         }
 
-        // 11. Write files (using WriterAgent for parallel I/O)
+        // 12. Write files (using WriterAgent for parallel I/O)
         const writerAgent = new WriterAgent();
         const writeResult = await writerAgent.execute(
           {
@@ -880,7 +970,7 @@ newCommand
 
         const result = toWritePlaybookResult(writeResult.data!, options.dryRun ?? false);
 
-        // 12. Display result or output JSON
+        // 13. Display result or output JSON
         if (jsonMode) {
           const warnings = lintViolationsToWarnings(lintViolations);
           const jsonResult = formatJsonSuccess(

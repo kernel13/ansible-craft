@@ -28,8 +28,13 @@ import {
   buildPlanPrompt,
 } from './prompts/index.js';
 import type { GenerateOptions as PromptGenerateOptions } from './prompts/generate.js';
-import { type GeneratedFile, parseGeneratedFiles } from './role/index.js';
+import {
+  type GeneratedFile,
+  parseGeneratedFiles,
+  type ExistingRoleContent,
+} from './role/index.js';
 import { PLAN_PREVIEW_SCHEMA, type PlanPreview } from './schemas/plan-preview.js';
+import type { ResearchFindings } from '../research/index.js';
 
 /**
  * Options for role generation.
@@ -60,6 +65,8 @@ export interface GenerateOptions {
 export interface CodeGenerateOptions extends Pick<GenerateOptions, 'quiet' | 'noRetry'> {
   /** Prompt generation options from wizard context */
   promptOptions?: PromptGenerateOptions;
+  /** Existing role content to improve */
+  existingRole?: ExistingRoleContent;
 }
 
 /**
@@ -72,13 +79,18 @@ export interface CodeGenerateOptions extends Pick<GenerateOptions, 'quiet' | 'no
  * @param description - Natural language role description
  * @param clarifications - Optional answers to clarifying questions
  * @param options - Generation options
+ * @param researchFindings - Optional research findings to inform the plan
+ * @param existingRole - Optional existing role content to improve
  * @returns Validated plan preview
  */
 export async function generateRolePlan(
   client: Anthropic,
   description: string,
   clarifications?: Record<string, string>,
-  options: Pick<GenerateOptions, 'quiet' | 'noRetry'> = {},
+  options: Pick<GenerateOptions, 'quiet' | 'noRetry'> & {
+    researchFindings?: ResearchFindings;
+    existingRole?: ExistingRoleContent;
+  } = {},
 ): Promise<PlanPreview> {
   // Show spinner unless quiet mode
   const spinner = options.quiet
@@ -94,7 +106,12 @@ export async function generateRolePlan(
 
   try {
     // Build the plan prompt
-    const prompt = buildPlanPrompt(description, clarifications);
+    const prompt = buildPlanPrompt(
+      description,
+      clarifications,
+      options.researchFindings,
+      options.existingRole,
+    );
 
     // Call Anthropic beta API with structured outputs
     const response = await withRetry(
@@ -162,7 +179,7 @@ export async function generateRoleCode(
   options: CodeGenerateOptions = {},
 ): Promise<GeneratedFile[]> {
   // Build generation prompt with wizard options
-  const prompt = buildGeneratePrompt(plan, description, options.promptOptions);
+  const prompt = buildGeneratePrompt(plan, description, options.promptOptions, options.existingRole);
 
   // Use streamMessage for visual streaming
   // It handles spinner, streaming tokens, and errors
