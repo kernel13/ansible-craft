@@ -75,7 +75,11 @@ namespace/name/
 ├── meta/runtime.yml       # Ansible version requirements
 ├── plugins/
 │   ├── modules/           # Custom modules
+│   │   ├── example_module.py          # Python module
+│   │   └── win_example_module.ps1     # PowerShell module
 │   ├── module_utils/      # Shared module utilities
+│   │   ├── common.py                  # Python utilities
+│   │   └── common.psm1                # PowerShell utilities
 │   ├── filter/            # Filter plugins (optional)
 │   ├── inventory/         # Inventory plugins (optional)
 │   ├── lookup/            # Lookup plugins (optional)
@@ -88,232 +92,227 @@ namespace/name/
         └── targets/       # Test targets
 ```
 
-### 3. Generate galaxy.yml
+### 3. Execute Collection Generation
 
-The `galaxy.yml` file is **required** and must contain:
+Once all requirements are gathered, generate the collection using the CLI.
 
-```yaml
-namespace: mycompany           # Required: lowercase, alphanumeric + underscore
-name: web_utils               # Required: lowercase, alphanumeric + underscore
-version: "1.0.0"              # Required: semantic versioning
-readme: README.md             # Required
-authors:                      # Required: at least one
-  - "Your Name <email@example.com>"
-description: "Web utility modules and filters"
-license:                      # Required: at least one
-  - MIT
-license_file: ''
-tags: []                      # Galaxy search tags
-dependencies: {}              # Format: namespace.name: ">=version"
-repository: ''
-documentation: ''
-homepage: ''
-issues: ''
-```
-
-**Critical Rules:**
-- `namespace` and `name` must be lowercase
-- Only alphanumeric characters and underscores (no hyphens!)
-- Version must be semantic (MAJOR.MINOR.PATCH)
-- At least one author and one license required
-
-### 4. Generate Plugin Templates
-
-#### Module Template (plugins/modules/example_module.py)
-
-```python
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, division, print_function
-__metaclass__ = type
-
-DOCUMENTATION = r'''
----
-module: example_module
-short_description: Brief description
-description:
-    - Detailed description
-version_added: "1.0.0"
-author:
-    - Your Name (@github)
-options:
-    name:
-        description: Resource name
-        required: true
-        type: str
-    state:
-        description: Desired state
-        choices: ['present', 'absent']
-        default: 'present'
-        type: str
-'''
-
-EXAMPLES = r'''
-- name: Ensure resource is present
-  mycompany.web_utils.example_module:
-    name: example
-    state: present
-'''
-
-RETURN = r'''
-changed:
-    description: Whether changes were made
-    type: bool
-    returned: always
-'''
-
-from ansible.module_utils.basic import AnsibleModule
-
-def main():
-    module = AnsibleModule(
-        argument_spec=dict(
-            name=dict(type='str', required=True),
-            state=dict(type='str', default='present', choices=['present', 'absent']),
-        ),
-        supports_check_mode=True,
-    )
-
-    # Implementation here
-    result = dict(changed=False, message='')
-    module.exit_json(**result)
-
-if __name__ == '__main__':
-    main()
-```
-
-#### Filter Plugin Template (plugins/filter/example_filter.py)
-
-```python
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, division, print_function
-__metaclass__ = type
-
-def example_filter(value, param=None):
-    """Transform value based on param."""
-    # Implementation here
-    return str(value).upper()
-
-class FilterModule:
-    def filters(self):
-        return {
-            'example_filter': example_filter,
-        }
-```
-
-### 5. Generate README.md
-
-```markdown
-# Ansible Collection - namespace.name
-
-Brief description of the collection.
-
-## Installation
-
-\`\`\`bash
-ansible-galaxy collection install namespace.name
-\`\`\`
-
-## Usage
-
-\`\`\`yaml
----
-- name: Use collection
-  hosts: all
-  collections:
-    - namespace.name
-  tasks:
-    - name: Use module
-      namespace.name.example_module:
-        name: example
-        state: present
-\`\`\`
-
-## Modules
-
-- `example_module` - Description
-
-## Roles
-
-- `example_role` - Description
-
-## License
-
-MIT
-
-## Author
-
-Your Name
-```
-
-### 6. Generate Integration Tests
-
-For basic or molecule testing, create test targets:
-
-```yaml
-# tests/integration/targets/example_module/tasks/main.yml
----
-- name: Test example_module
-  namespace.name.example_module:
-    name: test_resource
-    state: present
-  register: result
-
-- name: Assert success
-  assert:
-    that:
-      - result is changed
-```
-
-### 7. Validation
-
-After generating all files, validate:
-
-1. **YAML Syntax**: All .yml files must be valid YAML
-2. **galaxy.yml Schema**: Must contain all required fields
-3. **Naming Conventions**: namespace and name must match regex `^[a-z][a-z0-9_]*$`
-4. **Version Format**: Must be semantic versioning `\d+\.\d+\.\d+`
-
-Run validation:
-```bash
-ansible-galaxy collection build
-```
-
-This will create a tarball: `namespace-name-version.tar.gz`
-
-### 8. Installation and Testing
+**Use the Bash tool to call ansible-craft CLI:**
 
 ```bash
-# Build the collection
+# Navigate to desired working directory (or use current directory)
+cd /path/to/workspace
+
+# Call ansible-craft CLI with gathered requirements
+bun run /Users/stephanesop/Documents/dev/ansible-craft/src/cli/index.ts new collection "<description>" \
+  --namespace "<namespace>" \
+  --name "<collection_name>" \
+  --version "<version_from_wizard>" \
+  --authors "<author_list>" \
+  --license "<license_list>" \
+  --description "<description>" \
+  --quick
+```
+
+**Note:** Replace placeholders with actual values gathered from user:
+- `<description>` - Brief collection description (used in CLI argument and --description flag)
+- `<namespace>` - Namespace (lowercase, alphanumeric + underscore)
+- `<collection_name>` - Collection name (lowercase, alphanumeric + underscore)
+- `<version_from_wizard>` - Semantic version (e.g., "1.0.0")
+- `<author_list>` - Comma-separated authors (e.g., "John Doe <john@example.com>,Jane Smith")
+- `<license_list>` - Comma-separated SPDX identifiers (e.g., "MIT,Apache-2.0")
+
+The `--quick` flag skips the interactive wizard since requirements were already gathered.
+
+**Generated Structure:**
+
+This will create a complete collection at `collections/ansible_collections/<namespace>/<name>/` with:
+
+- **galaxy.yml** - Collection metadata
+- **README.md** - Documentation with usage examples
+- **CHANGELOG.md** - Version history
+- **meta/runtime.yml** - Ansible version requirements
+- **plugins/modules/example_module.py** - Python module template
+- **plugins/modules/win_example_module.ps1** - PowerShell module template ✓
+- **plugins/module_utils/common.py** - Python utilities
+- **plugins/module_utils/common.psm1** - PowerShell utilities ✓
+- **tests/integration/** - Test scaffolding
+- **docs/** - Documentation structure
+
+### 4. Validation
+
+After generation completes, verify the collection:
+
+```bash
+# Verify directory structure
+tree collections/ansible_collections/<namespace>/<name>/
+
+# Specifically verify PowerShell files exist
+ls -la collections/ansible_collections/<namespace>/<name>/plugins/modules/win_example_module.ps1
+ls -la collections/ansible_collections/<namespace>/<name>/plugins/module_utils/common.psm1
+
+# Display PowerShell module content
+echo "=== PowerShell Module ==="
+cat collections/ansible_collections/<namespace>/<name>/plugins/modules/win_example_module.ps1
+
+# Build and validate collection
+cd collections/ansible_collections/<namespace>/<name>/
 ansible-galaxy collection build
 
-# Install locally
+# Verify build succeeded
+ls -la *.tar.gz
+```
+
+**Expected PowerShell Module Structure:**
+```powershell
+#!powershell
+# Copyright: (c) 2026, <namespace>
+# GNU General Public License v3.0+
+
+#AnsibleRequires -CSharpUtil Ansible.Basic
+
+$spec = @{
+    options = @{
+        name = @{ type = "str"; required = $true }
+        state = @{ type = "str"; default = "present"; choices = "absent", "present" }
+    }
+    supports_check_mode = $true
+}
+
+$module = [Ansible.Basic.AnsibleModule]::Create($args, $spec)
+# ... module logic ...
+$module.ExitJson()
+```
+
+### 5. Installation and Testing
+
+```bash
+# Install the built collection locally
 ansible-galaxy collection install namespace-name-1.0.0.tar.gz
 
-# Test the module
+# Test Python module
 ansible localhost -m namespace.name.example_module -a "name=test state=present"
+
+# Test PowerShell module (on Windows hosts)
+ansible windows_host -m namespace.name.win_example_module -a "name=test state=present"
 ```
 
 ## Using the ansible-craft CLI
 
-The fastest way to generate a collection is using the CLI:
+**This is the recommended approach.** The skill workflow above (sections 1-4) gathers requirements from the user and then calls the CLI to ensure all templates (Python and PowerShell) are generated correctly.
+
+### Direct CLI Usage
+
+Users can also invoke the CLI directly:
 
 ```bash
-# Interactive mode (recommended)
+# Interactive mode (wizard) - creates in collections/ansible_collections/
 ansible-craft new collection "web utilities" --namespace mycompany
+# Creates: ./collections/ansible_collections/mycompany/web_utilities/
 
-# Quick mode (uses defaults)
+# Quick mode (skip wizard, use defaults)
 ansible-craft new collection "database tools" \
   --namespace acme \
   --name db_tools \
   --quick
 
-# With specific options
+# With custom output directory
 ansible-craft new collection "monitoring plugins" \
   --namespace myorg \
-  --output ./collections \
-  --force
+  --output ~/my-project
+# Creates: ~/my-project/collections/ansible_collections/myorg/monitoring_plugins/
+```
+
+### Generated Files
+
+Both approaches (skill workflow and direct CLI) generate the same complete structure including:
+- **Python modules** (`.py`) for cross-platform support
+- **PowerShell modules** (`.ps1`) for Windows targets
+- **Module utilities** for both languages (`.py` and `.psm1`)
+- Complete documentation and testing scaffolding
+- Galaxy-compliant metadata and structure
+
+## PowerShell Module Reference
+
+Collections automatically include PowerShell module templates for Windows targets:
+
+### PowerShell Module Template (plugins/modules/win_example_module.ps1)
+
+```powershell
+#!powershell
+# Copyright: (c) 2026, namespace
+# GNU General Public License v3.0+
+
+#AnsibleRequires -CSharpUtil Ansible.Basic
+
+$spec = @{
+    options = @{
+        name = @{ type = "str"; required = $true }
+        state = @{ type = "str"; default = "present"; choices = "absent", "present" }
+    }
+    supports_check_mode = $true
+}
+
+$module = [Ansible.Basic.AnsibleModule]::Create($args, $spec)
+
+$name = $module.Params.name
+$state = $module.Params.state
+$checkMode = $module.CheckMode
+
+try {
+    if ($state -eq "present") {
+        $module.Result.changed = $false
+        $module.Result.message = "Resource '$name' is in desired state"
+    }
+    elseif ($state -eq "absent") {
+        $module.Result.changed = $false
+        $module.Result.message = "Resource '$name' removed successfully"
+    }
+
+    $module.ExitJson()
+}
+catch {
+    $module.FailJson("An error occurred: $($_.Exception.Message)", $_)
+}
+```
+
+### PowerShell Module Utilities (plugins/module_utils/common.psm1)
+
+```powershell
+#!powershell
+# Copyright: (c) 2026, namespace
+# GNU General Public License v3.0+
+
+Function Invoke-CommonValidation {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        $Module,
+
+        [Parameter(Mandatory = $true)]
+        [hashtable]$Params
+    )
+
+    # Common validation logic
+    if (-not $Params.ContainsKey('name')) {
+        $Module.FailJson("Parameter 'name' is required")
+    }
+
+    return $true
+}
+
+Export-ModuleMember -Function Invoke-CommonValidation
+```
+
+### Using PowerShell Modules in Playbooks
+
+```yaml
+- name: Use PowerShell module on Windows
+  hosts: windows_hosts
+  tasks:
+    - name: Manage resource with PowerShell module
+      mycompany.windows_utils.win_example_module:
+        name: example
+        state: present
 ```
 
 ## Important Notes
