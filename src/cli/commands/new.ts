@@ -12,13 +12,16 @@ import { Command } from 'commander';
 import { runPlaybookWizard } from '../../wizard/playbook-wizard.js';
 import { runProjectWizard } from '../../wizard/project-wizard.js';
 import { runRoleWizard } from '../../wizard/role-wizard.js';
+import { runCollectionWizard } from '../../wizard/collection-wizard.js';
 import { confirmDeepDive } from '../../wizard/prompts.js';
 import {
   formatPlaybookContextForPrompt,
   formatRoleContextForPrompt,
+  formatCollectionContextForPrompt,
   type PlaybookWizardContext,
   type ProjectWizardContext,
   type RoleWizardContext,
+  type CollectionWizardContext,
 } from '../../wizard/types.js';
 import { FixerAgent, WriterAgent, validateAndLint } from '../../core/index.js';
 import type { WriterOutput } from '../../core/types.js';
@@ -46,21 +49,27 @@ import {
   type PlaybookPlanPreview,
   type WritePlaybookResult,
   type WriteResult,
+  collectionExists,
   createProjectStructure,
   displayPlaybookTree,
   displayRoleTree,
   displayValidationReport,
   formatInstallInstructions,
+  generateCollectionFiles,
+  generateCollectionPlan,
   generatePlaybookCode,
   generatePlaybookPlan,
   generateProjectFiles,
   generateRoleCode,
   generateRolePlan,
+  inferCollectionName,
   inferPlaybookName,
   inferRoleName,
   projectExists,
   readExistingRole,
+  sanitizeCollectionName,
   sanitizeRoleName,
+  validateCollectionFiles,
 } from '../../generation/index.js';
 import { createAgentContext, displayAgentWarnings, handleAgentFailure } from '../helpers/index.js';
 import {
@@ -71,6 +80,73 @@ import {
 } from '../json-output.js';
 import { createPhaseTracker } from '../output.js';
 import { displayLintResults, previewAndConfirm } from '../preview.js';
+import type { GenerateOptions as PromptGenerateOptions } from '../../generation/prompts/generate.js';
+
+/**
+ * Convert wizard clarifications to prompt generation options.
+ *
+ * Maps the flat clarifications object (from formatRoleContextForPrompt)
+ * to the typed PromptGenerateOptions interface expected by buildGeneratePrompt.
+ */
+function clarificationsToPromptOptions(
+  clarifications?: Record<string, string>,
+): PromptGenerateOptions | undefined {
+  if (!clarifications) return undefined;
+
+  const options: PromptGenerateOptions = {};
+
+  // Ansible version
+  if (clarifications.ansible_min_version) {
+    options.ansibleMinVersion = clarifications.ansible_min_version;
+  }
+
+  // Version check
+  if (clarifications.version_check) {
+    options.includeVersionCheck = clarifications.version_check === 'enabled';
+  }
+
+  // Variable naming
+  if (clarifications.variable_naming) {
+    options.variableNaming = clarifications.variable_naming;
+  }
+
+  // Tag strategy
+  if (clarifications.tag_strategy) {
+    options.tagStrategy = clarifications.tag_strategy;
+  }
+  if (clarifications.tag_groups) {
+    options.tagGroups = clarifications.tag_groups;
+  }
+
+  // Privilege escalation
+  if (clarifications.privilege_escalation) {
+    options.privilegeEscalation = clarifications.privilege_escalation;
+  }
+  if (clarifications.become_user) {
+    options.becomeUser = clarifications.become_user;
+  }
+
+  // Idempotency
+  if (clarifications.idempotency) {
+    options.idempotency = clarifications.idempotency;
+  }
+
+  // Molecule testing
+  if (clarifications.molecule_testing) {
+    options.moleculeEnabled = clarifications.molecule_testing === 'enabled';
+  }
+  if (clarifications.molecule_driver) {
+    options.moleculeDriver = clarifications.molecule_driver;
+  }
+  if (clarifications.molecule_platforms) {
+    options.moleculePlatforms = clarifications.molecule_platforms;
+  }
+  if (clarifications.molecule_scenarios) {
+    options.moleculeScenarios = clarifications.molecule_scenarios;
+  }
+
+  return Object.keys(options).length > 0 ? options : undefined;
+}
 
 /**
  * New command - create new Ansible resources.
@@ -274,6 +350,9 @@ newCommand
         // Load existing defaults for comparison and --quick mode
         const existingDefaults = config.defaults?.wizard?.role;
 
+        // Create phase tracker for progress display (needed by research phase)
+        const tracker = createPhaseTracker(options.quiet ?? false);
+
         // Research phase (before wizard)
         let researchFindings: ResearchFindings | undefined;
 
@@ -382,13 +461,8 @@ newCommand
         const existingRole = await readExistingRole(outputDir, roleName);
         if (existingRole.exists && !jsonMode && !options.quiet) {
           console.log(chalk.blue(`\nℹ Found existing role at ${outputDir}/${roleName}`));
-          console.log(
-            chalk.blue('  Will generate improvements based on current implementation\n'),
-          );
+          console.log(chalk.blue('  Will generate improvements based on current implementation\n'));
         }
-
-        // Create phase tracker for progress display
-        const tracker = createPhaseTracker(options.quiet ?? false);
 
         // 4. Generate plan preview
         tracker.start('Planning role structure...');
@@ -444,9 +518,11 @@ newCommand
 
         // 7. Generate code
         tracker.start('Generating role code...');
+        const promptOptions = clarificationsToPromptOptions(clarifications);
         let files = await generateRoleCode(client, currentPlan, description, {
           quiet: true, // Suppress inner spinner - tracker handles progress
           existingRole: existingRole.exists ? existingRole : undefined,
+          promptOptions,
         });
         tracker.succeed('Code generation complete');
 
@@ -1209,6 +1285,269 @@ newCommand
       } catch (error) {
         // Handle JSON mode errors
         if (jsonMode) {
+          const code =
+            error instanceof Error && 'code' in error
+              ? (error as Error & { code: string }).code
+              : 'UNKNOWN_ERROR';
+          outputJson(
+            formatJsonError(code, error instanceof Error ? error.message : 'Unknown error'),
+          );
+          process.exit(1);
+        }
+
+        if (error instanceof Error && error.message === 'Operation cancelled by user') {
+          console.log(chalk.yellow('\nOperation cancelled.'));
+          return;
+        }
+
+        console.error(
+          chalk.red(`\nError: ${error instanceof Error ? error.message : 'Unknown error'}`),
+        );
+        process.exit(1);
+      }
+    },
+  );
+
+/**
+ * New collection subcommand.
+ */
+newCommand
+  .command('collection <description>')
+  .description('Generate a new Ansible collection from description')
+  .requiredOption('--namespace <name>', 'Collection namespace (required)')
+  .option('--name <name>', 'Collection name (inferred from description if not provided)')
+  .option('-o, --output <dir>', 'Output directory (default: current directory)')
+  .option('--dry-run', 'Preview without writing files')
+  .option('--force', 'Overwrite existing directory without prompting')
+  .option('--no-interactive', 'Skip clarifying questions')
+  .option('-Q, --quick', 'Skip wizard and use defaults')
+  .option('-q, --quiet', 'Suppress progress output')
+  .option('--json', 'Output results in JSON format')
+  .action(
+    async (
+      description: string,
+      options: {
+        namespace: string;
+        name?: string;
+        output?: string;
+        dryRun?: boolean;
+        force?: boolean;
+        interactive?: boolean;
+        quick?: boolean;
+        quiet?: boolean;
+        json?: boolean;
+      },
+    ) => {
+      try {
+        const jsonMode = options.json ?? false;
+        const outputDir = options.output ?? process.cwd();
+
+        // Validate namespace (required)
+        const namespace = sanitizeCollectionName(options.namespace);
+        if (!namespace || !/^[a-z][a-z0-9_]*$/.test(namespace)) {
+          throw new Error(
+            'Invalid namespace: must start with a letter and contain only lowercase letters, numbers, and underscores',
+          );
+        }
+
+        // Infer or validate collection name
+        const collectionName = options.name
+          ? sanitizeCollectionName(options.name)
+          : inferCollectionName(description);
+
+        if (!collectionName || !/^[a-z][a-z0-9_]*$/.test(collectionName)) {
+          throw new Error(
+            'Invalid collection name: must start with a letter and contain only lowercase letters, numbers, and underscores',
+          );
+        }
+
+        // Check if collection already exists
+        if (collectionExists(outputDir, namespace, collectionName) && !options.force) {
+          const shouldContinue = await confirm({
+            message: `Collection ${namespace}.${collectionName} already exists. Overwrite?`,
+            default: false,
+          });
+
+          if (!shouldContinue) {
+            console.log(chalk.yellow('\nOperation cancelled.'));
+            return;
+          }
+        }
+
+        // Run wizard or use defaults
+        let wizardContext: CollectionWizardContext;
+
+        if (options.interactive !== false && !options.quick && !jsonMode) {
+          // Interactive mode: run wizard
+          try {
+            wizardContext = await runCollectionWizard(namespace, collectionName);
+          } catch (error) {
+            if (error instanceof ExitPromptError) {
+              console.log(chalk.yellow('\nWizard cancelled.'));
+              return;
+            }
+            throw error;
+          }
+        } else {
+          // Non-interactive or quick mode: use defaults
+          wizardContext = {
+            namespace,
+            name: collectionName,
+            version: '1.0.0',
+            description,
+            license: ['MIT'],
+            authors: ['Author'],
+            includeRoles: false,
+            roleNames: [],
+            includeModules: true,
+            includeFilterPlugins: false,
+            includeInventoryPlugins: false,
+            includeLookupPlugins: false,
+            includeTestPlugins: false,
+            dependencies: {},
+            testingLevel: 'basic',
+            includeRuntime: true,
+            requiresAnsible: '>=2.9',
+            includeDocs: true,
+            includeChangelog: true,
+            custom: {},
+          };
+
+          if (!jsonMode && !options.quiet) {
+            console.log(chalk.dim('Using default settings'));
+          }
+        }
+
+        // Create phase tracker for progress display
+        const tracker = createPhaseTracker(options.quiet ?? false);
+
+        // Generate plan
+        tracker.start('Planning collection structure...');
+        const plan = await generateCollectionPlan(wizardContext);
+        tracker.succeed('Collection plan created');
+
+        // Display plan preview
+        if (!jsonMode && !options.quiet) {
+          console.log(chalk.cyan.bold('\nCollection Plan:'));
+          console.log(chalk.dim(`FQCN: ${plan.namespace}.${plan.name}`));
+          console.log(chalk.dim(`Version: ${plan.version}`));
+          console.log(chalk.dim(`Description: ${plan.description}`));
+          console.log(chalk.dim(`Files: ${plan.fileCount}`));
+          console.log(chalk.dim(`Directories: ${plan.directories.length}`));
+        }
+
+        // Generate files
+        tracker.start('Generating collection files...');
+        const files = await generateCollectionFiles(wizardContext);
+        tracker.succeed('Collection files generated');
+
+        // Validate files
+        tracker.start('Validating collection files...');
+        const validationResult = await validateCollectionFiles(files);
+        tracker.succeed('Validation complete');
+
+        if (!validationResult.valid) {
+          if (jsonMode) {
+            outputJson(
+              formatJsonError(
+                'VALIDATION_ERROR',
+                'Collection validation failed',
+                validationResult.errors.map((e) => e.message),
+              ),
+            );
+          } else {
+            console.error(chalk.red('\n✗ Validation failed:'));
+            for (const error of validationResult.errors) {
+              console.error(chalk.red(`  - ${error.file}: ${error.message}`));
+            }
+          }
+          process.exit(1);
+        }
+
+        // Display validation warnings
+        if (validationResult.warnings.length > 0 && !jsonMode && !options.quiet) {
+          console.log(chalk.yellow('\nWarnings:'));
+          for (const warning of validationResult.warnings) {
+            console.log(chalk.yellow(`  - ${warning.file}: ${warning.message}`));
+          }
+        }
+
+        // Write files (unless dry-run)
+        if (!options.dryRun) {
+          tracker.start('Writing collection files...');
+          const { createCollectionStructure } = await import(
+            '../../generation/collection/structure.js'
+          );
+          const { writeFile, mkdir } = await import('node:fs/promises');
+          const { join } = await import('node:path');
+
+          // Create directory structure
+          const structureResult = await createCollectionStructure({
+            namespace,
+            name: collectionName,
+            outputDir,
+            pluginDirs: [],
+            dryRun: false,
+          });
+
+          // Write all generated files
+          for (const file of files) {
+            const filePath = join(structureResult.collectionDir, file.path);
+            const fileDir = join(filePath, '..');
+            await mkdir(fileDir, { recursive: true });
+            await writeFile(filePath, file.content);
+          }
+
+          tracker.succeed('Collection files written');
+
+          // Success output
+          if (jsonMode) {
+            outputJson(
+              formatJsonSuccess(
+                'collection',
+                `${namespace}.${collectionName}`,
+                structureResult.collectionDir,
+                files,
+                validationResult.warnings.map((w) => w.message),
+                `ansible-craft new collection "${description}" --namespace ${namespace}`,
+              ),
+            );
+          } else {
+            console.log(chalk.green.bold('\n✓ Collection created successfully!'));
+            console.log(chalk.dim(`Location: ${structureResult.collectionDir}`));
+            console.log(chalk.dim(`FQCN: ${namespace}.${collectionName}`));
+            console.log(chalk.dim(`\nNext steps:`));
+            console.log(chalk.dim(`  cd ${structureResult.collectionDir}`));
+            console.log(chalk.dim(`  ansible-galaxy collection build`));
+            console.log(
+              chalk.dim(
+                `  ansible-galaxy collection install ${namespace}-${collectionName}-${wizardContext.version}.tar.gz`,
+              ),
+            );
+          }
+        } else {
+          // Dry-run mode: just display what would be created
+          if (jsonMode) {
+            outputJson({
+              status: 'success',
+              dry_run: true,
+              collection: {
+                namespace,
+                name: collectionName,
+                version: wizardContext.version,
+              },
+              files: files.map((f) => ({ path: f.path, size: f.content.length })),
+            });
+          } else {
+            console.log(chalk.cyan.bold('\nDry-run mode - no files written'));
+            console.log(chalk.dim('Files that would be created:'));
+            for (const file of files) {
+              console.log(chalk.dim(`  - ${file.path} (${file.content.length} bytes)`));
+            }
+          }
+        }
+      } catch (error) {
+        if (options.json) {
           const code =
             error instanceof Error && 'code' in error
               ? (error as Error & { code: string }).code

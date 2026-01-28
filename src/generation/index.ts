@@ -117,3 +117,14 @@ export {
   type CreateProjectOptions,
   type ProjectStructureResult,
 } from './project/index.js';
+
+// Collection generation
+export * from './collection/index.js';
+export {
+  COLLECTION_PLAN_SCHEMA,
+  type CollectionPlanPreview,
+  type GalaxyYml,
+  type PluginSpec,
+  type FileSpec,
+} from './schemas/collection-plan.js';
+export { generateCollectionFiles, generateCollectionPlan } from './generate-collection.js';

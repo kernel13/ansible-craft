@@ -250,6 +250,11 @@ export interface RoleWizardContext {
   /** Molecule testing configuration */
   molecule: MoleculeConfig;
 
+  /** Features selected from research findings */
+  selectedFeatures?: string[];
+  /** Packages selected from research findings */
+  selectedPackages?: string[];
+
   /** Extensibility field for future wizard data */
   custom: Record<string, string>;
 }
@@ -474,6 +479,8 @@ export const roleWizardSchema = z
     idempotency: idempotencyConfigSchema,
     dependencies: dependenciesConfigSchema,
     molecule: moleculeConfigSchema,
+    selectedFeatures: z.array(z.string()).optional(),
+    selectedPackages: z.array(z.string()).optional(),
     custom: z.record(z.string(), z.string()),
   })
   .strict();
@@ -563,6 +570,128 @@ export const projectWizardSchema = z
  * Export inferred type from Zod schema for consistency.
  */
 export type ProjectWizardContextValidated = z.infer<typeof projectWizardSchema>;
+
+// ============================================
+// Collection Wizard Types
+// ============================================
+
+/**
+ * Collection wizard context collected through interactive prompts.
+ */
+export interface CollectionWizardContext {
+  // Metadata
+  /** Collection namespace (lowercase, alphanumeric + underscore) */
+  namespace: string;
+  /** Collection name (lowercase, alphanumeric + underscore) */
+  name: string;
+  /** Semantic version (MAJOR.MINOR.PATCH) */
+  version: string;
+  /** Brief description of the collection */
+  description: string;
+  /** SPDX license identifiers */
+  license: string[];
+  /** Collection authors */
+  authors: string[];
+
+  // Structure
+  /** Whether to include roles scaffolding */
+  includeRoles: boolean;
+  /** Role names to scaffold (if includeRoles is true) */
+  roleNames: string[];
+
+  // Plugins
+  /** Include modules (plugins/modules) */
+  includeModules: boolean;
+  /** Include filter plugins (plugins/filter) */
+  includeFilterPlugins: boolean;
+  /** Include inventory plugins (plugins/inventory) */
+  includeInventoryPlugins: boolean;
+  /** Include lookup plugins (plugins/lookup) */
+  includeLookupPlugins: boolean;
+  /** Include test plugins (plugins/test) */
+  includeTestPlugins: boolean;
+
+  // Dependencies
+  /** Collection dependencies (namespace.name: version) */
+  dependencies: Record<string, string>;
+
+  // Testing
+  /** Testing configuration level */
+  testingLevel: 'none' | 'basic' | 'molecule';
+
+  // Optional
+  /** Include meta/runtime.yml */
+  includeRuntime: boolean;
+  /** Ansible version requirement (e.g., ">=2.9") */
+  requiresAnsible?: string;
+  /** Include docs directory with templates */
+  includeDocs: boolean;
+  /** Include CHANGELOG.md */
+  includeChangelog: boolean;
+
+  /** Extensibility field for future wizard data */
+  custom: Record<string, string>;
+}
+
+// ============================================
+// Collection Wizard Zod Schemas
+// ============================================
+
+/**
+ * Zod schema for collection namespace/name validation.
+ * Must be lowercase, start with letter, contain only alphanumeric + underscore.
+ */
+const collectionNameRegex = /^[a-z][a-z0-9_]*$/;
+
+/**
+ * Zod schema for semantic version validation (MAJOR.MINOR.PATCH).
+ */
+const semanticVersionRegex = /^\d+\.\d+\.\d+$/;
+
+/**
+ * Zod schema for testing level validation.
+ */
+export const collectionTestingLevelSchema = z.enum(['none', 'basic', 'molecule']);
+
+/**
+ * Zod schema for collection wizard context validation with strict mode.
+ */
+export const collectionWizardSchema = z
+  .object({
+    namespace: z.string().regex(collectionNameRegex, {
+      message:
+        'Namespace must be lowercase, start with letter, contain only alphanumeric + underscore',
+    }),
+    name: z.string().regex(collectionNameRegex, {
+      message: 'Name must be lowercase, start with letter, contain only alphanumeric + underscore',
+    }),
+    version: z.string().regex(semanticVersionRegex, {
+      message: 'Version must follow semantic versioning (MAJOR.MINOR.PATCH)',
+    }),
+    description: z.string().min(1, { message: 'Description is required' }),
+    license: z.array(z.string()).min(1, { message: 'At least one license is required' }),
+    authors: z.array(z.string()).min(1, { message: 'At least one author is required' }),
+    includeRoles: z.boolean(),
+    roleNames: z.array(z.string()),
+    includeModules: z.boolean(),
+    includeFilterPlugins: z.boolean(),
+    includeInventoryPlugins: z.boolean(),
+    includeLookupPlugins: z.boolean(),
+    includeTestPlugins: z.boolean(),
+    dependencies: z.record(z.string()),
+    testingLevel: collectionTestingLevelSchema,
+    includeRuntime: z.boolean(),
+    requiresAnsible: z.string().optional(),
+    includeDocs: z.boolean(),
+    includeChangelog: z.boolean(),
+    custom: z.record(z.string(), z.string()),
+  })
+  .strict();
+
+/**
+ * Export inferred type from Zod schema for consistency.
+ */
+export type CollectionWizardContextValidated = z.infer<typeof collectionWizardSchema>;
 
 /**
  * Convert role wizard context to clarifications format for prompt builders.
@@ -714,6 +843,15 @@ export function formatRoleContextForPrompt(context: RoleWizardContext): Record<s
     result.molecule_testing = 'disabled';
   }
 
+  // Research selections
+  if (context.selectedFeatures && context.selectedFeatures.length > 0) {
+    result.selected_features = context.selectedFeatures.join(', ');
+  }
+
+  if (context.selectedPackages && context.selectedPackages.length > 0) {
+    result.selected_packages = context.selectedPackages.join(', ');
+  }
+
   // Include custom fields if non-empty
   if (Object.keys(context.custom).length > 0) {
     Object.assign(result, context.custom);
@@ -762,6 +900,100 @@ export function formatPlaybookContextForPrompt(
 
   // Format handler inclusion
   result.handlers = context.includeHandlers ? 'include' : 'exclude';
+
+  // Include custom fields if non-empty
+  if (Object.keys(context.custom).length > 0) {
+    Object.assign(result, context.custom);
+  }
+
+  return result;
+}
+
+/**
+ * Convert collection wizard context to clarifications format for prompt builders.
+ *
+ * Formats wizard context as terse key-value pairs optimized for token efficiency.
+ * Used by collection generation prompts to provide user configuration context.
+ *
+ * @param context - Validated collection wizard context
+ * @returns Record of clarifications for AI prompt
+ *
+ * @example
+ * ```typescript
+ * const context: CollectionWizardContext = {
+ *   namespace: 'mycompany',
+ *   name: 'web_utils',
+ *   version: '1.0.0',
+ *   description: 'Web utilities collection',
+ *   license: ['MIT'],
+ *   authors: ['John Doe'],
+ *   includeRoles: true,
+ *   roleNames: ['nginx', 'apache'],
+ *   includeModules: true,
+ *   // ... other fields
+ *   custom: {}
+ * };
+ * const clarifications = formatCollectionContextForPrompt(context);
+ * // Returns formatted key-value pairs for AI prompt
+ * ```
+ */
+export function formatCollectionContextForPrompt(
+  context: CollectionWizardContext,
+): Record<string, string> {
+  const result: Record<string, string> = {};
+
+  // Core metadata
+  result.namespace = context.namespace;
+  result.collection_name = context.name;
+  result.version = context.version;
+  result.description = context.description;
+
+  // License and authors
+  if (context.license.length > 0) {
+    result.licenses = context.license.join(', ');
+  }
+  if (context.authors.length > 0) {
+    result.authors = context.authors.join(', ');
+  }
+
+  // Roles
+  if (context.includeRoles) {
+    result.include_roles = 'yes';
+    if (context.roleNames.length > 0) {
+      result.role_names = context.roleNames.join(', ');
+    }
+  } else {
+    result.include_roles = 'no';
+  }
+
+  // Plugins
+  const plugins: string[] = [];
+  if (context.includeModules) plugins.push('modules');
+  if (context.includeFilterPlugins) plugins.push('filter');
+  if (context.includeInventoryPlugins) plugins.push('inventory');
+  if (context.includeLookupPlugins) plugins.push('lookup');
+  if (context.includeTestPlugins) plugins.push('test');
+  if (plugins.length > 0) {
+    result.plugin_types = plugins.join(', ');
+  }
+
+  // Dependencies
+  if (Object.keys(context.dependencies).length > 0) {
+    result.dependencies = Object.entries(context.dependencies)
+      .map(([name, version]) => `${name}:${version}`)
+      .join(', ');
+  }
+
+  // Testing
+  result.testing_level = context.testingLevel;
+
+  // Optional features
+  result.include_runtime = context.includeRuntime ? 'yes' : 'no';
+  if (context.requiresAnsible) {
+    result.requires_ansible = context.requiresAnsible;
+  }
+  result.include_docs = context.includeDocs ? 'yes' : 'no';
+  result.include_changelog = context.includeChangelog ? 'yes' : 'no';
 
   // Include custom fields if non-empty
   if (Object.keys(context.custom).length > 0) {
