@@ -165,7 +165,10 @@ async function readDirectoryRecursive(
             files.set(relativePath, content);
           } catch (readError) {
             // If we can't read a specific file, store an error message
-            files.set(relativePath, `[Error reading file: ${readError instanceof Error ? readError.message : 'Unknown error'}]`);
+            files.set(
+              relativePath,
+              `[Error reading file: ${readError instanceof Error ? readError.message : 'Unknown error'}]`,
+            );
           }
         }
       }

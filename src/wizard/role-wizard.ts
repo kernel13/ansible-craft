@@ -10,6 +10,8 @@ import {
   promptAnsibleVersion,
   promptDependencies,
   promptDirectories,
+  promptForFeatures,
+  promptForPackages,
   promptHandlers,
   promptIdempotency,
   promptMolecule,
@@ -22,26 +24,37 @@ import {
 } from './prompts.js';
 import type { RoleWizardContext } from './types.js';
 import { roleWizardSchema } from './types.js';
+import type { ResearchFindings } from '../research/index.js';
 
-/** Total number of wizard steps */
-const TOTAL_STEPS = 11;
+/** Base number of wizard steps (without research) */
+const BASE_STEPS = 11;
+
+/**
+ * Calculate total steps including research prompts.
+ */
+function calculateTotalSteps(hasResearch: boolean): number {
+  return hasResearch ? BASE_STEPS + 2 : BASE_STEPS; // +2 for features and packages
+}
 
 /**
  * Run the interactive role wizard to collect user preferences.
  *
- * Guides the user through a 10-step process:
+ * Guides the user through an 11+ step process:
  * 1. Select role directories (tasks required, others optional)
- * 2. Select target platforms (Ubuntu, RHEL, etc. or Generic)
- * 3. Configure Ansible version requirements
- * 4. Configure variable strategy
- * 5. Configure privilege escalation
- * 6. Select handlers needed (restart, reload, enable, custom)
- * 7. Configure tags strategy
- * 8. Configure idempotency settings
- * 9. Configure role dependencies
- * 10. Configure Molecule testing
- * 11. Complete - show summary
+ * 2. Select features from research findings (if available)
+ * 3. Select package from research findings (if available)
+ * 4. Select target platforms (Ubuntu, RHEL, etc. or Generic)
+ * 5. Configure Ansible version requirements
+ * 6. Configure variable strategy
+ * 7. Configure privilege escalation
+ * 8. Select handlers needed (restart, reload, enable, custom)
+ * 9. Configure tags strategy
+ * 10. Configure idempotency settings
+ * 11. Configure role dependencies
+ * 12. Configure Molecule testing
+ * 13. Complete - show summary
  *
+ * @param researchFindings - Optional research findings to inform prompts
  * @returns Validated RoleWizardContext ready for AI generation
  * @throws {ExitPromptError} If user cancels with Ctrl+C
  *
@@ -51,7 +64,7 @@ const TOTAL_STEPS = 11;
  * import { runRoleWizard } from './role-wizard.js';
  *
  * try {
- *   const context = await runRoleWizard();
+ *   const context = await runRoleWizard(researchFindings);
  *   // Use context for generation
  * } catch (error) {
  *   if (error instanceof ExitPromptError) {
@@ -60,7 +73,9 @@ const TOTAL_STEPS = 11;
  * }
  * ```
  */
-export async function runRoleWizard(): Promise<RoleWizardContext> {
+export async function runRoleWizard(
+  researchFindings?: ResearchFindings,
+): Promise<RoleWizardContext> {
   // Display wizard intro
   console.log(chalk.cyan.bold('\nRole Generation Wizard'));
   console.log('Customize your role structure, platforms, and configuration.');
@@ -70,48 +85,69 @@ export async function runRoleWizard(): Promise<RoleWizardContext> {
   // Display topics overview
   showTopicsOverview();
 
+  // Calculate total steps based on whether research is available
+  const hasResearch =
+    researchFindings &&
+    (researchFindings.features.length > 0 || researchFindings.packages.length > 0);
+  const totalSteps = calculateTotalSteps(!!hasResearch);
+  let currentStep = 1;
+
   // Step 1: Role Structure
-  showStepHeader(1, TOTAL_STEPS, 'Role Structure');
+  showStepHeader(currentStep++, totalSteps, 'Role Structure');
   const structure = await promptDirectories();
 
-  // Step 2: Target Platforms
-  showStepHeader(2, TOTAL_STEPS, 'Target Platforms');
+  // Optional: Features from research
+  let selectedFeatures: string[] = [];
+  if (researchFindings && researchFindings.features.length > 0) {
+    showStepHeader(currentStep++, totalSteps, 'Feature Selection');
+    selectedFeatures = await promptForFeatures(researchFindings.features);
+  }
+
+  // Optional: Packages from research
+  let selectedPackage: string | undefined;
+  if (researchFindings && researchFindings.packages.length > 0) {
+    showStepHeader(currentStep++, totalSteps, 'Package Selection');
+    selectedPackage = await promptForPackages(researchFindings.packages);
+  }
+
+  // Step N: Target Platforms
+  showStepHeader(currentStep++, totalSteps, 'Target Platforms');
   const platforms = await promptPlatforms();
 
-  // Step 3: Ansible Version
-  showStepHeader(3, TOTAL_STEPS, 'Ansible Version');
+  // Step N: Ansible Version
+  showStepHeader(currentStep++, totalSteps, 'Ansible Version');
   const ansibleVersion = await promptAnsibleVersion();
 
-  // Step 4: Variable Strategy
-  showStepHeader(4, TOTAL_STEPS, 'Variable Strategy');
+  // Step N: Variable Strategy
+  showStepHeader(currentStep++, totalSteps, 'Variable Strategy');
   const variableStrategy = await promptVariableStrategy();
 
-  // Step 5: Privilege Escalation
-  showStepHeader(5, TOTAL_STEPS, 'Privilege Escalation');
+  // Step N: Privilege Escalation
+  showStepHeader(currentStep++, totalSteps, 'Privilege Escalation');
   const privilegeEscalation = await promptPrivilegeEscalation();
 
-  // Step 6: Service Handlers
-  showStepHeader(6, TOTAL_STEPS, 'Service Handlers');
+  // Step N: Service Handlers
+  showStepHeader(currentStep++, totalSteps, 'Service Handlers');
   const handlers = await promptHandlers();
 
-  // Step 7: Tags Configuration
-  showStepHeader(7, TOTAL_STEPS, 'Tags Configuration');
+  // Step N: Tags Configuration
+  showStepHeader(currentStep++, totalSteps, 'Tags Configuration');
   const tags = await promptTags();
 
-  // Step 8: Idempotency Settings
-  showStepHeader(8, TOTAL_STEPS, 'Idempotency Settings');
+  // Step N: Idempotency Settings
+  showStepHeader(currentStep++, totalSteps, 'Idempotency Settings');
   const idempotency = await promptIdempotency();
 
-  // Step 9: Role Dependencies
-  showStepHeader(9, TOTAL_STEPS, 'Dependencies');
+  // Step N: Role Dependencies
+  showStepHeader(currentStep++, totalSteps, 'Dependencies');
   const dependencies = await promptDependencies();
 
-  // Step 10: Molecule Testing
-  showStepHeader(10, TOTAL_STEPS, 'Molecule Testing');
+  // Step N: Molecule Testing
+  showStepHeader(currentStep++, totalSteps, 'Molecule Testing');
   const molecule = await promptMolecule(platforms);
 
-  // Step 11: Completion
-  showStepHeader(11, TOTAL_STEPS, 'Configuration Complete');
+  // Final Step: Completion
+  showStepHeader(currentStep, totalSteps, 'Configuration Complete');
   console.log(chalk.green('✓ Wizard complete! Starting role generation...\n'));
 
   // Build context object
@@ -126,6 +162,8 @@ export async function runRoleWizard(): Promise<RoleWizardContext> {
     idempotency,
     dependencies,
     molecule,
+    selectedFeatures: selectedFeatures.length > 0 ? selectedFeatures : undefined,
+    selectedPackages: selectedPackage ? [selectedPackage] : undefined,
     custom: {},
   };
 

@@ -28,11 +28,7 @@ import {
   buildPlanPrompt,
 } from './prompts/index.js';
 import type { GenerateOptions as PromptGenerateOptions } from './prompts/generate.js';
-import {
-  type GeneratedFile,
-  parseGeneratedFiles,
-  type ExistingRoleContent,
-} from './role/index.js';
+import { type GeneratedFile, parseGeneratedFiles, type ExistingRoleContent } from './role/index.js';
 import { PLAN_PREVIEW_SCHEMA, type PlanPreview } from './schemas/plan-preview.js';
 import type { ResearchFindings } from '../research/index.js';
 
@@ -179,7 +175,12 @@ export async function generateRoleCode(
   options: CodeGenerateOptions = {},
 ): Promise<GeneratedFile[]> {
   // Build generation prompt with wizard options
-  const prompt = buildGeneratePrompt(plan, description, options.promptOptions, options.existingRole);
+  const prompt = buildGeneratePrompt(
+    plan,
+    description,
+    options.promptOptions,
+    options.existingRole,
+  );
 
   // Use streamMessage for visual streaming
   // It handles spinner, streaming tokens, and errors

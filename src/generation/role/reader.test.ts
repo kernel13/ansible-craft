@@ -84,7 +84,10 @@ describe('readExistingRole', () => {
 
     // Create Molecule structure
     await mkdir(join(roleDir, 'molecule', 'default'), { recursive: true });
-    await writeFile(join(roleDir, 'molecule', 'default', 'molecule.yml'), '---\ndriver:\n  name: docker');
+    await writeFile(
+      join(roleDir, 'molecule', 'default', 'molecule.yml'),
+      '---\ndriver:\n  name: docker',
+    );
 
     const result = await readExistingRole(testDir, roleName);
 

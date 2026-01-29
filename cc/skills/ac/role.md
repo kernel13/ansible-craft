@@ -36,30 +36,118 @@ Generate Galaxy-standard Ansible roles with interactive configuration using spec
 ## Workflow Overview
 
 ```
-Step 1: AskUserQuestion      → Gather requirements (direct - no agent)
-Step 2: Task(ac-planner)     → Generate structured plan ⚠️ AGENT REQUIRED
-Step 3: Display plan         → User approval (direct - no agent)
+Step 1: Research Phase       → 2 PARALLEL RESEARCHERS:
+        ├── Task(ac-researcher-docs)  → Documentation, Galaxy roles, best practices
+        └── Task(ac-researcher-impl)  → Package options, implementation details
+        Display research findings to user
+
+Step 2: AskUserQuestion      → Gather requirements (informed by research)
+Step 3: Task(ac-researcher-deepdive) → Deep dive on selected features (OPTIONAL)
+Step 4: Task(ac-planner)     → Generate structured plan ⚠️ AGENT REQUIRED
+Step 5: Display plan         → User approval (direct - no agent)
         ↓
-        ├── "Yes" → Proceed to Step 4
-        ├── "Modify" → Collect changes, LOOP BACK to Step 2 with modifications
+        ├── "Yes" → Proceed to Step 6
+        ├── "Modify" → Collect changes, LOOP BACK to Step 4 with modifications
         └── "No" → Cancel generation
 
-Step 4: 4 PARALLEL GENERATORS:
+Step 6: 4 PARALLEL GENERATORS:
         ├── Task(ac-generator-core)       → defaults, vars, handlers, meta, README
         ├── Task(ac-generator-tasks)      → tasks/*.yml
         ├── Task(ac-generator-templates)  → templates/*.j2
         └── Task(ac-generator-molecule)   → molecule/**/*
-Step 5: Task(ac-validator)   → Validate code ⚠️ AGENT REQUIRED (parallel)
-Step 6: Task(ac-linter)      → Run ansible-lint ⚠️ AGENT REQUIRED (parallel)
-Step 7: Task(ac-fixer)       → Auto-fix violations ⚠️ AGENT REQUIRED (if needed)
-Step 8: Display results      → Show file tree (direct - no agent)
+Step 7: Task(ac-validator)   → Validate code ⚠️ AGENT REQUIRED (parallel)
+Step 8: Task(ac-linter)      → Run ansible-lint ⚠️ AGENT REQUIRED (parallel)
+Step 9: Task(ac-fixer)       → Auto-fix violations ⚠️ AGENT REQUIRED (if needed)
+Step 10: Display results     → Show file tree (direct - no agent)
 ```
 
-## Step 1: Requirements Gathering (Direct)
+## Step 1: Research Phase (Parallel Agents)
 
-Use AskUserQuestion to gather requirements. Combine questions efficiently (max 4 questions per call, max 4 options each).
+**Launch 2 researcher agents in parallel to discover features, packages, and best practices:**
 
-**Core Questions Example:**
+```json
+[
+  {
+    "subagent_type": "ac-researcher-docs",
+    "description": "Research [role_name] documentation",
+    "prompt": "Research documentation and best practices for: [user_description]\n\nRole name: [sanitized_role_name]\n\nFocus on:\n- Galaxy role implementations\n- Common features and patterns\n- Best practices from official docs\n- Community recommendations\n\nReturn structured findings with features (essential/recommended/optional), best practices (critical/recommended), and reference Galaxy roles."
+  },
+  {
+    "subagent_type": "ac-researcher-impl",
+    "description": "Research [role_name] packages",
+    "prompt": "Research package options and implementation details for: [user_description]\n\nRole name: [sanitized_role_name]\n\nFocus on:\n- System packages (apt, yum, dnf, choco)\n- Package versions and descriptions\n- Implementation patterns\n- Installation best practices\n\nReturn structured findings with packages (name, source, version, isDefault) and implementation features."
+  }
+]
+```
+
+**After research completes, display findings to user:**
+
+Format the combined research findings in a clear summary:
+```
+=== Research Findings ===
+
+Discovered Features:
+  ✓ [feature 1] (essential) - [description]
+  ✓ [feature 2] (recommended) - [description]
+  • [feature 3] (optional) - [description]
+
+Package Options:
+  • [package 1] ([source]) [default] - [description]
+  • [package 2] ([source]) - [description]
+
+Best Practices:
+  ✓ [practice 1] (critical)
+     Rationale: [rationale]
+  ✓ [practice 2] (recommended)
+     Rationale: [rationale]
+
+Reference Galaxy Roles:
+  1. [namespace].[name] (⭐ [stars], [downloads] downloads)
+     Features: [feature list]
+  2. [namespace].[name] (⭐ [stars], [downloads] downloads)
+
+Proceeding to role configuration...
+```
+
+## Step 2: Requirements Gathering (Research-Informed)
+
+Use AskUserQuestion to gather requirements. **IMPORTANT: Incorporate research findings into your questions.**
+
+**Features Question (Research-Informed):**
+
+If research discovered features, present them as options:
+```json
+{
+  "question": "What features do you need? (select all that apply)",
+  "header": "Features",
+  "options": [
+    {"label": "[researched feature 1] (essential)", "description": "[description from research]"},
+    {"label": "[researched feature 2] (recommended)", "description": "[description from research]"},
+    {"label": "[researched feature 3] (optional)", "description": "[description from research]"},
+    {"label": "None - basic installation only", "description": "Skip advanced features"}
+  ],
+  "multiSelect": true
+}
+```
+
+**Package Selection (Research-Informed):**
+
+If research found packages, ask user to choose:
+```json
+{
+  "question": "Which package should be used for installation?",
+  "header": "Package",
+  "options": [
+    {"label": "[package1] ([source]) (Recommended)", "description": "[description from research]"},
+    {"label": "[package2] ([source])", "description": "[description from research]"},
+    {"label": "Custom package name", "description": "Specify a different package"}
+  ],
+  "multiSelect": false
+}
+```
+
+**Standard Questions (Always Ask):**
+
 ```json
 {
   "questions": [
@@ -77,22 +165,11 @@ Use AskUserQuestion to gather requirements. Combine questions efficiently (max 4
       "question": "How should the software be installed?",
       "header": "Install",
       "options": [
-        {"label": "Package manager (Recommended)", "description": "apt/yum for Linux, Chocolatey for Windows"},
+        {"label": "Package manager (Recommended)", "description": "Use researched packages if available"},
         {"label": "Source/binary", "description": "Download and extract manually"},
         {"label": "Container", "description": "Pull and run Docker image"}
       ],
       "multiSelect": false
-    },
-    {
-      "question": "What features do you need? (select all that apply)",
-      "header": "Features",
-      "options": [
-        {"label": "SSL/TLS support", "description": "HTTPS configuration"},
-        {"label": "Virtual hosts", "description": "Multiple site configurations"},
-        {"label": "Firewall rules", "description": "Open required ports"},
-        {"label": "Basic only", "description": "Minimal installation"}
-      ],
-      "multiSelect": true
     },
     {
       "question": "Molecule testing level?",
@@ -271,9 +348,52 @@ Molecule: advanced
   Verifier: [ansible/testinfra]
 ```
 
-## Step 2: Generate Plan ⚠️ AGENT REQUIRED
+## Step 3: Optional Deep Dive Research (Conditional)
 
-After gathering requirements, **invoke the Task tool** with ac-planner:
+**IMPORTANT:** Only execute this step if:
+1. User selected 3+ features in Step 2
+2. Features include complex options (SSL/TLS, virtual hosts, caching, etc.)
+
+**Ask user first:**
+```
+Deep dive research provides detailed implementation guidance for your selected features.
+This adds approximately 30 seconds to the planning phase.
+
+Would you like deep dive research on your selected features? (y/N)
+```
+
+**If user confirms, launch deep dive researcher:**
+
+```json
+{
+  "subagent_type": "ac-researcher-deepdive",
+  "description": "Deep dive on selected features",
+  "prompt": "Deep dive research on selected features for: [user_description]\n\nRole name: [sanitized_role_name]\n\nSelected features:\n- [feature 1]\n- [feature 2]\n- [feature 3]\n\nProvide detailed implementation guidance for each feature:\n- Multiple implementation approaches (simple → complex)\n- Configuration details and best practices\n- Security considerations\n- Common pitfalls to avoid\n\nReturn structured findings with expanded sub-features and feature-specific best practices."
+}
+```
+
+**After deep dive completes, display expanded findings:**
+
+```
+=== Deep Dive Results ===
+
+[Feature 1] Implementation Options:
+  • [sub-feature 1] (simple) - [description]
+  • [sub-feature 2] (moderate) - [description]
+  • [sub-feature 3] (complex) - [description]
+
+[Feature 1] Best Practices:
+  ✓ [practice 1] - [rationale]
+  ✓ [practice 2] - [rationale]
+
+[Repeat for each feature...]
+
+Proceeding to role planning...
+```
+
+## Step 4: Generate Plan ⚠️ AGENT REQUIRED
+
+After gathering requirements (and optional deep dive), **invoke the Task tool** with ac-planner:
 
 ```json
 {
@@ -281,12 +401,12 @@ After gathering requirements, **invoke the Task tool** with ac-planner:
   "parameters": {
     "subagent_type": "ac-planner",
     "description": "Plan [role_name] role",
-    "prompt": "Generate a role plan for: [user description]\n\nRequirements:\n- Platforms: [value]\n- Ansible: [version]\n- Variables: [naming]\n- Handlers: [list]\n- Tags: [strategy]\n- Molecule: [none/basic/advanced]\n\n[If Molecule is basic - include this block:]\nMolecule config: basic\n  Driver: docker\n  Images: pre-built (geerlingguy/*-ansible)\n  Sequence: standard\n  Verifier: ansible\n\n[If Molecule is advanced - include all collected options from Step 1b:]\nMolecule config: advanced\n  Driver: [docker/podman/vagrant/delegated]\n  Images: [pre-built/custom]               (Docker/Podman only)\n  Options: [standard/privileged/rootless]  (Docker/Podman only)\n  Provider: [virtualbox/libvirt/parallels] (Vagrant only)\n  Resources: [minimal/standard/powerful]   (Vagrant only)\n  Sequence: [standard/with-prepare/with-side-effect/minimal]\n  Verifier: [ansible/testinfra]\n\nService-specific: [answers]\n\nNaming convention:\n- Variables MUST use role name prefix (e.g., nginx_port, apache_user)\n\nRead these references:\n- cc/common/references/role-structure.md\n- cc/common/references/fqcn.md\n- cc/common/references/patterns.md\n- cc/common/references/molecule.md\n\nReturn complete plan with: config summary, variables, tasks with FQCN, handlers, templates, file tree, and Molecule configuration details"
+    "prompt": "Generate a role plan for: [user description]\n\n## Research Findings (from Step 1)\n\n[If research found features:]\nDiscovered Features:\n- [feature 1] ([category]) - [description]\n- [feature 2] ([category]) - [description]\n\n[If research found packages:]\nRecommended Packages:\n- [package 1] ([source]): [description]\n\n[If research found best practices:]\nBest Practices:\n- [practice 1] ([priority]): [rationale]\n- [practice 2] ([priority]): [rationale]\n\n[If deep dive was performed:]\nDeep Dive Implementation Details:\n- [feature]: [sub-feature 1] (simple), [sub-feature 2] (moderate)\n\n## User Requirements (from Step 2)\n\n- Platforms: [value]\n- Ansible: [version]\n- Variables: [naming]\n- Handlers: [list]\n- Tags: [strategy]\n- Molecule: [none/basic/advanced]\n- Selected Features: [list from user]\n- Selected Package: [package from user]\n\n[If Molecule is basic - include this block:]\nMolecule config: basic\n  Driver: docker\n  Images: pre-built (geerlingguy/*-ansible)\n  Sequence: standard\n  Verifier: ansible\n\n[If Molecule is advanced - include all collected options from Step 1b:]\nMolecule config: advanced\n  Driver: [docker/podman/vagrant/delegated]\n  Images: [pre-built/custom]               (Docker/Podman only)\n  Options: [standard/privileged/rootless]  (Docker/Podman only)\n  Provider: [virtualbox/libvirt/parallels] (Vagrant only)\n  Resources: [minimal/standard/powerful]   (Vagrant only)\n  Sequence: [standard/with-prepare/with-side-effect/minimal]\n  Verifier: [ansible/testinfra]\n\nService-specific: [answers]\n\nNaming convention:\n- Variables MUST use role name prefix (e.g., nginx_port, apache_user)\n\nRead these references:\n- cc/common/references/role-structure.md\n- cc/common/references/fqcn.md\n- cc/common/references/patterns.md\n- cc/common/references/molecule.md\n\nReturn complete plan with: config summary, variables, tasks with FQCN, handlers, templates, file tree, and Molecule configuration details"
   }
 }
 ```
 
-## Step 3: Plan Approval (Direct) - WITH MODIFICATION LOOP
+## Step 5: Plan Approval (Direct) - WITH MODIFICATION LOOP
 
 Display the plan from ac-planner and ask user to approve:
 
@@ -346,7 +466,7 @@ Use AskUserQuestion for approval with these options:
 
 This loop ensures the user can iteratively refine the plan before any code is generated.
 
-## Step 4: Generate Files ⚠️ AGENTS REQUIRED (Parallel)
+## Step 6: Generate Files ⚠️ AGENTS REQUIRED (Parallel)
 
 After approval, **invoke 4 Task tool calls in PARALLEL** with specialized generators:
 
@@ -389,7 +509,7 @@ After approval, **invoke 4 Task tool calls in PARALLEL** with specialized genera
 
 **Note:** All 4 generators run in parallel for faster role generation. Each generator handles a specific subset of files to avoid conflicts.
 
-## Step 5-6: Validation ⚠️ AGENTS REQUIRED (Parallel)
+## Step 7-8: Validation ⚠️ AGENTS REQUIRED (Parallel)
 
 Run validator and linter **in parallel** using two Task tool calls in the same message:
 
@@ -414,7 +534,7 @@ Run validator and linter **in parallel** using two Task tool calls in the same m
 ]
 ```
 
-## Step 7: Auto-Fix ⚠️ AGENT REQUIRED (If Needed)
+## Step 9: Auto-Fix ⚠️ AGENT REQUIRED (If Needed)
 
 If violations found, **invoke the Task tool** with ac-fixer:
 
@@ -429,7 +549,7 @@ If violations found, **invoke the Task tool** with ac-fixer:
 }
 ```
 
-## Step 8: Final Report (Direct)
+## Step 10: Final Report (Direct)
 
 Display final results using Bash to show file tree:
 
