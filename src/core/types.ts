@@ -307,6 +307,52 @@ export interface DebuggerOutput {
 }
 
 // ============================================================
+// Researcher Agent Types
+// ============================================================
+
+export type ResearchDepth = 'quick' | 'standard' | 'deep';
+
+export interface ResearcherInput {
+  description: string;
+  roleName: string;
+  selectedFeatures?: string[];
+  researchDepth: ResearchDepth;
+}
+
+export interface ResearcherOutput {
+  findings: {
+    features: Array<{
+      name: string;
+      description: string;
+      category: 'essential' | 'recommended' | 'optional';
+      complexity: 'simple' | 'moderate' | 'complex';
+    }>;
+    packages: Array<{
+      name: string;
+      source: string;
+      version?: string;
+      description?: string;
+      isDefault: boolean;
+    }>;
+    bestPractices: Array<{
+      practice: string;
+      rationale: string;
+      priority: 'critical' | 'recommended' | 'optional';
+    }>;
+    galaxyRoles: Array<{
+      namespace: string;
+      name: string;
+      stars: number;
+      downloads: number;
+      keyFeatures: string[];
+    }>;
+  };
+  confidence: 'high' | 'medium' | 'low';
+  sourcesUsed: Array<'galaxy_api' | 'package_search' | 'web_search' | 'mcp_context'>;
+  researchDuration: number;
+}
+
+// ============================================================
 // Agent Configuration
 // ============================================================
 
@@ -387,5 +433,26 @@ export const DEFAULT_AGENT_CONFIGS: Record<string, AgentConfig> = {
     maxConcurrency: 1,
     timeout: 120000,
     retries: 2,
+  },
+  'researcher-docs': {
+    name: 'ansible-researcher-docs',
+    description: 'Research documentation and best practices',
+    maxConcurrency: 1,
+    timeout: 30000,
+    retries: 1,
+  },
+  'researcher-impl': {
+    name: 'ansible-researcher-impl',
+    description: 'Research implementation details and packages',
+    maxConcurrency: 1,
+    timeout: 30000,
+    retries: 1,
+  },
+  'researcher-deepdive': {
+    name: 'ansible-researcher-deepdive',
+    description: 'Deep dive research on selected features',
+    maxConcurrency: 1,
+    timeout: 45000,
+    retries: 1,
   },
 };

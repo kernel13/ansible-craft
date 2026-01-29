@@ -557,7 +557,10 @@ async function promptMoleculeVagrant(
     message: 'VM resources:',
     choices: [
       { name: 'minimal - 512MB RAM, 1 CPU', value: 'minimal' as VagrantResourcePreset },
-      { name: 'standard - 1GB RAM, 2 CPUs (Recommended)', value: 'standard' as VagrantResourcePreset },
+      {
+        name: 'standard - 1GB RAM, 2 CPUs (Recommended)',
+        value: 'standard' as VagrantResourcePreset,
+      },
       { name: 'powerful - 2GB RAM, 4 CPUs', value: 'powerful' as VagrantResourcePreset },
     ],
     default: 'standard',
@@ -635,7 +638,11 @@ async function promptMoleculeAdvancedCommon(): Promise<Partial<MoleculeConfig>> 
   // Always include converge (it's required and disabled in UI)
   const finalSequence: MoleculeTestStage[] = testSequence.includes('converge')
     ? testSequence
-    : [...testSequence.slice(0, testSequence.indexOf('idempotence')), 'converge' as MoleculeTestStage, ...testSequence.slice(testSequence.indexOf('idempotence'))];
+    : [
+        ...testSequence.slice(0, testSequence.indexOf('idempotence')),
+        'converge' as MoleculeTestStage,
+        ...testSequence.slice(testSequence.indexOf('idempotence')),
+      ];
 
   // Verifier selection
   const verifier = (await select({
@@ -808,4 +815,137 @@ export async function promptMolecule(rolePlatforms: RolePlatform[]): Promise<Mol
     platforms: platforms.length > 0 ? platforms : undefined,
     scenarios,
   };
+}
+
+// ============================================
+// Research Integration Prompts
+// ============================================
+
+/**
+ * Prompt user to select features from research findings.
+ *
+ * @param features - Array of discovered features with metadata
+ * @returns Array of selected feature names
+ */
+export async function promptForFeatures(
+  features: Array<{
+    name: string;
+    description: string;
+    category: 'essential' | 'recommended' | 'optional';
+    complexity: string;
+  }>,
+): Promise<string[]> {
+  if (features.length === 0) {
+    return [];
+  }
+
+  console.log(chalk.dim('Research discovered the following features:\n'));
+
+  const choices = features.map((feature) => {
+    const categoryLabel =
+      feature.category === 'essential'
+        ? chalk.green('essential')
+        : feature.category === 'recommended'
+          ? chalk.yellow('recommended')
+          : chalk.dim('optional');
+
+    const complexityLabel =
+      feature.complexity === 'simple' ? '' : chalk.dim(` [${feature.complexity}]`);
+
+    return {
+      name: `${feature.name} ${categoryLabel}${complexityLabel}`,
+      value: feature.name,
+      description: feature.description,
+      checked: feature.category === 'essential', // Pre-check essential features
+    };
+  });
+
+  choices.push({
+    name: chalk.dim('None of the above - skip features'),
+    value: '__skip__',
+    description: 'Continue without selecting features',
+    checked: false,
+  });
+
+  const selected = await checkbox({
+    message: 'Select features to include (space to select, enter to confirm):',
+    choices,
+  });
+
+  // Filter out the skip option
+  return selected.filter((s) => s !== '__skip__');
+}
+
+/**
+ * Prompt user to select a package from research findings.
+ *
+ * @param packages - Array of discovered packages with metadata
+ * @returns Selected package name or undefined
+ */
+export async function promptForPackages(
+  packages: Array<{
+    name: string;
+    source: string;
+    version?: string;
+    description?: string;
+    isDefault: boolean;
+  }>,
+): Promise<string | undefined> {
+  if (packages.length === 0) {
+    return undefined;
+  }
+
+  console.log(chalk.dim('Research discovered the following package options:\n'));
+
+  const choices = packages.map((pkg) => {
+    const defaultLabel = pkg.isDefault ? chalk.green(' [recommended]') : '';
+    const versionLabel = pkg.version ? chalk.dim(` v${pkg.version}`) : '';
+    const sourceLabel = chalk.dim(` (${pkg.source})`);
+
+    return {
+      name: `${pkg.name}${sourceLabel}${versionLabel}${defaultLabel}`,
+      value: pkg.name,
+      description: pkg.description || `${pkg.name} package`,
+    };
+  });
+
+  choices.push({
+    name: chalk.dim('Use custom package name'),
+    value: '__custom__',
+    description: 'Specify a different package name',
+  });
+
+  const selection = await select({
+    message: 'Which package should be used for installation?',
+    choices,
+  });
+
+  if (selection === '__custom__') {
+    const customName = await input({
+      message: 'Enter custom package name:',
+      validate: (value) => (value.trim().length > 0 ? true : 'Package name cannot be empty'),
+    });
+    return customName.trim();
+  }
+
+  return selection;
+}
+
+/**
+ * Prompt user to confirm deep dive research on selected features.
+ *
+ * @returns true if user wants deep dive, false otherwise
+ */
+export async function confirmDeepDive(): Promise<boolean> {
+  console.log(
+    chalk.dim(
+      '\nDeep dive research provides detailed implementation guidance for selected features.',
+    ),
+  );
+  console.log(chalk.dim('This adds approximately 30 seconds to the planning phase.\n'));
+
+  return await confirm({
+    message: 'Run deep dive research on selected features?',
+    default: false,
+  });
 }
