@@ -15,7 +15,29 @@ Format: `namespace.name`
 
 Example: `mycompany.web_utils`
 
+## Local Development Structure
+
+For local development, collections should be placed in a `collections/ansible_collections/` directory relative to your project:
+
+```
+your-project/
+├── playbooks/
+│   └── site.yml
+└── collections/
+    └── ansible_collections/
+        └── namespace/
+            └── name/
+                ├── galaxy.yml
+                ├── README.md
+                ├── plugins/
+                └── roles/
+```
+
+This allows Ansible to automatically discover the collection when running playbooks from your project directory without requiring installation via `ansible-galaxy`.
+
 ## Directory Structure
+
+Within the collection directory (`collections/ansible_collections/namespace/name/`):
 
 ```
 namespace/name/
@@ -157,6 +179,134 @@ Must include:
 ### Other Plugins
 
 Follow Ansible plugin conventions for each plugin type.
+
+## PowerShell Modules (Windows)
+
+PowerShell modules are stored in the same `plugins/modules/` directory but use `.ps1` extension:
+
+```
+plugins/modules/
+  win_example_module.ps1     # PowerShell module for Windows
+  example_module.py          # Python module for Linux/cross-platform
+```
+
+### PowerShell Module Structure
+
+```powershell
+#!powershell
+# Copyright: (c) 2026, Author Name
+# GNU General Public License v3.0+
+
+#AnsibleRequires -CSharpUtil Ansible.Basic
+
+$spec = @{
+    options = @{
+        name = @{ type = "str"; required = $true }
+        state = @{ type = "str"; default = "present"; choices = "absent", "present" }
+    }
+    supports_check_mode = $true
+}
+
+$module = [Ansible.Basic.AnsibleModule]::Create($args, $spec)
+
+# Access parameters
+$name = $module.Params.name
+$state = $module.Params.state
+$checkMode = $module.CheckMode
+
+# Module logic
+try {
+    $module.Result.changed = $false
+    $module.Result.message = "Operation completed"
+    $module.ExitJson()
+}
+catch {
+    $module.FailJson("Error: $($_.Exception.Message)", $_)
+}
+```
+
+### PowerShell Module Requirements
+
+PowerShell modules require:
+1. `#!powershell` shebang at the top
+2. `#AnsibleRequires -CSharpUtil Ansible.Basic` for modern modules
+3. `[Ansible.Basic.AnsibleModule]::Create()` for module initialization
+4. `$module.Params` to access parameters
+5. `$module.Result` hashtable for return values
+6. `$module.ExitJson()` for success
+7. `$module.FailJson()` for errors
+8. `$module.CheckMode` to support check mode
+
+### PowerShell Module Utils
+
+PowerShell utilities use `.psm1` extension:
+
+```
+plugins/module_utils/
+  common.psm1               # PowerShell module utils
+  common.py                 # Python module utils
+```
+
+**Example PowerShell module_utils:**
+```powershell
+#!powershell
+# Copyright: (c) 2026, Author Name
+# GNU General Public License v3.0+
+
+Function Invoke-CommonHelper {
+    <#
+    .SYNOPSIS
+    Perform common validation or operations.
+
+    .PARAMETER Module
+    The AnsibleModule instance.
+
+    .PARAMETER Params
+    Parameters hashtable.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        $Module,
+
+        [Parameter(Mandatory = $true)]
+        [hashtable]$Params
+    )
+
+    # Helper logic
+    if (-not $Params.ContainsKey('name')) {
+        $Module.FailJson("Missing required parameter: name")
+    }
+
+    return $true
+}
+
+Export-ModuleMember -Function Invoke-CommonHelper
+```
+
+**Using module_utils in PowerShell modules:**
+```powershell
+#AnsibleRequires -CSharpUtil Ansible.Basic
+#AnsibleRequires -PowerShell ansible_collections.namespace.name.plugins.module_utils.common
+
+$module = [Ansible.Basic.AnsibleModule]::Create($args, $spec)
+
+# Call helper function
+Invoke-CommonHelper -Module $module -Params $module.Params
+```
+
+### PowerShell Module Naming Conventions
+
+- Use `win_` prefix for Windows-specific modules
+- Use `win_iis_` prefix for IIS-related modules
+- Use `win_sql_` prefix for SQL Server modules
+- File extension must be `.ps1` for modules
+- File extension must be `.psm1` for module_utils
+
+Examples:
+- `win_service_manager.ps1` - Manage Windows services
+- `win_iis_website.ps1` - Manage IIS websites
+- `win_sql_database.ps1` - Manage SQL Server databases
 
 ## Naming Conventions
 

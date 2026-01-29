@@ -79,6 +79,136 @@ Fully Qualified Collection Names for all Ansible modules.
 | win_path | ansible.windows.win_path |
 | win_scheduled_task | ansible.windows.win_scheduled_task |
 
+### PowerShell Module Development
+
+When creating custom Windows modules, follow these naming conventions:
+
+```yaml
+# Windows-specific modules (use win_ prefix)
+- name: Manage Windows service
+  mycompany.windows_utils.win_service_manager:
+    name: MyService
+    state: started
+
+# IIS modules (use win_iis_ prefix)
+- name: Configure IIS site
+  mycompany.windows_utils.win_iis_website:
+    name: MySite
+    state: present
+    port: 80
+
+# SQL Server modules (use win_sql_ prefix)
+- name: Manage SQL database
+  mycompany.windows_utils.win_sql_database:
+    name: MyDB
+    state: present
+
+# Active Directory modules (use win_ad_ prefix)
+- name: Manage AD user
+  mycompany.windows_utils.win_ad_user:
+    name: jdoe
+    state: present
+```
+
+### PowerShell Module Requirements
+
+PowerShell modules in collections require:
+
+1. **Shebang and requirements:**
+   ```powershell
+   #!powershell
+   #AnsibleRequires -CSharpUtil Ansible.Basic
+   ```
+
+2. **Module initialization:**
+   ```powershell
+   $spec = @{
+       options = @{
+           name = @{ type = "str"; required = $true }
+           state = @{ type = "str"; default = "present"; choices = "absent", "present" }
+       }
+       supports_check_mode = $true
+   }
+
+   $module = [Ansible.Basic.AnsibleModule]::Create($args, $spec)
+   ```
+
+3. **Parameter access:**
+   ```powershell
+   $name = $module.Params.name
+   $state = $module.Params.state
+   $checkMode = $module.CheckMode
+   ```
+
+4. **Result handling:**
+   ```powershell
+   # Success
+   $module.Result.changed = $true
+   $module.Result.message = "Operation completed"
+   $module.ExitJson()
+
+   # Failure
+   $module.FailJson("Error message", $error)
+   ```
+
+5. **Check mode support:**
+   ```powershell
+   if (-not $checkMode) {
+       # Only perform changes if not in check mode
+       # Make actual changes here
+   }
+   else {
+       # Report what would be changed
+       $module.Result.changed = $true
+       $module.Result.message = "Would make changes"
+   }
+   ```
+
+### PowerShell vs Python Modules
+
+Collections can contain both Python and PowerShell modules:
+
+| Aspect | Python Modules | PowerShell Modules |
+|--------|----------------|-------------------|
+| **File extension** | `.py` | `.ps1` |
+| **Target OS** | Linux, macOS, Windows (with PSCore) | Windows |
+| **Execution** | Python interpreter on control node or target | PowerShell on Windows target |
+| **Module utils** | `plugins/module_utils/*.py` | `plugins/module_utils/*.psm1` |
+| **Naming** | `module_name.py` | `win_module_name.ps1` |
+| **FQCN usage** | `namespace.name.module_name` | `namespace.name.win_module_name` |
+
+### Mixed Environment Example
+
+A collection supporting both Linux and Windows:
+
+```
+plugins/modules/
+  example_module.py           # Works on Linux/macOS
+  win_example_module.ps1      # Windows-specific version
+  service_manager.py          # Cross-platform (uses platform detection)
+  win_iis_website.ps1         # Windows-only (IIS specific)
+```
+
+**Playbook using both:**
+```yaml
+- name: Configure cross-platform environment
+  hosts: all
+  tasks:
+    # Python module - runs on Linux/macOS
+    - name: Configure on Linux
+      mycompany.utils.example_module:
+        name: example
+        state: present
+      when: ansible_os_family != "Windows"
+
+    # PowerShell module - runs on Windows
+    - name: Configure on Windows
+      mycompany.utils.win_example_module:
+        name: example
+        state: present
+      when: ansible_os_family == "Windows"
+```
+
 ## Chocolatey Modules (chocolatey.chocolatey)
 
 | Short Name | FQCN |
