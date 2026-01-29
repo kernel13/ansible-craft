@@ -53,7 +53,8 @@ export function formatResearchForPlanner(findings?: ResearchFindings): string {
   if (findings.galaxyRoles.length > 0) {
     sections.push('**Reference Galaxy Roles:**');
     for (const role of findings.galaxyRoles.slice(0, 3)) {
-      const features = role.keyFeatures.length > 0 ? ` - Features: ${role.keyFeatures.join(', ')}` : '';
+      const features =
+        role.keyFeatures.length > 0 ? ` - Features: ${role.keyFeatures.join(', ')}` : '';
       sections.push(`- ${role.namespace}.${role.name} (${role.downloads} downloads)${features}`);
     }
     sections.push('');

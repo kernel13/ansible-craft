@@ -302,7 +302,10 @@ Proprietary
  * @param data - Template data
  * @returns Generated content string
  */
-export function generateTemplateContent(type: ProjectTemplateType, data: ProjectTemplateData): string {
+export function generateTemplateContent(
+  type: ProjectTemplateType,
+  data: ProjectTemplateData,
+): string {
   switch (type) {
     case 'inventory':
       return generateInventory(data);

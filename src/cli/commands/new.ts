@@ -1518,6 +1518,9 @@ newCommand
             console.log(chalk.dim(`FQCN: ${namespace}.${collectionName}`));
             console.log(chalk.dim(`\nNext steps:`));
             console.log(chalk.dim(`  cd ${structureResult.collectionDir}`));
+            console.log(chalk.dim(`  # Test locally (no installation needed):`));
+            console.log(chalk.dim(`  ansible-playbook playbooks/test.yml`));
+            console.log(chalk.dim(`  # Or build for distribution:`));
             console.log(chalk.dim(`  ansible-galaxy collection build`));
             console.log(
               chalk.dim(

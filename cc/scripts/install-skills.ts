@@ -153,7 +153,7 @@ function installFiles(
   sourceDir: string,
   targetDir: string,
   files: string[],
-  options: InstallOptions
+  options: InstallOptions,
 ): InstallResult {
   const result: InstallResult = {
     success: true,

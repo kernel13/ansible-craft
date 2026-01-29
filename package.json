@@ -13,7 +13,15 @@
       "default": "./dist/cli/index.js"
     }
   },
-  "files": ["dist", "cc/skills", "cc/agents", "cc/common", "cc/scripts/install-skills.ts", "README.md", "LICENSE"],
+  "files": [
+    "dist",
+    "cc/skills",
+    "cc/agents",
+    "cc/common",
+    "cc/scripts/install-skills.ts",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "dev": "bun run src/cli/index.ts",
     "build": "tsup",

@@ -136,7 +136,9 @@ export async function promptAnsibleCfg(): Promise<boolean> {
  * @returns Boolean indicating whether to include sample content
  */
 export async function promptSampleFiles(): Promise<boolean> {
-  console.log(chalk.dim('  Sample files include placeholder hosts, group_vars, and example playbooks'));
+  console.log(
+    chalk.dim('  Sample files include placeholder hosts, group_vars, and example playbooks'),
+  );
 
   return await confirm({
     message: 'Include sample files with placeholder content?',
