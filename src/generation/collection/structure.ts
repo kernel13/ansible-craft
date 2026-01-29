@@ -46,7 +46,7 @@ export interface CollectionStructureOptions {
   namespace: string;
   /** Collection name (e.g., 'web_utils') */
   name: string;
-  /** Output directory (collection will be created at outputDir/namespace/name) */
+  /** Output directory (collection will be created at outputDir/collections/ansible_collections/namespace/name) */
   outputDir: string;
   /** Optional plugin directories to include */
   pluginDirs?: string[];
@@ -72,10 +72,10 @@ export interface CollectionStructureResult {
  * const result = await createCollectionStructure({
  *   namespace: 'mycompany',
  *   name: 'web_utils',
- *   outputDir: './collections',
+ *   outputDir: '.',
  *   pluginDirs: ['plugins/filter', 'plugins/lookup']
  * });
- * // Creates: collections/mycompany/web_utils/
+ * // Creates: ./collections/ansible_collections/mycompany/web_utils/
  * ```
  */
 export async function createCollectionStructure(
@@ -83,8 +83,8 @@ export async function createCollectionStructure(
 ): Promise<CollectionStructureResult> {
   const { namespace, name, outputDir, pluginDirs = [], dryRun = false } = options;
 
-  // Collection root: outputDir/namespace/name
-  const collectionDir = join(outputDir, namespace, name);
+  // Collection root: outputDir/collections/ansible_collections/namespace/name
+  const collectionDir = join(outputDir, 'collections', 'ansible_collections', namespace, name);
   const createdDirs: string[] = [];
   const createdGitkeeps: string[] = [];
 
@@ -132,7 +132,7 @@ export async function createCollectionStructure(
  * Check if a collection directory already exists.
  */
 export function collectionExists(outputDir: string, namespace: string, name: string): boolean {
-  const collectionDir = join(outputDir, namespace, name);
+  const collectionDir = join(outputDir, 'collections', 'ansible_collections', namespace, name);
   return existsSync(collectionDir);
 }
 
@@ -140,5 +140,5 @@ export function collectionExists(outputDir: string, namespace: string, name: str
  * Get the full path to a collection directory.
  */
 export function getCollectionDir(outputDir: string, namespace: string, name: string): string {
-  return join(outputDir, namespace, name);
+  return join(outputDir, 'collections', 'ansible_collections', namespace, name);
 }

@@ -16,6 +16,8 @@ import {
   generateFilterPluginTemplate,
   generateIntegrationTest,
   generateModuleUtilsTemplate,
+  generatePowerShellModuleTemplate,
+  generatePowerShellModuleUtilsTemplate,
 } from './collection/templates.js';
 
 /**
@@ -67,16 +69,28 @@ export async function generateCollectionFiles(
 
   // 5. Module templates
   if (context.includeModules) {
-    // Generate example module
+    // Generate Python example module
     files.push({
       path: 'plugins/modules/example_module.py',
       content: generateModuleTemplate(context.namespace, context.name, 'example_module'),
     });
 
-    // Generate module_utils helper
+    // Generate Python module_utils helper
     files.push({
       path: 'plugins/module_utils/common.py',
       content: generateModuleUtilsTemplate(context.namespace, context.name, 'Common'),
+    });
+
+    // Generate PowerShell example module
+    files.push({
+      path: 'plugins/modules/win_example_module.ps1',
+      content: generatePowerShellModuleTemplate(context.namespace, context.name, 'win_example_module'),
+    });
+
+    // Generate PowerShell module_utils helper
+    files.push({
+      path: 'plugins/module_utils/common.psm1',
+      content: generatePowerShellModuleUtilsTemplate(context.namespace, context.name),
     });
   }
 

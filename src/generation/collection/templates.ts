@@ -326,3 +326,150 @@ class ${utilName}Helper:
         return {'changed': False, 'message': 'Action performed'}
 `;
 }
+
+/**
+ * Generate PowerShell module template for Windows targets.
+ */
+export function generatePowerShellModuleTemplate(
+  namespace: string,
+  name: string,
+  moduleName: string,
+): string {
+  const fqcn = `${namespace}.${name}.${moduleName}`;
+
+  return `#!powershell
+# Copyright: (c) ${new Date().getFullYear()}, ${namespace}
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+
+#AnsibleRequires -CSharpUtil Ansible.Basic
+
+$spec = @{
+    options = @{
+        name = @{ type = "str"; required = $true }
+        state = @{ type = "str"; default = "present"; choices = "absent", "present" }
+    }
+    supports_check_mode = $true
+}
+
+$module = [Ansible.Basic.AnsibleModule]::Create($args, $spec)
+
+$name = $module.Params.name
+$state = $module.Params.state
+$checkMode = $module.CheckMode
+
+# Main module logic
+try {
+    if ($state -eq "present") {
+        # Perform action for present state
+        if (-not $checkMode) {
+            # Example: create or update resource
+            $module.Result.changed = $false
+            $module.Result.message = "Resource '$name' is in desired state"
+        }
+        else {
+            $module.Result.changed = $false
+            $module.Result.message = "Would ensure resource '$name' is present"
+        }
+    }
+    elseif ($state -eq "absent") {
+        # Perform action for absent state
+        if (-not $checkMode) {
+            # Example: remove resource
+            $module.Result.changed = $false
+            $module.Result.message = "Resource '$name' removed successfully"
+        }
+        else {
+            $module.Result.changed = $false
+            $module.Result.message = "Would ensure resource '$name' is absent"
+        }
+    }
+
+    $module.ExitJson()
+}
+catch {
+    $module.FailJson("An error occurred: $($_.Exception.Message)", $_)
+}
+`;
+}
+
+/**
+ * Generate PowerShell module_utils template.
+ */
+export function generatePowerShellModuleUtilsTemplate(
+  namespace: string,
+  name: string,
+): string {
+  return `#!powershell
+# Copyright: (c) ${new Date().getFullYear()}, ${namespace}
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+
+Function Invoke-CommonValidation {
+    <#
+    .SYNOPSIS
+    Validate common module parameters.
+
+    .PARAMETER Module
+    The AnsibleModule instance.
+
+    .PARAMETER Params
+    The parameters hashtable to validate.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        $Module,
+
+        [Parameter(Mandatory = $true)]
+        [hashtable]$Params
+    )
+
+    # Common validation logic
+    if (-not $Params.ContainsKey('name')) {
+        $Module.FailJson("Parameter 'name' is required")
+    }
+
+    if ([string]::IsNullOrWhiteSpace($Params.name)) {
+        $Module.FailJson("Parameter 'name' cannot be empty")
+    }
+
+    return $true
+}
+
+Function Invoke-CommonAction {
+    <#
+    .SYNOPSIS
+    Perform a common action with consistent error handling.
+
+    .PARAMETER Module
+    The AnsibleModule instance.
+
+    .PARAMETER Action
+    The action to perform.
+
+    .PARAMETER Params
+    The parameters hashtable for the action.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        $Module,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Action,
+
+        [Parameter(Mandatory = $true)]
+        [hashtable]$Params
+    )
+
+    # Common action implementation
+    $result = @{
+        changed = $false
+        message = "Action '$Action' performed successfully"
+    }
+
+    return $result
+}
+
+Export-ModuleMember -Function Invoke-CommonValidation, Invoke-CommonAction
+`;
+}
