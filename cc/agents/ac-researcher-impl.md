@@ -205,7 +205,7 @@ Rate confidence in findings:
 
 ## Structured JSON Output
 
-Return findings as structured JSON:
+Return findings as structured JSON with enhanced exploration fields:
 
 ```json
 {
@@ -215,13 +215,15 @@ Return findings as structured JSON:
         "name": "Package manager installation",
         "description": "Install via system package manager (apt/yum)",
         "category": "essential",
-        "complexity": "simple"
+        "complexity": "simple",
+        "confidence": "high"
       },
       {
         "name": "Service management",
         "description": "Manage service lifecycle (start, stop, restart, enable)",
         "category": "essential",
-        "complexity": "simple"
+        "complexity": "simple",
+        "confidence": "high"
       }
     ],
     "packages": [
@@ -230,13 +232,35 @@ Return findings as structured JSON:
         "source": "apt",
         "version": "1.24.0",
         "description": "High-performance web server",
-        "isDefault": true
+        "isDefault": true,
+        "confidence": "high",
+        "qualityIndicators": {
+          "official": true,
+          "wellMaintained": true,
+          "documentedWell": true
+        }
       },
       {
         "name": "nginx-full",
         "source": "apt",
         "description": "Nginx with additional modules",
-        "isDefault": false
+        "isDefault": false,
+        "confidence": "high",
+        "qualityIndicators": {
+          "official": true,
+          "wellMaintained": true
+        }
+      },
+      {
+        "name": "nginx-extras",
+        "source": "apt",
+        "description": "Nginx with extra third-party modules",
+        "isDefault": false,
+        "confidence": "medium",
+        "qualityIndicators": {
+          "official": false,
+          "wellMaintained": true
+        }
       }
     ],
     "bestPractices": [
@@ -259,7 +283,7 @@ Return findings as structured JSON:
 }
 ```
 
-## Package Format
+## Package Format (Enhanced)
 
 Each package must have:
 - **name:** Package name (string)
@@ -267,6 +291,29 @@ Each package must have:
 - **version:** Version if available (string, optional)
 - **description:** Package description (string, optional)
 - **isDefault:** Whether this is the recommended option (boolean)
+- **confidence:** high | medium | low (based on source reliability)
+- **qualityIndicators:** (optional) Object with quality flags:
+  - **official:** Is this from official repository? (boolean)
+  - **wellMaintained:** Is this actively maintained? (boolean)
+  - **documentedWell:** Does it have good documentation? (boolean)
+
+## Confidence Assignment for Packages
+
+**High confidence:**
+- Found in official repository
+- Has version number available
+- Package description present
+- Package exists in multiple sources
+
+**Medium confidence:**
+- Found in one source only
+- Limited metadata available
+- Third-party/universe repository
+
+**Low confidence:**
+- Only found in unofficial source
+- No version information
+- Minimal or no description
 
 </output_format>
 

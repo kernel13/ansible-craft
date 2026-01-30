@@ -1,11 +1,13 @@
 /**
  * Interactive role wizard for collecting user preferences.
  *
- * Provides a 10-step guided experience for customizing role generation
- * before AI generation begins.
+ * Provides two modes:
+ * 1. Exploration-based (default): Research-driven conversational exploration
+ * 2. Classic: Traditional 11-step guided experience
  */
 
 import chalk from 'chalk';
+import { confirm } from '@inquirer/prompts';
 import {
   promptAnsibleVersion,
   promptDependencies,
@@ -25,6 +27,10 @@ import {
 import type { RoleWizardContext } from './types.js';
 import { roleWizardSchema } from './types.js';
 import type { ResearchFindings } from '../research/index.js';
+import {
+  runExplorationWorkflow,
+  type ExplorationOptions,
+} from '../exploration/index.js';
 
 /** Base number of wizard steps (without research) */
 const BASE_STEPS = 11;
@@ -37,7 +43,117 @@ function calculateTotalSteps(hasResearch: boolean): number {
 }
 
 /**
+ * Options for role wizard.
+ */
+export interface RoleWizardOptions {
+  /** Use classic linear wizard instead of exploration mode */
+  classic?: boolean;
+  /** Role description (for exploration mode) */
+  roleDescription?: string;
+  /** Sanitized role name (for exploration mode) */
+  roleName?: string;
+  /** Exploration-specific options */
+  exploration?: ExplorationOptions;
+}
+
+/**
  * Run the interactive role wizard to collect user preferences.
+ *
+ * By default, uses the exploration-based flow which:
+ * 1. Shows overview of research findings
+ * 2. Lets user explore interesting topics
+ * 3. Applies smart defaults to unexplored topics
+ * 4. Allows natural language modifications
+ *
+ * Use `options.classic = true` for the traditional 11-step wizard.
+ *
+ * @param researchFindings - Optional research findings to inform prompts
+ * @param options - Wizard options
+ * @returns Validated RoleWizardContext ready for AI generation
+ * @throws {ExitPromptError} If user cancels with Ctrl+C
+ *
+ * @example
+ * ```typescript
+ * import { ExitPromptError } from '@inquirer/prompts';
+ * import { runRoleWizard } from './role-wizard.js';
+ *
+ * try {
+ *   // Exploration mode (default)
+ *   const context = await runRoleWizard(researchFindings, {
+ *     roleDescription: 'nginx with SSL',
+ *     roleName: 'nginx',
+ *   });
+ *
+ *   // Or classic mode
+ *   const context = await runRoleWizard(researchFindings, { classic: true });
+ * } catch (error) {
+ *   if (error instanceof ExitPromptError) {
+ *     console.log('Wizard cancelled');
+ *   }
+ * }
+ * ```
+ */
+export async function runRoleWizard(
+  researchFindings?: ResearchFindings,
+  options: RoleWizardOptions = {},
+): Promise<RoleWizardContext> {
+  // Use exploration mode if research is available and not in classic mode
+  const hasResearch =
+    researchFindings &&
+    (researchFindings.features.length > 0 ||
+      researchFindings.packages.length > 0 ||
+      researchFindings.bestPractices.length > 0);
+
+  if (!options.classic && hasResearch && options.roleDescription && options.roleName) {
+    return runExplorationWizard(
+      options.roleDescription,
+      options.roleName,
+      researchFindings,
+      options.exploration,
+    );
+  }
+
+  // Fall back to classic wizard
+  return runClassicWizard(researchFindings);
+}
+
+/**
+ * Run the exploration-based wizard.
+ */
+async function runExplorationWizard(
+  roleDescription: string,
+  roleName: string,
+  findings: ResearchFindings,
+  options?: ExplorationOptions,
+): Promise<RoleWizardContext> {
+  console.log(chalk.cyan.bold('\nRole Generation - Exploration Mode'));
+  console.log('Explore research findings and configure your role interactively.');
+  console.log(chalk.dim('Type topic names to explore, or "continue" for smart defaults.\n'));
+
+  try {
+    const result = await runExplorationWorkflow(roleDescription, roleName, findings, options);
+
+    // Validate and return
+    return roleWizardSchema.parse(result.wizardContext);
+  } catch (error) {
+    // If exploration fails, offer to fall back to classic
+    if (error instanceof Error && error.message !== 'Generation cancelled by user') {
+      console.log(chalk.yellow('\nExploration mode encountered an issue.'));
+      const fallback = await confirm({
+        message: 'Would you like to use the classic wizard instead?',
+        default: true,
+      });
+
+      if (fallback) {
+        return runClassicWizard(findings);
+      }
+    }
+    throw error;
+  }
+}
+
+/**
+ * Run the classic linear wizard.
  *
  * Guides the user through an 11+ step process:
  * 1. Select role directories (tasks required, others optional)
@@ -53,29 +169,8 @@ function calculateTotalSteps(hasResearch: boolean): number {
  * 11. Configure role dependencies
  * 12. Configure Molecule testing
  * 13. Complete - show summary
- *
- * @param researchFindings - Optional research findings to inform prompts
- * @returns Validated RoleWizardContext ready for AI generation
- * @throws {ExitPromptError} If user cancels with Ctrl+C
- *
- * @example
- * ```typescript
- * import { ExitPromptError } from '@inquirer/prompts';
- * import { runRoleWizard } from './role-wizard.js';
- *
- * try {
- *   const context = await runRoleWizard(researchFindings);
- *   // Use context for generation
- * } catch (error) {
- *   if (error instanceof ExitPromptError) {
- *     console.log('Wizard cancelled');
- *   }
- * }
- * ```
  */
-export async function runRoleWizard(
-  researchFindings?: ResearchFindings,
-): Promise<RoleWizardContext> {
+async function runClassicWizard(researchFindings?: ResearchFindings): Promise<RoleWizardContext> {
   // Display wizard intro
   console.log(chalk.cyan.bold('\nRole Generation Wizard'));
   console.log('Customize your role structure, platforms, and configuration.');

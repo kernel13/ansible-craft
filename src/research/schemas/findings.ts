@@ -24,6 +24,38 @@ export const featureComplexitySchema = z.enum(['simple', 'moderate', 'complex'])
 export type FeatureComplexity = z.infer<typeof featureComplexitySchema>;
 
 /**
+ * Confidence level for research findings.
+ */
+export const confidenceLevelSchema = z.enum(['high', 'medium', 'low']);
+export type ConfidenceLevel = z.infer<typeof confidenceLevelSchema>;
+
+/**
+ * Source information for a finding.
+ */
+export const findingSourceSchema = z.object({
+  /** Source type */
+  type: z.enum(['galaxy', 'docs', 'web', 'package_manager']),
+  /** Source URL or identifier */
+  url: z.string().optional(),
+  /** Quality score (0-100) */
+  quality: z.number().min(0).max(100).optional(),
+});
+export type FindingSource = z.infer<typeof findingSourceSchema>;
+
+/**
+ * Alternative implementation option.
+ */
+export const alternativeSchema = z.object({
+  /** Alternative name */
+  name: z.string(),
+  /** Description */
+  description: z.string(),
+  /** Trade-offs compared to main option */
+  tradeoffs: z.string().optional(),
+});
+export type Alternative = z.infer<typeof alternativeSchema>;
+
+/**
  * Discovered feature with metadata.
  */
 export const featureSchema = z.object({
@@ -35,6 +67,14 @@ export const featureSchema = z.object({
   category: featureCategorySchema,
   /** Implementation complexity */
   complexity: featureComplexitySchema,
+  /** Confidence in this finding */
+  confidence: confidenceLevelSchema.optional(),
+  /** Hint about why this is worth exploring */
+  exploreHint: z.string().optional(),
+  /** Sources that support this finding */
+  sources: z.array(findingSourceSchema).optional(),
+  /** Alternative implementations */
+  alternatives: z.array(alternativeSchema).optional(),
 });
 export type Feature = z.infer<typeof featureSchema>;
 
@@ -47,6 +87,19 @@ export type Feature = z.infer<typeof featureSchema>;
  */
 export const packageSourceSchema = z.enum(['apt', 'yum', 'dnf', 'choco', 'pip', 'npm', 'gem']);
 export type PackageSource = z.infer<typeof packageSourceSchema>;
+
+/**
+ * Package quality indicators.
+ */
+export const packageQualitySchema = z.object({
+  /** Whether this is an official package */
+  official: z.boolean().optional(),
+  /** Whether the package is well-maintained */
+  wellMaintained: z.boolean().optional(),
+  /** Whether the package has good documentation */
+  documentedWell: z.boolean().optional(),
+});
+export type PackageQuality = z.infer<typeof packageQualitySchema>;
 
 /**
  * Discovered package option.
@@ -62,6 +115,10 @@ export const packageSchema = z.object({
   description: z.string().optional(),
   /** Whether this is the default/recommended option */
   isDefault: z.boolean(),
+  /** Confidence in this finding */
+  confidence: confidenceLevelSchema.optional(),
+  /** Quality indicators */
+  qualityIndicators: packageQualitySchema.optional(),
 });
 export type Package = z.infer<typeof packageSchema>;
 

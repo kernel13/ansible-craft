@@ -12,7 +12,7 @@ allowed-tools:
 
 # Ansible Role Generator
 
-Generate Galaxy-standard Ansible roles with interactive configuration using specialized agents.
+Generate Galaxy-standard Ansible roles with conversational exploration using specialized agents.
 
 ## CRITICAL: Agent Usage Required
 
@@ -33,32 +33,42 @@ Generate Galaxy-standard Ansible roles with interactive configuration using spec
 ╚═══════════════════════════════════════════════════════════════════════╝
 ```
 
-## Workflow Overview
+## Workflow Overview: Conversational Exploration
+
+The workflow uses a **research-driven, conversational exploration** approach where users:
+1. See an overview of research findings
+2. Choose which topics to explore deeper
+3. Get smart defaults applied to unexplored areas
+4. Can make natural language modifications at the summary
 
 ```
-Step 1: Research Phase       → 2 PARALLEL RESEARCHERS:
-        ├── Task(ac-researcher-docs)  → Documentation, Galaxy roles, best practices
-        └── Task(ac-researcher-impl)  → Package options, implementation details
-        Display research findings to user
+Step 1: Research Phase (Parallel)
+        ├── Task(ac-researcher-docs)  → Documentation, Galaxy roles, features
+        └── Task(ac-researcher-impl)  → Package options, quality indicators
 
-Step 2: AskUserQuestion      → Gather requirements (informed by research)
-Step 3: Task(ac-researcher-deepdive) → Deep dive on selected features (OPTIONAL)
-Step 4: Task(ac-planner)     → Generate structured plan ⚠️ AGENT REQUIRED
-Step 5: Display plan         → User approval (direct - no agent)
-        ↓
-        ├── "Yes" → Proceed to Step 6
-        ├── "Modify" → Collect changes, LOOP BACK to Step 4 with modifications
-        └── "No" → Cancel generation
+Step 2: Interactive Overview
+        → Display interesting findings (worth exploring)
+        → Show standard decisions (smart defaults ready)
+        → List optional topics (hidden by default)
 
-Step 6: 4 PARALLEL GENERATORS:
-        ├── Task(ac-generator-core)       → defaults, vars, handlers, meta, README
-        ├── Task(ac-generator-tasks)      → tasks/*.yml
-        ├── Task(ac-generator-templates)  → templates/*.j2
-        └── Task(ac-generator-molecule)   → molecule/**/*
-Step 7: Task(ac-validator)   → Validate code ⚠️ AGENT REQUIRED (parallel)
-Step 8: Task(ac-linter)      → Run ansible-lint ⚠️ AGENT REQUIRED (parallel)
-Step 9: Task(ac-fixer)       → Auto-fix violations ⚠️ AGENT REQUIRED (if needed)
-Step 10: Display results     → Show file tree (direct - no agent)
+Step 3: Topic Exploration Loop
+        → User selects topic to explore (or "continue" for defaults)
+        → Display topic context with options and trade-offs
+        → Ask contextual follow-up questions
+        → Record decision or skip (uses default)
+        → Repeat until user is done exploring
+
+Step 4: Summary & Natural Language Modification
+        → Show what was explored vs defaulted
+        → User can type "yes" to proceed OR describe changes
+        → Apply modifications: "add CentOS support", "skip molecule"
+
+Step 5: Task(ac-planner)     → Generate plan with exploration results
+Step 6: Plan Approval Loop   → Approve/modify/cancel
+
+Step 7: 4 PARALLEL GENERATORS (after approval)
+Step 8-9: Validation & Auto-Fix
+Step 10: Final Report
 ```
 
 ## Step 1: Research Phase (Parallel Agents)
@@ -80,36 +90,145 @@ Step 10: Display results     → Show file tree (direct - no agent)
 ]
 ```
 
-**After research completes, display findings to user:**
+**After research completes, display the Interactive Overview:**
 
-Format the combined research findings in a clear summary:
+## Step 2: Interactive Overview
+
+Present a **scannable overview** organized by exploration value:
+
 ```
-=== Research Findings ===
+## Research Complete for "[role_description]"
 
-Discovered Features:
-  ✓ [feature 1] (essential) - [description]
-  ✓ [feature 2] (recommended) - [description]
-  • [feature 3] (optional) - [description]
+### Interesting Findings (explore these)
+Topics with depth worth exploring:
+  • **SSL/TLS Configuration** - 3 approaches found (Let's Encrypt, self-signed, custom CA)
+  • **Virtual Hosts** - Multiple patterns for multi-site setup
+  • **Reverse Proxy** - Load balancing options available
 
-Package Options:
-  • [package 1] ([source]) [default] - [description]
-  • [package 2] ([source]) - [description]
+### Standard Decisions (smart defaults ready)
+Topics with obvious choices:
+  ✓ Package: nginx (official)
+  ✓ Platforms: Generic
+  ✓ Privilege escalation: Required
 
-Best Practices:
-  ✓ [practice 1] (critical)
-     Rationale: [rationale]
-  ✓ [practice 2] (recommended)
-     Rationale: [rationale]
+### Optional Topics (hidden by default)
+  Molecule testing, Tags strategy, Variable naming...
 
-Reference Galaxy Roles:
-  1. [namespace].[name] (⭐ [stars], [downloads] downloads)
-     Features: [feature list]
-  2. [namespace].[name] (⭐ [stars], [downloads] downloads)
+### Best Practices
+  ! Use FQCN for all modules
+  • Implement idempotency with changed_when
 
-Proceeding to role configuration...
+### Reference Galaxy Roles
+  1. geerlingguy.nginx (⭐⭐⭐⭐⭐ 1.5M downloads)
+
+What would you like to explore? (type topic name or "continue" for defaults)
 ```
 
-## Step 2: Requirements Gathering (Research-Informed)
+**Use AskUserQuestion for initial topic selection:**
+
+```json
+{
+  "questions": [{
+    "question": "What would you like to explore? Pick a topic or continue with smart defaults.",
+    "header": "Explore",
+    "options": [
+      {"label": "SSL/TLS Configuration", "description": "3 approaches found - Let's Encrypt, self-signed, custom CA"},
+      {"label": "Virtual Hosts", "description": "Multiple patterns for multi-site setup"},
+      {"label": "Continue with defaults", "description": "Apply smart defaults to all topics and proceed to planning"}
+    ],
+    "multiSelect": false
+  }]
+}
+```
+
+## Step 3: Topic Exploration Loop
+
+When user selects a topic, enter a **focused conversation**:
+
+**Display topic context:**
+```
+Research found 3 SSL approaches:
+- Let's Encrypt (recommended): Auto-renewing, free, requires certbot
+- Self-signed: Quick setup, browser warnings, good for internal
+- Custom CA: Enterprise use, manual cert management
+
+Which approach fits your use case?
+```
+
+**Use AskUserQuestion for topic decision:**
+
+```json
+{
+  "questions": [{
+    "question": "Which SSL/TLS approach fits your use case?",
+    "header": "SSL",
+    "options": [
+      {"label": "Let's Encrypt (Recommended)", "description": "Auto-renewing free certificates via certbot"},
+      {"label": "Self-signed", "description": "Quick setup for internal use, browser warnings"},
+      {"label": "Custom CA", "description": "Enterprise certificate management"},
+      {"label": "Skip this topic", "description": "Use default (Let's Encrypt) and continue"}
+    ],
+    "multiSelect": false
+  }]
+}
+```
+
+**After each topic decision, ask if user wants to explore more:**
+
+```json
+{
+  "questions": [{
+    "question": "Explore another topic or continue to summary?",
+    "header": "Continue",
+    "options": [
+      {"label": "Explore another topic", "description": "Choose another topic to configure"},
+      {"label": "Continue to summary", "description": "Apply smart defaults to remaining topics"}
+    ],
+    "multiSelect": false
+  }]
+}
+```
+
+## Step 4: Summary & Natural Language Modification
+
+Present final summary with **natural language modification** capability:
+
+```
+## Role Summary: nginx-ssl
+
+### Explored Topics
+  ✓ SSL/TLS: Let's Encrypt with webroot
+  ✓ Virtual hosts: Multi-site with separate configs
+
+### Applied Defaults
+  • Package: nginx from official repos
+  • Platforms: Generic
+  • Molecule: Basic Docker tests
+  • Tags: Per-task strategy
+
+### Structure
+  tasks/, handlers/, templates/, defaults/, vars/, meta/, molecule/
+
+Does this look right?
+  - Type "yes" to generate
+  - Or describe changes: "add CentOS support", "skip molecule tests", etc.
+```
+
+**Handle modifications:**
+
+If user types something other than "yes", parse their request:
+- "add CentOS support" → Add RHEL to platforms
+- "skip molecule tests" → Disable molecule
+- "make SSL optional" → Add feature toggle variable
+- "remove virtual hosts" → Simplify to single-site config
+
+**Apply modifications and show updated summary**, then ask again until user approves.
+
+## Step 5: Requirements Gathering (Research-Informed) - LEGACY MODE
+
+**NOTE:** This section describes the classic linear wizard. Use the exploration workflow above by default.
+
+For legacy mode or when exploration fails, fall back to these questions:
 
 Use AskUserQuestion to gather requirements. **IMPORTANT: Incorporate research findings into your questions.**
 

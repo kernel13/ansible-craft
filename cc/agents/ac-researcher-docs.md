@@ -155,7 +155,7 @@ Rate confidence in findings:
 
 ## Structured JSON Output
 
-Return findings as structured JSON:
+Return findings as structured JSON with enhanced exploration fields:
 
 ```json
 {
@@ -165,19 +165,33 @@ Return findings as structured JSON:
         "name": "SSL/TLS support",
         "description": "Configure secure connections with SSL/TLS certificates",
         "category": "recommended",
-        "complexity": "moderate"
+        "complexity": "moderate",
+        "confidence": "high",
+        "exploreHint": "3 approaches found - Let's Encrypt, self-signed, custom CA",
+        "sources": [
+          {"type": "galaxy", "quality": 90},
+          {"type": "docs", "url": "https://nginx.org/en/docs/"}
+        ],
+        "alternatives": [
+          {"name": "Let's Encrypt", "description": "Auto-renewing free certificates", "tradeoffs": "Requires certbot, brief renewal downtime"},
+          {"name": "Self-signed", "description": "Quick setup for internal use", "tradeoffs": "Browser warnings, not for production"},
+          {"name": "Custom CA", "description": "Enterprise certificate management", "tradeoffs": "Manual cert management required"}
+        ]
       },
       {
         "name": "Virtual hosts",
         "description": "Support multiple domains on a single server",
         "category": "recommended",
-        "complexity": "moderate"
+        "complexity": "moderate",
+        "confidence": "high",
+        "exploreHint": "Multiple patterns for multi-site setup"
       },
       {
         "name": "Rate limiting",
         "description": "Limit request rates to prevent abuse",
         "category": "optional",
-        "complexity": "complex"
+        "complexity": "complex",
+        "confidence": "medium"
       }
     ],
     "packages": [],
@@ -209,13 +223,30 @@ Return findings as structured JSON:
 }
 ```
 
-## Feature Format
+## Feature Format (Enhanced)
 
 Each feature must have:
 - **name:** Short descriptive name (e.g., "SSL/TLS support")
 - **description:** What it provides (1-2 sentences)
 - **category:** essential | recommended | optional
 - **complexity:** simple | moderate | complex
+- **confidence:** high | medium | low (based on source quality and agreement)
+- **exploreHint:** (optional) Why this topic is worth exploring - e.g., "Multiple implementation approaches found"
+- **sources:** (optional) Array of sources supporting this finding
+- **alternatives:** (optional) Array of alternative implementations with trade-offs
+
+## When to Add exploreHint
+
+Add an exploreHint when:
+- Multiple implementation approaches exist (e.g., "3 SSL approaches found")
+- Feature has significant configuration options (e.g., "Multiple patterns for multi-site")
+- Trade-offs between approaches aren't obvious (e.g., "Performance vs security trade-offs")
+- Galaxy roles implement feature differently (e.g., "Different caching strategies found")
+
+Skip exploreHint for:
+- Standard features with obvious implementations (e.g., "Package installation")
+- Simple on/off features with no alternatives
+- Low-confidence findings with limited information
 
 ## Best Practice Format
 
