@@ -102,21 +102,36 @@ role_name_packages:
 
 Standard task sequence:
 
-**Validation Phase (ALWAYS FIRST):**
-1. OS family validation (assert supported platforms)
-2. Required variables validation (assert critical inputs defined)
-3. Ansible version check (if role needs specific features)
-4. Collection dependencies check (if external collections used)
-5. Mutually exclusive options check (if applicable)
-6. File/path existence checks (for SSL certs, custom configs, etc.)
+**tasks/main.yml (Entry Point):**
+- Include validate_params.yml (FIRST)
+- Include install.yml
+- Include configure.yml
+- Include service.yml
+- Include validate.yml (LAST)
 
-**Execution Phase:**
-7. OS-specific variables (include_vars)
-8. Package installation
-9. User/group creation (if needed)
-10. Directory structure
-11. Configuration files (templates)
-12. Service management
+**tasks/validate_params.yml (Input Validation - ALWAYS FIRST):**
+1. Ansible version check (if role needs specific features)
+2. OS family validation (assert supported platforms)
+3. Variable type validation (string, number, boolean, list, dict)
+4. Required variables validation (assert critical inputs defined)
+5. Range validation (ports 1-65535, percentages 0-100)
+6. Enum validation (service_state: started/stopped/restarted/reloaded)
+7. Mutually exclusive options check (if applicable)
+8. Conditional requirements (SSL cert/key when SSL enabled)
+
+**Execution Phase (install.yml, configure.yml, service.yml):**
+1. OS-specific variables (include_vars)
+2. Package installation
+3. User/group creation (if needed)
+4. Directory structure
+5. Configuration files (templates)
+6. Service management
+
+**tasks/validate.yml (Post-Installation Verification - ALWAYS LAST):**
+1. Service status verification (service_facts or win_service_info)
+2. Port listening validation (wait_for or win_wait_for)
+3. Configuration file existence (stat or win_stat)
+4. Verify installation succeeded
 
 ## Step 5: Design Handlers
 
@@ -173,12 +188,18 @@ Return a structured plan in this format:
 ### Tasks Structure
 
 **tasks/main.yml** - Entry point:
-- Validate operating system (ansible.builtin.assert)
-- Validate required variables (ansible.builtin.assert)
-- Include OS-specific variables (if multi-platform)
+- Include validate_params.yml (FIRST - input validation)
 - Include install.yml
 - Include configure.yml
 - Include service.yml
+- Include validate.yml (LAST - post-installation verification)
+
+**tasks/validate_params.yml** (REQUIRED - runs first):
+- Validate Ansible version (ansible.builtin.assert)
+- Validate operating system (ansible.builtin.assert)
+- Validate required variables (ansible.builtin.assert)
+- Validate variable types (ansible.builtin.assert)
+- Validate ranges/enums (ansible.builtin.assert)
 
 **tasks/install.yml:**
 - [task 1 description] → [FQCN module]
@@ -189,6 +210,11 @@ Return a structured plan in this format:
 
 **tasks/service.yml:**
 - [task descriptions with modules]
+
+**tasks/validate.yml** (runs last):
+- Verify service status (ansible.builtin.service_facts or ansible.windows.win_service_info)
+- Verify ports listening (ansible.builtin.wait_for or ansible.windows.win_wait_for)
+- Verify configuration files exist (ansible.builtin.stat or ansible.windows.win_stat)
 
 ### Handlers
 
@@ -227,9 +253,11 @@ Return a structured plan in this format:
 │   └── main.yml
 ├── tasks/
 │   ├── main.yml
+│   ├── validate_params.yml    # Input validation (runs first)
 │   ├── install.yml
 │   ├── configure.yml
-│   └── service.yml
+│   ├── service.yml
+│   └── validate.yml            # Post-install verification (runs last)
 ├── handlers/
 │   └── main.yml
 ├── templates/
