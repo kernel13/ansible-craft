@@ -233,9 +233,9 @@ Created by ansible-craft.
 
 ## Quick Reference Files
 
-- Role structure: `skills/ac/role/references/structure.md`
-- FQCN modules: `skills/ac/role/references/fqcn.md`
-- Patterns: `skills/ac/role/references/patterns.md`
+- Role structure: `cc/common/references/role-structure.md`
+- FQCN modules: `cc/common/references/fqcn.md`
+- Patterns: `cc/common/references/patterns.md`
 
 </references>
 

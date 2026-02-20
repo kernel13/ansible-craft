@@ -263,8 +263,8 @@ WantedBy=multi-user.target
 
 ## Quick Reference Files
 
-- Role structure: `skills/ac/role/references/structure.md`
-- Patterns: `skills/ac/role/references/patterns.md`
+- Role structure: `cc/common/references/role-structure.md`
+- Patterns: `cc/common/references/patterns.md`
 
 </references>
 

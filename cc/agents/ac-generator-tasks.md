@@ -2,7 +2,7 @@
 name: ac-generator-tasks
 description: Generate Ansible role task files (tasks/*.yml). Part of parallel generation pipeline.
 tools: Read, Write, Grep, Glob
-model: haiku
+model: sonnet
 color: blue
 ---
 
@@ -592,10 +592,10 @@ Validation tasks should:
 
 ## Quick Reference Files
 
-- Role structure: `skills/ac/role/references/structure.md`
-- FQCN modules: `skills/ac/role/references/fqcn.md`
-- Patterns: `skills/ac/role/references/patterns.md`
-- Lint fixes: `skills/ac/role/references/lint-fixes.md`
+- Role structure: `cc/common/references/role-structure.md`
+- FQCN modules: `cc/common/references/fqcn.md`
+- Patterns: `cc/common/references/patterns.md`
+- Lint fixes: `cc/common/references/lint-fixes.md`
 
 </references>
 

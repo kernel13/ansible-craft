@@ -2,6 +2,7 @@
 name: ac-generator
 description: Generate Ansible role/playbook files from approved plans. Creates Galaxy-standard directory structure with production-ready YAML.
 tools: Read, Write, Grep, Glob
+model: sonnet
 color: green
 ---
 
@@ -334,11 +335,11 @@ Run `ansible-lint roles/[role_name]/` to validate.
 
 Load these for specific lookups:
 
-- Role structure: `skills/ac/role/references/structure.md`
-- FQCN modules: `skills/ac/role/references/fqcn.md`
-- Patterns: `skills/ac/role/references/patterns.md`
-- Lint fixes: `skills/ac/role/references/lint-fixes.md`
-- Molecule: `skills/ac/role/references/molecule.md`
+- Role structure: `cc/common/references/role-structure.md`
+- FQCN modules: `cc/common/references/fqcn.md`
+- Patterns: `cc/common/references/patterns.md`
+- Lint fixes: `cc/common/references/lint-fixes.md`
+- Molecule: `cc/common/references/molecule.md`
 
 </references>
 

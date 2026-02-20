@@ -2,6 +2,7 @@
 name: ac-validator
 description: Validate generated Ansible code for YAML syntax, FQCN compliance, idempotency patterns, and variable naming conventions.
 tools: Read, Grep, Glob
+model: haiku
 color: yellow
 ---
 
@@ -304,10 +305,10 @@ Validation passed. Ready for ansible-lint.
 
 ## Quick Reference Files
 
-- FQCN modules: `skills/ac/role/references/fqcn.md`
-- Patterns: `skills/ac/role/references/patterns.md`
-- Lint fixes: `skills/ac/role/references/lint-fixes.md`
-- Role structure: `skills/ac/role/references/structure.md`
+- FQCN modules: `cc/common/references/fqcn.md`
+- Patterns: `cc/common/references/patterns.md`
+- Lint fixes: `cc/common/references/lint-fixes.md`
+- Role structure: `cc/common/references/role-structure.md`
 
 </references>
 

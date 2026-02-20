@@ -2,7 +2,7 @@
 name: ac-generator-molecule
 description: Generate Molecule test files (molecule/**/*). Part of parallel generation pipeline.
 tools: Read, Write, Grep, Glob
-model: haiku
+model: sonnet
 color: purple
 ---
 
@@ -565,9 +565,9 @@ def test_config_file_exists(host):
 
 ## Quick Reference Files
 
-- Molecule testing: `skills/ac/role/references/molecule.md`
-- Role structure: `skills/ac/role/references/structure.md`
-- Patterns: `skills/ac/role/references/patterns.md`
+- Molecule testing: `cc/common/references/molecule.md`
+- Role structure: `cc/common/references/role-structure.md`
+- Patterns: `cc/common/references/patterns.md`
 
 </references>
 

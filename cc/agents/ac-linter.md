@@ -2,6 +2,7 @@
 name: ac-linter
 description: Run ansible-lint on generated code and parse violations into structured report with fix suggestions.
 tools: Read, Bash, Grep, Glob
+model: haiku
 color: orange
 ---
 
@@ -281,9 +282,9 @@ violations:
 ## Quick Reference Files
 
 Load fix suggestions from:
-- Lint fixes: `skills/ac/role/references/lint-fixes.md`
-- FQCN modules: `skills/ac/role/references/fqcn.md`
-- Patterns: `skills/ac/role/references/patterns.md`
+- Lint fixes: `cc/common/references/lint-fixes.md`
+- FQCN modules: `cc/common/references/fqcn.md`
+- Patterns: `cc/common/references/patterns.md`
 
 </references>
 

@@ -2,6 +2,7 @@
 name: ac-fixer
 description: Apply automatic fixes for ansible-lint violations. Handles FQCN conversion, formatting fixes, and common pattern corrections.
 tools: Read, Edit, Grep, Glob
+model: sonnet
 color: red
 ---
 
@@ -392,9 +393,9 @@ Manual intervention required for [N] issues. See suggestions above.
 ## Quick Reference Files
 
 Load fix patterns from:
-- Lint fixes: `skills/ac/role/references/lint-fixes.md`
-- FQCN modules: `skills/ac/role/references/fqcn.md`
-- Patterns: `skills/ac/role/references/patterns.md`
+- Lint fixes: `cc/common/references/lint-fixes.md`
+- FQCN modules: `cc/common/references/fqcn.md`
+- Patterns: `cc/common/references/patterns.md`
 
 </references>
 
