@@ -131,118 +131,22 @@ Examples for a role named "myapp":
 - `myapp:validate` - post-installation verification tasks
 </critical_rule>
 
-<code_standards>
+<first_step>
 
-## FQCN - MANDATORY
+## CRITICAL: Read Reference Files First
 
-```yaml
-# ALWAYS use fully qualified collection names
-ansible.builtin.apt:
-ansible.builtin.yum:
-ansible.builtin.template:
-ansible.builtin.service:
-ansible.builtin.file:
-ansible.builtin.copy:
-ansible.builtin.command:
-ansible.builtin.shell:
-ansible.builtin.assert:
-ansible.builtin.fail:
-ansible.builtin.debug:
-ansible.builtin.include_tasks:
-ansible.builtin.include_vars:
-ansible.builtin.set_fact:
+Before generating any files, read these references:
+- `cc/common/references/fqcn.md` — Complete FQCN module mappings (NEVER use short names)
+- `cc/common/references/patterns.md` — Task structure order, idempotency patterns, YAML formatting, variable naming
 
-# Windows modules
-ansible.windows.win_service:
-ansible.windows.win_file:
-ansible.windows.win_template:
-ansible.windows.win_command:
-ansible.windows.win_stat:
-chocolatey.chocolatey.win_chocolatey:
+Apply all standards from those references. Key reminders:
+- ALL modules must use FQCN (e.g., `ansible.builtin.apt:` not `apt:`)
+- ALL variables must be role-prefixed (e.g., `nginx_port` not `port`)
+- ALL tags must use `rolename:action` format (e.g., `nginx:install`)
+- Always include explicit `state:` parameter
+- Use `changed_when: false` for read-only commands
 
-# NEVER use short names
-apt:      # WRONG
-service:  # WRONG
-```
-
-## Task Structure Order
-
-```yaml
-- name: Task name in sentence case
-  become: true                    # 1. Privilege first
-  when: condition                 # 2. Conditionals
-  ansible.builtin.module:         # 3. Module (FQCN)
-    param: value
-    state: present               # 4. Always explicit state
-    mode: '0644'                 # 5. Quoted modes
-  register: result_var           # 6. Register with role prefix
-  notify: Handler name           # 7. Handlers
-  changed_when: false            # 8. Change control
-  failed_when: condition         # 9. Failure control
-  tags:                          # 10. Tags last - MUST use rolename:action format
-    - rolename:action            # e.g., nginx:install, nginx:config
-```
-
-## Idempotency Patterns
-
-```yaml
-# Package installation - always state
-- name: Install packages
-  ansible.builtin.apt:
-    name: "{{ packages }}"
-    state: present
-    update_cache: true
-
-# Command with creates marker
-- name: Initialize application
-  ansible.builtin.command:
-    cmd: /opt/app/init.sh
-    creates: /opt/app/.initialized
-
-# Read-only command
-- name: Check version
-  ansible.builtin.command:
-    cmd: app --version
-  register: role_version
-  changed_when: false
-
-# Configuration with handler
-- name: Deploy configuration
-  ansible.builtin.template:
-    src: config.j2
-    dest: /etc/app/config
-    mode: '0644'
-  notify: Restart app
-```
-
-## Variable References
-
-```yaml
-# Always use role-prefixed variables
-"{{ role_name_port }}"
-"{{ role_name_config_path }}"
-
-# Register with role prefix
-register: role_name_result
-```
-
-## Input Validation - MANDATORY
-
-Every role MUST start with validation tasks:
-
-1. **OS validation** - Assert ansible_os_family is supported
-2. **Required variables** - Assert critical variables are defined and valid
-3. **Version constraints** - Assert Ansible version meets minimum (if needed)
-4. **Dependencies** - Check required collections (if any)
-
-Validation tasks should:
-- Use `ansible.builtin.assert` for simple checks
-- Use `ansible.builtin.stat` + `ansible.builtin.fail` for file checks
-- Include descriptive `fail_msg` with remediation hints
-- Include `success_msg` for visibility
-- Be tagged with `validation` for selective runs
-
-</code_standards>
+</first_step>
 
 <file_templates>
 
@@ -586,11 +490,7 @@ Validation tasks should:
 
 <references>
 
-## Primary Reference
-
-- **Best Practices:** `docs/architecture/ansible-best-practices.md` - Comprehensive guide to all standards
-
-## Quick Reference Files
+## Reference Files
 
 - Role structure: `cc/common/references/role-structure.md`
 - FQCN modules: `cc/common/references/fqcn.md`

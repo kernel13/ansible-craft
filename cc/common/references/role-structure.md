@@ -11,7 +11,11 @@ role_name/
 │   └── main.yml              # Internal variables
 ├── tasks/
 │   ├── main.yml              # Main entry point (REQUIRED)
-│   └── validate.yml          # Input validation (REQUIRED)
+│   ├── validate_params.yml   # Input validation (REQUIRED, runs first)
+│   ├── install.yml           # Installation tasks
+│   ├── configure.yml         # Configuration tasks
+│   ├── service.yml           # Service management
+│   └── validate.yml          # Post-install verification (runs last)
 ├── handlers/
 │   └── main.yml              # Event handlers
 ├── templates/
@@ -76,11 +80,12 @@ role_name_required_packages:
 ```yaml
 ---
 # Main task entry point
+# This file contains ONLY include_tasks - no direct task implementations
 
-# Validation FIRST (always)
-- name: Validate inputs
+# Validate inputs FIRST (always)
+- name: Validate role inputs
   ansible.builtin.include_tasks:
-    file: validate.yml
+    file: validate_params.yml
   tags:
     - role_name
     - validation
@@ -112,13 +117,22 @@ role_name_required_packages:
   tags:
     - role_name
     - service
+
+# Post-install verification LAST (always)
+- name: Verify installation
+  ansible.builtin.include_tasks:
+    file: validate.yml
+  tags:
+    - role_name
+    - validation
 ```
 
-### tasks/validate.yml
+### tasks/validate_params.yml
 ```yaml
 ---
 # Input validation for role_name role
-# Validates all user-configurable variables before execution
+# Validates all user-configurable variables BEFORE any work begins
+# This file runs FIRST in the role execution
 
 # ============================================
 # ANSIBLE VERSION VALIDATION
@@ -218,6 +232,90 @@ role_name_required_packages:
 #   loop_control:
 #     label: "{{ item.name | default('unnamed') }}"
 #   when: role_name_vhosts is defined and role_name_vhosts | length > 0
+#   tags:
+#     - role_name
+#     - validation
+```
+
+### tasks/validate.yml
+```yaml
+---
+# Post-installation verification for role_name role
+# Verifies the installation succeeded AFTER all tasks complete
+# This file runs LAST in the role execution
+
+# ============================================
+# SERVICE VERIFICATION
+# ============================================
+- name: Verify service is running
+  ansible.builtin.service_facts:
+  tags:
+    - role_name
+    - validation
+
+- name: Assert service is active
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.services[role_name_service_name ~ '.service'] is defined
+      - ansible_facts.services[role_name_service_name ~ '.service'].state == 'running'
+    fail_msg: "Service {{ role_name_service_name }} is not running"
+    success_msg: "Service {{ role_name_service_name }} is running"
+  when: role_name_service_enabled | default(true)
+  tags:
+    - role_name
+    - validation
+
+# ============================================
+# PORT VERIFICATION
+# ============================================
+- name: Verify port is listening
+  ansible.builtin.wait_for:
+    port: "{{ role_name_port }}"
+    host: "{{ role_name_bind_address | default('127.0.0.1') }}"
+    timeout: 10
+    state: started
+  when: role_name_port is defined
+  tags:
+    - role_name
+    - validation
+
+# ============================================
+# CONFIGURATION VERIFICATION
+# ============================================
+- name: Verify configuration file exists
+  ansible.builtin.stat:
+    path: "{{ role_name_config_path }}/config.yml"
+  register: _config_stat
+  tags:
+    - role_name
+    - validation
+
+- name: Assert configuration file exists
+  ansible.builtin.assert:
+    that:
+      - _config_stat.stat.exists
+    fail_msg: "Configuration file not found at {{ role_name_config_path }}/config.yml"
+    success_msg: "Configuration file verified"
+  when: role_name_config_path is defined
+  tags:
+    - role_name
+    - validation
+
+# ============================================
+# HEALTH CHECK (if applicable)
+# ============================================
+# Example for HTTP health check (uncomment if needed):
+# - name: Verify health endpoint responds
+#   ansible.builtin.uri:
+#     url: "http://{{ role_name_bind_address | default('127.0.0.1') }}:{{ role_name_port }}/health"
+#     method: GET
+#     status_code: 200
+#     timeout: 10
+#   register: _health_check
+#   retries: 3
+#   delay: 5
+#   until: _health_check.status == 200
+#   when: role_name_port is defined
 #   tags:
 #     - role_name
 #     - validation

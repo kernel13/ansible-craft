@@ -327,11 +327,7 @@ Run `ansible-lint roles/[role_name]/` to validate.
 
 <references>
 
-## Primary Reference
-
-- **Best Practices:** `docs/architecture/ansible-best-practices.md` - Comprehensive guide to all standards
-
-## Quick Reference Files
+## Reference Files
 
 Load these for specific lookups:
 

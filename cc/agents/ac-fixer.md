@@ -29,7 +29,7 @@ Your job: Apply fixes to Ansible code based on lint violations. Preserve file st
 
 ### 1. FQCN Conversion
 
-Convert short module names to fully qualified:
+Convert short module names to fully qualified. **Read `cc/common/references/fqcn.md` for the complete mapping table.**
 
 ```yaml
 # Before
@@ -40,61 +40,6 @@ apt:
 ansible.builtin.apt:
   name: nginx
 ```
-
-**FQCN Reference Table:**
-
-| Short | FQCN |
-|-------|------|
-| apt | ansible.builtin.apt |
-| yum | ansible.builtin.yum |
-| dnf | ansible.builtin.dnf |
-| package | ansible.builtin.package |
-| file | ansible.builtin.file |
-| copy | ansible.builtin.copy |
-| template | ansible.builtin.template |
-| service | ansible.builtin.service |
-| systemd | ansible.builtin.systemd_service |
-| user | ansible.builtin.user |
-| group | ansible.builtin.group |
-| command | ansible.builtin.command |
-| shell | ansible.builtin.shell |
-| debug | ansible.builtin.debug |
-| fail | ansible.builtin.fail |
-| assert | ansible.builtin.assert |
-| set_fact | ansible.builtin.set_fact |
-| include_tasks | ansible.builtin.include_tasks |
-| import_tasks | ansible.builtin.import_tasks |
-| include_vars | ansible.builtin.include_vars |
-| get_url | ansible.builtin.get_url |
-| unarchive | ansible.builtin.unarchive |
-| stat | ansible.builtin.stat |
-| lineinfile | ansible.builtin.lineinfile |
-| blockinfile | ansible.builtin.blockinfile |
-| pip | ansible.builtin.pip |
-| apt_repository | ansible.builtin.apt_repository |
-| yum_repository | ansible.builtin.yum_repository |
-| uri | ansible.builtin.uri |
-| wait_for | ansible.builtin.wait_for |
-| wait_for_connection | ansible.builtin.wait_for_connection |
-| reboot | ansible.builtin.reboot |
-
-**Windows modules:**
-
-| Short | FQCN |
-|-------|------|
-| win_package | ansible.windows.win_package |
-| win_service | ansible.windows.win_service |
-| win_file | ansible.windows.win_file |
-| win_copy | ansible.windows.win_copy |
-| win_template | ansible.windows.win_template |
-| win_user | ansible.windows.win_user |
-| win_group | ansible.windows.win_group |
-| win_shell | ansible.windows.win_shell |
-| win_command | ansible.windows.win_command |
-| win_stat | ansible.windows.win_stat |
-| win_reboot | ansible.windows.win_reboot |
-| win_firewall_rule | ansible.windows.win_firewall_rule |
-| win_chocolatey | chocolatey.chocolatey.win_chocolatey |
 
 ### 2. Trailing Whitespace
 
@@ -384,15 +329,21 @@ Manual intervention required for [N] issues. See suggestions above.
 
 </output_format>
 
+<first_step>
+
+## CRITICAL: Read Reference Files First
+
+Before applying any fixes, read these references:
+- `cc/common/references/fqcn.md` — Complete FQCN mapping table for conversions
+- `cc/common/references/lint-fixes.md` — Common lint violations and fix patterns
+- `cc/common/references/patterns.md` — Code standards to verify against
+
+</first_step>
+
 <references>
 
-## Primary Reference
+## Reference Files
 
-- **Best Practices:** `docs/architecture/ansible-best-practices.md` - Comprehensive guide to all standards
-
-## Quick Reference Files
-
-Load fix patterns from:
 - Lint fixes: `cc/common/references/lint-fixes.md`
 - FQCN modules: `cc/common/references/fqcn.md`
 - Patterns: `cc/common/references/patterns.md`

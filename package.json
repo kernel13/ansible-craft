@@ -1,50 +1,30 @@
 {
   "name": "ansible-craft",
-  "version": "0.1.0",
-  "description": "Generate production-ready Ansible roles from natural language",
+  "version": "0.2.0",
+  "description": "Claude Code skills for generating production-ready Ansible roles and playbooks",
   "type": "module",
-  "bin": {
-    "ansible-craft": "./dist/cli/index.js"
-  },
-  "main": "./dist/cli/index.js",
-  "exports": {
-    ".": {
-      "import": "./dist/cli/index.js",
-      "default": "./dist/cli/index.js"
-    }
-  },
   "files": [
-    "dist",
     "cc/skills",
     "cc/agents",
     "cc/common",
-    "cc/scripts/install-skills.ts",
+    "cc/scripts/install-skills.mjs",
     "README.md",
     "LICENSE"
   ],
   "scripts": {
-    "dev": "bun run src/cli/index.ts",
-    "build": "tsup",
-    "prepublishOnly": "bun run build",
-    "postinstall": "bun run cc/scripts/install-skills.ts --quiet || true",
+    "postinstall": "node cc/scripts/install-skills.mjs --quiet || true",
+    "install-skills": "node cc/scripts/install-skills.mjs",
+    "install-skills:project": "node cc/scripts/install-skills.mjs --project",
     "lint": "biome check .",
-    "format": "biome format . --write",
-    "test": "bun test",
-    "test:watch": "bun test --watch",
-    "test:coverage": "bun test --coverage"
+    "format": "biome format . --write"
   },
   "keywords": [
     "ansible",
     "automation",
-    "infrastructure",
     "devops",
-    "configuration",
-    "ai",
     "claude",
-    "code-generation",
-    "llm",
-    "anthropic",
-    "cli",
+    "claude-code",
+    "skills",
     "role",
     "playbook"
   ],
@@ -62,21 +42,6 @@
     "node": ">=18"
   },
   "devDependencies": {
-    "@biomejs/biome": "^1.9.4",
-    "@types/bun": "latest",
-    "@types/node": "^22.15.30",
-    "tsup": "^8.5.1"
-  },
-  "dependencies": {
-    "@anthropic-ai/sdk": "^0.71.2",
-    "@inquirer/prompts": "^8.2.0",
-    "boxen": "^8.0.1",
-    "chalk": "^5.4.1",
-    "cli-highlight": "^2.1.11",
-    "commander": "^14.0.2",
-    "ora": "^9.0.0",
-    "smol-toml": "^1.6.0",
-    "yaml": "^2.8.2",
-    "zod": "^4.3.5"
+    "@biomejs/biome": "^1.9.4"
   }
 }

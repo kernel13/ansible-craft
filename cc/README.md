@@ -4,27 +4,28 @@ This directory contains all Claude Code integration files for ansible-craft. The
 
 ## Installation
 
-Install skills and agents using the CLI:
+Install skills and agents using the installer script:
 
 ```bash
 # Install to ~/.claude/ (global - recommended)
-bun run src/cli/index.ts setup
+node cc/scripts/install-skills.mjs
 
 # Install to ./.claude/ (project-local)
-bun run src/cli/index.ts setup --project
+node cc/scripts/install-skills.mjs --project
 
 # Force overwrite existing files
-bun run src/cli/index.ts setup --force
+node cc/scripts/install-skills.mjs --force
 ```
 
-Or run the installer directly:
+Or via npm (runs automatically on `npm install`):
 
 ```bash
-bun run cc/scripts/install-skills.ts [--global|--project] [--force]
+npm run install-skills
+npm run install-skills:project
 ```
 
 After installation:
-- Skills are available as `/ac:role`, `/ac:playbook`, `/ac:explain`, `/ac:fix`
+- Skills are available as `/ac:role`, `/ac:playbook`, `/ac:explain`, `/ac:fix`, `/ac:project`, `/ac:collection`
 - Agents are available for Task tool invocation with `subagent_type: "ac-*"`
 
 ## Directory Structure
@@ -32,7 +33,8 @@ After installation:
 ```
 cc/
 ├── agents/                         # Specialized agents for Task tool
-│   ├── ac-planner.md               # Plans role/playbook structure
+│   ├── ac-researcher.md            # Research docs, features, and implementation
+│   ├── ac-planner.md               # Synthesizes role/playbook plans
 │   ├── ac-generator.md             # Generates playbook files
 │   ├── ac-generator-core.md        # Generates role core files
 │   ├── ac-generator-tasks.md       # Generates role task files
@@ -48,13 +50,18 @@ cc/
 │       ├── molecule.md             # Molecule testing guide
 │       ├── patterns.md             # Ansible best practices
 │       ├── playbook-structure.md   # Playbook conventions
-│       └── role-structure.md       # Galaxy role structure
+│       ├── role-structure.md       # Galaxy role structure
+│       ├── project-structure.md    # Ansible project structure
+│       ├── collection-structure.md # Collection structure
+│       └── research-sources.md     # Research source URLs
 ├── scripts/
-│   └── install-skills.ts           # Installation script
+│   └── install-skills.mjs          # Installation script
 └── skills/
     └── ac/                         # Slash command definitions
         ├── role.md                 # /ac:role command
         ├── playbook.md             # /ac:playbook command
+        ├── project.md              # /ac:project command
+        ├── collection.md           # /ac:collection command
         ├── explain.md              # /ac:explain command
         └── fix.md                  # /ac:fix command
 ```
@@ -67,24 +74,32 @@ Skills are user-invocable slash commands that orchestrate agents to complete tas
 |---------|-------------|----------|
 | `/ac:role` | Generate Ansible roles | "Create a role for nginx with SSL" |
 | `/ac:playbook` | Generate Ansible playbooks | "Create a LAMP stack deployment playbook" |
+| `/ac:project` | Scaffold Ansible project structure | "Create an Ansible project for web infrastructure" |
+| `/ac:collection` | Generate Ansible collections | "Create a collection for network utilities" |
 | `/ac:explain` | Explain Ansible code | "Explain this role's tasks" |
 | `/ac:fix` | Fix Ansible errors | "Fix this ansible-lint error" |
 
 ### Role Generation Workflow
 
 ```
-/ac:role → AskUserQuestion → ac-planner → User Approval
-                                              ↓
-         ┌──────────────────┬─────────────────┼─────────────────┬──────────────────┐
-         ↓                  ↓                 ↓                 ↓                  │
+/ac:role → ac-researcher (sonnet) → Interactive Exploration → Summary
+                                                                ↓
+                                                    Read reference files (direct)
+                                                                ↓
+                                                     ac-planner (opus) → User Approval
+                                                                ↓
+         ┌──────────────────┬─────────────────┬──────────────────┐
+         ↓                  ↓                 ↓                  ↓
   ac-generator-core  ac-generator-tasks  ac-generator-templates  ac-generator-molecule
-         │                  │                 │                 │                  │
-         └──────────────────┴─────────────────┼─────────────────┴──────────────────┘
+         │                  │                 │                  │
+         └──────────────────┴─────────────────┴──────────────────┘
                                               ↓
                               ac-validator + ac-linter (parallel)
                                               ↓
                                     ac-fixer (if needed)
 ```
+
+Agent calls: **7-9** (1 researcher + 1 planner + 4 generators + 2 validators + conditional fixer)
 
 ### Playbook Generation Workflow
 
@@ -104,7 +119,8 @@ Agents are specialized workers invoked via the Task tool with `subagent_type`.
 
 | Agent | Purpose | Tools |
 |-------|---------|-------|
-| `ac-planner` | Generate structured plans from requirements | Read, Grep, Glob, WebSearch |
+| `ac-researcher` | Research docs, features, best practices, implementation | Read, Grep, Glob, WebSearch, Context7 |
+| `ac-planner` | Synthesize plans from all inputs | Read |
 | `ac-generator` | Generate playbook files from plans | Read, Write, Grep, Glob |
 | `ac-generator-core` | Generate role core files (defaults, vars, handlers, meta, README) | Read, Write, Grep, Glob |
 | `ac-generator-tasks` | Generate role task files (tasks/*.yml) | Read, Write, Grep, Glob |
@@ -133,12 +149,15 @@ Reference documents provide shared knowledge for agents. Agents read these files
 
 | File | Description |
 |------|-------------|
-| `fqcn.md` | Fully Qualified Collection Name mappings (short → FQCN) |
+| `fqcn.md` | Fully Qualified Collection Name mappings (short to FQCN) |
 | `lint-fixes.md` | Common ansible-lint violations and their fixes |
 | `molecule.md` | Molecule testing configuration patterns |
 | `patterns.md` | Ansible best practices and idempotency patterns |
 | `playbook-structure.md` | Playbook directory conventions and structure |
 | `role-structure.md` | Galaxy-standard role directory structure |
+| `project-structure.md` | Ansible project directory structure |
+| `collection-structure.md` | Ansible collection structure |
+| `research-sources.md` | Research source URLs for documentation lookup |
 
 ## Development
 
@@ -158,7 +177,7 @@ Reference documents provide shared knowledge for agents. Agents read these files
 
 2. Define the workflow and agent orchestration in the markdown body
 
-3. Run `bun run src/cli/index.ts setup --force` to reinstall
+3. Run `node cc/scripts/install-skills.mjs --force` to reinstall
 
 ### Adding a New Agent
 
@@ -174,7 +193,7 @@ Reference documents provide shared knowledge for agents. Agents read these files
 
 2. Define the agent's role, philosophy, and process in the markdown body
 
-3. Run `bun run src/cli/index.ts setup --force` to reinstall
+3. Run `node cc/scripts/install-skills.mjs --force` to reinstall
 
 ### Adding a Reference Document
 
@@ -187,6 +206,6 @@ Reference documents provide shared knowledge for agents. Agents read these files
 
 ### File Naming Conventions
 
-- **Skills**: `cc/skills/ac/{name}.md` → becomes `/ac:{name}` command
-- **Agents**: `cc/agents/ac-{name}.md` → becomes `ac-{name}` subagent_type
-- **References**: `cc/common/references/{topic}.md` → descriptive topic name
+- **Skills**: `cc/skills/ac/{name}.md` -> becomes `/ac:{name}` command
+- **Agents**: `cc/agents/ac-{name}.md` -> becomes `ac-{name}` subagent_type
+- **References**: `cc/common/references/{topic}.md` -> descriptive topic name

@@ -1,19 +1,12 @@
-# dependencies (bun install)
+# dependencies
 node_modules
 
-# output
-out
-dist
+# package artifacts
 *.tgz
-
-# code coverage
-coverage
-*.lcov
 
 # logs
 logs
-_.log
-report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
+*.log
 
 # dotenv environment variable files
 .env
@@ -23,9 +16,7 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 .env.local
 
 # caches
-.eslintcache
 .cache
-*.tsbuildinfo
 
 # IntelliJ based IDEs
 .idea

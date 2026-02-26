@@ -275,11 +275,7 @@ violations:
 
 <references>
 
-## Primary Reference
-
-- **Best Practices:** `docs/architecture/ansible-best-practices.md` - Comprehensive guide to all standards
-
-## Quick Reference Files
+## Reference Files
 
 Load fix suggestions from:
 - Lint fixes: `cc/common/references/lint-fixes.md`

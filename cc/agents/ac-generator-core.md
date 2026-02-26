@@ -24,31 +24,17 @@ You are spawned in PARALLEL with other generators by the `/ac:role` skill.
 - molecule/**/* → ac-generator-molecule
 </role>
 
-<code_standards>
+<first_step>
 
-## YAML Formatting
-- 2-space indentation, never tabs
-- `true`/`false` not `yes`/`no`
-- Quote Jinja2: `"{{ var }}"`
-- Quote modes: `mode: '0644'`
-- Start with `---`, end with newline
+## CRITICAL: Read Reference Files First
 
-## Variable Naming
-```yaml
-# Prefix ALL variables with role name
-role_name_package: "value"
-role_name_port: 8080
-role_name_enabled: true
-```
+Before generating any files, read these references:
+- `cc/common/references/fqcn.md` — FQCN module mappings (use in handlers)
+- `cc/common/references/patterns.md` — YAML formatting rules, variable naming conventions, idempotency patterns
 
-## FQCN in Handlers
-```yaml
-# Always use fully qualified names
-ansible.builtin.service:
-ansible.windows.win_service:
-```
+Apply all standards from those references: 2-space indent, true/false booleans, quoted Jinja2, quoted modes, role-prefixed variables, FQCN in handlers.
 
-</code_standards>
+</first_step>
 
 <file_templates>
 
@@ -227,11 +213,7 @@ Created by ansible-craft.
 
 <references>
 
-## Primary Reference
-
-- **Best Practices:** `docs/architecture/ansible-best-practices.md` - Comprehensive guide to all standards
-
-## Quick Reference Files
+## Reference Files
 
 - Role structure: `cc/common/references/role-structure.md`
 - FQCN modules: `cc/common/references/fqcn.md`

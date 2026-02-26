@@ -1,8 +1,0 @@
----
-# Handlers for sample role
-
-- name: restart application
-  ansible.builtin.service:
-    name: "{{ app_service }}"
-    state: restarted
-  become: true

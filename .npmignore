@@ -1,35 +1,7 @@
-# Source files (dist is published, not src)
-src/
-*.ts
-!*.d.ts
-
-# Development configuration
-.planning/
-tsup.config.ts
-biome.json
-bun.lockb
-bun.lock
-*.config.ts
-*.config.js
-
-# Test files
-*.test.ts
-__tests__/
-__test-utils__/
-coverage/
-
-# Documentation (build docs separately if needed)
-docs/
-
-# IDE and OS
-.vscode/
-.idea/
-.DS_Store
-
-# Git
+.claude/
 .git/
 .gitignore
-
-# Temporary files
-*.log
-tmp/
+.DS_Store
+biome.json
+node_modules/
+docs/

@@ -559,11 +559,7 @@ def test_config_file_exists(host):
 
 <references>
 
-## Primary Reference
-
-- **Best Practices:** `docs/architecture/ansible-best-practices.md` - Comprehensive guide to all standards
-
-## Quick Reference Files
+## Reference Files
 
 - Molecule testing: `cc/common/references/molecule.md`
 - Role structure: `cc/common/references/role-structure.md`

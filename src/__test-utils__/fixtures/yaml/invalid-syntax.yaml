@@ -1,5 +1,0 @@
----
-- name: Bad task
-  apt:
-    name: nginx
-    state: [unclosed

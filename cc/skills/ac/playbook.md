@@ -14,6 +14,26 @@ allowed-tools:
 
 Generate production-ready playbooks with multi-play structure, group variables, and inventory templates using specialized agents.
 
+## CRITICAL: Agent Usage Required
+
+**YOU MUST use the Task tool to invoke specialized agents.** Do NOT generate playbook files directly with Write tool. The agents provide validated, production-ready output.
+
+```
+╔═══════════════════════════════════════════════════════════════════════╗
+║  MANDATORY: Use Task tool with subagent_type parameter                ║
+║                                                                       ║
+║  You MUST call the Task tool like this:                               ║
+║                                                                       ║
+║  Task tool parameters:                                                ║
+║    subagent_type: "ac-planner"     (or ac-generator, etc.)            ║
+║    description: "Plan LAMP playbook"  (short 3-5 word description)    ║
+║    prompt: "Generate a playbook plan for..."  (full instructions)     ║
+║                                                                       ║
+║  DO NOT skip agents. DO NOT use Write tool directly for playbook      ║
+║  files.                                                               ║
+╚═══════════════════════════════════════════════════════════════════════╝
+```
+
 ## Workflow Overview
 
 ```
@@ -172,6 +192,10 @@ Use AskUserQuestion for approval with these options:
 
 **Important:** The "Other" option is always available, allowing users to type specific modifications directly. Treat any non-"Yes" response as a modification request.
 
+### When User Approves ("Yes, generate the playbook")
+
+Your NEXT response after approval MUST contain exactly 1 Task tool call to ac-generator (Step 4). Do NOT use Write, Edit, or Bash to create any playbook files. The generator loads reference files, validates FQCN usage, and applies idempotency patterns that writing directly would skip. Proceed immediately to Step 4.
+
 ### CRITICAL: Modification Loop
 
 **When user selects "Modify" or provides modification text:**
@@ -199,7 +223,9 @@ Task(ac-planner):
 
 This loop ensures the user can iteratively refine the plan before any code is generated.
 
-## Step 4: Generate Files
+## Step 4: Generate Files ⚠️ AGENT REQUIRED
+
+**STOP — DO NOT use Write tool here.** Pass the plan to ac-generator below. It handles file creation. Using Write directly skips FQCN validation, idempotency patterns, and reference loading that the agent performs.
 
 After approval, invoke the generator agent:
 

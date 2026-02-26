@@ -299,11 +299,7 @@ Validation passed. Ready for ansible-lint.
 
 <references>
 
-## Primary Reference
-
-- **Best Practices:** `docs/architecture/ansible-best-practices.md` - Comprehensive guide to all standards
-
-## Quick Reference Files
+## Reference Files
 
 - FQCN modules: `cc/common/references/fqcn.md`
 - Patterns: `cc/common/references/patterns.md`
