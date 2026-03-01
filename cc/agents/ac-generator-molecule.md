@@ -25,7 +25,7 @@ You are spawned in PARALLEL with other generators by the `/ac:role` skill.
 - handlers/*.yml → ac-generator-core
 - meta/*.yml → ac-generator-core
 - tasks/*.yml → ac-generator-tasks
-- templates/*.j2 → ac-generator-templates
+- templates/*.j2 → ac-generator-core
 </role>
 
 <molecule_config>

@@ -65,12 +65,10 @@ node cc/scripts/install-skills.mjs --force      # Force overwrite existing files
 | `ac-researcher` | Research docs, features, best practices, and implementation details |
 | `ac-planner` | Synthesize structured plans from all inputs |
 | `ac-generator` | Generate playbook files from plans |
-| `ac-generator-core` | Generate role core files (defaults, vars, handlers, meta, README) |
+| `ac-generator-core` | Generate role core files (defaults, vars, handlers, meta, README) and templates (templates/*.j2) |
 | `ac-generator-tasks` | Generate role task files (tasks/*.yml) |
-| `ac-generator-templates` | Generate role templates (templates/*.j2) |
 | `ac-generator-molecule` | Generate Molecule test files |
-| `ac-validator` | Static validation (YAML, FQCN, idempotency) |
-| `ac-linter` | Run ansible-lint and parse results |
+| `ac-validator` | Static validation (YAML, FQCN, idempotency) + ansible-lint execution |
 | `ac-fixer` | Auto-fix lint violations |
 
 ## References

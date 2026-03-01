@@ -36,12 +36,10 @@ cc/
 │   ├── ac-researcher.md            # Research docs, features, and implementation
 │   ├── ac-planner.md               # Synthesizes role/playbook plans
 │   ├── ac-generator.md             # Generates playbook files
-│   ├── ac-generator-core.md        # Generates role core files
+│   ├── ac-generator-core.md        # Generates role core files + templates
 │   ├── ac-generator-tasks.md       # Generates role task files
-│   ├── ac-generator-templates.md   # Generates role templates
 │   ├── ac-generator-molecule.md    # Generates Molecule tests
-│   ├── ac-validator.md             # Static code validation
-│   ├── ac-linter.md                # Runs ansible-lint
+│   ├── ac-validator.md             # Static validation + ansible-lint
 │   └── ac-fixer.md                 # Auto-fixes lint violations
 ├── common/
 │   └── references/                 # Shared reference documentation
@@ -88,18 +86,19 @@ Skills are user-invocable slash commands that orchestrate agents to complete tas
                                                                 ↓
                                                      ac-planner (opus) → User Approval
                                                                 ↓
-         ┌──────────────────┬─────────────────┬──────────────────┐
-         ↓                  ↓                 ↓                  ↓
-  ac-generator-core  ac-generator-tasks  ac-generator-templates  ac-generator-molecule
-         │                  │                 │                  │
-         └──────────────────┴─────────────────┴──────────────────┘
+         ┌──────────────────────┬─────────────────┬──────────────────┐
+         ↓                      ↓                 ↓
+  ac-generator-core+templates  ac-generator-tasks  ac-generator-molecule
+         │                      │                 │
+         └──────────────────────┴─────────────────┘
                                               ↓
-                              ac-validator + ac-linter (parallel)
+                                        ac-validator
+                              (static checks + ansible-lint)
                                               ↓
                                     ac-fixer (if needed)
 ```
 
-Agent calls: **7-9** (1 researcher + 1 planner + 4 generators + 2 validators + conditional fixer)
+Agent calls: **6-8** (1 researcher + 1 planner + 3 generators + 1 validator + conditional fixer)
 
 ### Playbook Generation Workflow
 
@@ -108,7 +107,8 @@ Agent calls: **7-9** (1 researcher + 1 planner + 4 generators + 2 validators + c
                                                   ↓
                                             ac-generator
                                                   ↓
-                              ac-validator + ac-linter (parallel)
+                                          ac-validator
+                                (static checks + ansible-lint)
                                                   ↓
                                         ac-fixer (if needed)
 ```
@@ -122,12 +122,10 @@ Agents are specialized workers invoked via the Task tool with `subagent_type`.
 | `ac-researcher` | Research docs, features, best practices, implementation | Read, Grep, Glob, WebSearch, Context7 |
 | `ac-planner` | Synthesize plans from all inputs | Read |
 | `ac-generator` | Generate playbook files from plans | Read, Write, Grep, Glob |
-| `ac-generator-core` | Generate role core files (defaults, vars, handlers, meta, README) | Read, Write, Grep, Glob |
+| `ac-generator-core` | Generate role core files (defaults, vars, handlers, meta, README) and templates (templates/*.j2) | Read, Write, Grep, Glob |
 | `ac-generator-tasks` | Generate role task files (tasks/*.yml) | Read, Write, Grep, Glob |
-| `ac-generator-templates` | Generate role templates (templates/*.j2) | Read, Write, Grep, Glob |
 | `ac-generator-molecule` | Generate Molecule test files (molecule/**/*) | Read, Write, Grep, Glob |
-| `ac-validator` | Static validation (YAML, FQCN, idempotency) | Read, Grep, Glob |
-| `ac-linter` | Run ansible-lint and parse results | Read, Bash, Grep, Glob |
+| `ac-validator` | Static validation (YAML, FQCN, idempotency) + ansible-lint execution | Read, Bash, Grep, Glob |
 | `ac-fixer` | Auto-fix lint violations | Read, Edit, Grep, Glob |
 
 ### Agent Invocation Example

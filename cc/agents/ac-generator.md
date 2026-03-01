@@ -18,7 +18,7 @@ Your job: Generate all files specified in the approved plan. Every file must be 
 **Core responsibilities:**
 - Create directory structure (Galaxy-standard)
 - Generate all YAML files with proper formatting
-- Generate Jinja2 templates
+- Generate Jinja2 templates (for playbooks)
 - Generate README documentation
 - Generate Molecule tests (if in plan)
 - Use FQCN for all modules
@@ -246,11 +246,7 @@ Generate install.yml, configure.yml, service.yml based on plan.
   listen: Reload role_name
 ```
 
-## Step 7: Generate Templates
-
-Create .j2 files with Jinja2 templating for configuration files.
-
-## Step 8: Generate meta/main.yml
+## Step 7: Generate meta/main.yml
 
 ```yaml
 ---
@@ -276,7 +272,7 @@ galaxy_info:
 dependencies: []
 ```
 
-## Step 9: Generate README.md
+## Step 8: Generate README.md
 
 Standard Galaxy README with:
 - Description
@@ -286,7 +282,7 @@ Standard Galaxy README with:
 - Example Playbook
 - License and Author
 
-## Step 10: Generate Molecule Tests (if in plan)
+## Step 9: Generate Molecule Tests (if in plan)
 
 Create molecule/default/ with:
 - molecule.yml

@@ -105,7 +105,6 @@ Skills (slash commands) orchestrate Agents (specialized workers)
 that reference shared documentation (references).
 
 /ac:role  ──→  ac-planner  ──→  ac-generator-*  ──→  ac-validator
-                                                       ac-linter
                                                        ac-fixer
 ```
 

@@ -46,13 +46,13 @@ Step 5:  [Optional] Task(ac-researcher) — deeper dive on selected features
 Step 6:  Read reference files           — direct Read, no agent
 Step 7:  Task(ac-planner)              — synthesis (receives research + refs)
 Step 8:  Plan Approval Loop             — approve/modify/cancel
-Step 9:  4x generators in parallel      — core/tasks/templates/molecule
-Step 10: ac-validator + ac-linter       — parallel validation
+Step 9:  3x generators in parallel      — core+templates/tasks/molecule
+Step 10: ac-validator                   — static checks + ansible-lint
 Step 11: ac-fixer (conditional)         — only if violations found
 Step 12: Final report                   — no agent
 ```
 
-**Agent calls: 7-9** (1 researcher + 1 planner + 4 generators + 2 validators + conditional fixer)
+**Agent calls: 6-8** (1 researcher + 1 planner + 3 generators + 1 validator + conditional fixer)
 
 ## Step 1: Research Phase (Single Agent)
 
@@ -287,7 +287,7 @@ Use AskUserQuestion for approval with these options:
 
 ### When User Approves ("Yes, generate the role")
 
-Your NEXT response after approval MUST contain exactly 4 Task tool calls to the generator agents (Step 9). Do NOT use Write, Edit, or Bash to create any role files. The generators load reference files, validate FQCN usage, and apply idempotency patterns that writing directly would skip. Proceed immediately to Step 9.
+Your NEXT response after approval MUST contain exactly 3 Task tool calls to the generator agents (Step 9). Do NOT use Write, Edit, or Bash to create any role files. The generators load reference files, validate FQCN usage, and apply idempotency patterns that writing directly would skip. Proceed immediately to Step 9.
 
 ### CRITICAL: Modification Loop
 
@@ -312,26 +312,21 @@ Your NEXT response after approval MUST contain exactly 4 Task tool calls to the 
 
 ## Step 9: Generate Files ⚠️ AGENTS REQUIRED (Parallel)
 
-**STOP — DO NOT use Write tool here.** Pass the plan to the 4 generator agents below.
+**STOP — DO NOT use Write tool here.** Pass the plan to the 3 generator agents below.
 
-After approval, **invoke 4 Task tool calls in PARALLEL**:
+After approval, **invoke 3 Task tool calls in PARALLEL**:
 
 ```json
 [
   {
     "subagent_type": "ac-generator-core",
     "description": "Generate [role_name] core files",
-    "prompt": "Generate core role files based on this approved plan:\n\n[Full plan from ac-planner]\n\nOutput directory: roles/[role_name]/\n\nYour scope: defaults/main.yml, vars/main.yml, handlers/main.yml, meta/main.yml, README.md"
+    "prompt": "Generate core role files and templates based on this approved plan:\n\n[Full plan from ac-planner]\n\nOutput directory: roles/[role_name]/\n\nYour scope: defaults/main.yml, vars/main.yml, handlers/main.yml, meta/main.yml, README.md, templates/*.j2"
   },
   {
     "subagent_type": "ac-generator-tasks",
     "description": "Generate [role_name] task files",
     "prompt": "Generate task files based on this approved plan:\n\n[Full plan from ac-planner]\n\nOutput directory: roles/[role_name]/\n\nYour scope: tasks/main.yml, tasks/validate_params.yml, tasks/install.yml, tasks/configure.yml, tasks/service.yml, tasks/validate.yml, and any additional task files from plan"
-  },
-  {
-    "subagent_type": "ac-generator-templates",
-    "description": "Generate [role_name] templates",
-    "prompt": "Generate template files based on this approved plan:\n\n[Full plan from ac-planner]\n\nOutput directory: roles/[role_name]/\n\nYour scope: templates/*.j2 (all Jinja2 templates)"
   },
   {
     "subagent_type": "ac-generator-molecule",
@@ -341,23 +336,16 @@ After approval, **invoke 4 Task tool calls in PARALLEL**:
 ]
 ```
 
-## Steps 10-11: Validation ⚠️ AGENTS REQUIRED (Parallel)
+## Step 10: Validation ⚠️ AGENT REQUIRED
 
-Run validator and linter **in parallel**:
+Run combined validation (static checks + ansible-lint):
 
 ```json
-[
-  {
-    "subagent_type": "ac-validator",
-    "description": "Validate [role_name] role",
-    "prompt": "Validate role at: roles/[role_name]/\n\nCheck: YAML syntax, FQCN compliance, idempotency patterns, variable naming.\n\nReturn validation report with file:line references."
-  },
-  {
-    "subagent_type": "ac-linter",
-    "description": "Lint [role_name] role",
-    "prompt": "Run ansible-lint on: roles/[role_name]/\n\nExecute: ansible-lint roles/[role_name]/\n\nParse and return: errors, warnings, auto-fixable issues, fix suggestions."
-  }
-]
+{
+  "subagent_type": "ac-validator",
+  "description": "Validate [role_name] role",
+  "prompt": "Validate role at: roles/[role_name]/\n\nPhase 1: Static checks — YAML syntax, FQCN compliance, idempotency patterns, variable naming.\nPhase 2: Run ansible-lint — execute `ansible-lint roles/[role_name]/`, parse violations.\n\nReturn combined validation report with file:line references, auto-fixable issues, and fix suggestions."
+}
 ```
 
 ## Step 11: Auto-Fix ⚠️ AGENT REQUIRED (If Needed)
@@ -368,7 +356,7 @@ If violations found, **invoke ac-fixer**:
 {
   "subagent_type": "ac-fixer",
   "description": "Fix [role_name] violations",
-  "prompt": "Apply fixes for these violations:\n\n[Violations from ac-validator and ac-linter]\n\nRole path: roles/[role_name]/\n\nApply auto-fixes and report what was fixed vs requires manual intervention."
+  "prompt": "Apply fixes for these violations:\n\n[Violations from ac-validator]\n\nRole path: roles/[role_name]/\n\nApply auto-fixes and report what was fixed vs requires manual intervention."
 }
 ```
 
@@ -563,12 +551,10 @@ win_service:
 |-------|---------|-----------------|
 | ac-researcher | Research docs, features, implementation details | Read, Grep, Glob, WebSearch, Context7 |
 | ac-planner | Synthesize role plan from all inputs | Read |
-| ac-generator-core | Core files: defaults, vars, handlers, meta, README | Read, Write, Grep, Glob |
+| ac-generator-core | Core files + templates: defaults, vars, handlers, meta, README, templates/*.j2 | Read, Write, Grep, Glob |
 | ac-generator-tasks | Task files: tasks/*.yml | Read, Write, Grep, Glob |
-| ac-generator-templates | Template files: templates/*.j2 | Read, Write, Grep, Glob |
 | ac-generator-molecule | Molecule tests: molecule/**/* | Read, Write, Grep, Glob |
-| ac-validator | Static code validation | Read, Grep, Glob |
-| ac-linter | Run ansible-lint | Read, Bash, Grep, Glob |
+| ac-validator | Static validation + ansible-lint | Read, Bash, Grep, Glob |
 | ac-fixer | Apply lint auto-fixes | Read, Edit, Grep, Glob |
 
 ## Reference Files

@@ -368,7 +368,7 @@ function main() {
           );
         }
         if (agentCount > 0) {
-          console.log('Agents: ac-planner, ac-generator, ac-validator, ac-linter, ac-fixer');
+          console.log('Agents: ac-planner, ac-generator, ac-validator, ac-fixer');
         }
       }
     }

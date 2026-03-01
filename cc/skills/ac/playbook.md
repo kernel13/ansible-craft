@@ -46,10 +46,9 @@ Step 3: Display plan → User approval (this skill)
         └── "No" → Cancel generation
 
 Step 4: Task(ac-generator) → Generate playbook files
-Step 5: Task(ac-validator) → Validate code (parallel)
-Step 6: Task(ac-linter) → Run ansible-lint (parallel)
-Step 7: Task(ac-fixer) → Auto-fix violations (if any)
-Step 8: Display results → Show file tree (this skill)
+Step 5: Task(ac-validator) → Validate code + run ansible-lint
+Step 6: Task(ac-fixer) → Auto-fix violations (if any)
+Step 7: Display results → Show file tree (this skill)
 ```
 
 ## Step 1: Requirements Gathering
@@ -251,37 +250,30 @@ Task(ac-generator):
     - cc/common/references/patterns.md
 ```
 
-## Step 5-6: Validation (Parallel)
+## Step 5: Validation
 
-Run validator and linter in parallel:
+Run combined validation (static checks + ansible-lint):
 
 ```
 Task(ac-validator):
   prompt: |
     Validate the generated playbook at: [playbook_name]/
 
-    Check for:
+    Phase 1: Static checks —
     - YAML syntax
     - FQCN compliance
     - Idempotency patterns
     - Variable references valid
 
-    Return validation report with file:line references.
-
-Task(ac-linter):
-  prompt: |
-    Run ansible-lint on: [playbook_name]/playbook.yml
-
+    Phase 2: Run ansible-lint —
     Execute: ansible-lint [playbook_name]/playbook.yml
+    Parse violations into structured format.
 
-    Parse output and return:
-    - Errors (blocking)
-    - Warnings (non-blocking)
-    - Auto-fixable issues
-    - Fix suggestions
+    Return combined validation report with file:line references,
+    auto-fixable issues, and fix suggestions.
 ```
 
-## Step 7: Auto-Fix
+## Step 6: Auto-Fix
 
 If violations found, invoke the fixer agent:
 
@@ -290,7 +282,7 @@ Task(ac-fixer):
   prompt: |
     Apply fixes for these violations:
 
-    [Violations from ac-validator and ac-linter]
+    [Violations from ac-validator]
 
     Playbook path: [playbook_name]/
 
@@ -301,7 +293,7 @@ Task(ac-fixer):
     Apply auto-fixes and report results.
 ```
 
-## Step 8: Final Report
+## Step 7: Final Report
 
 Display final results:
 
@@ -406,8 +398,7 @@ See [role/references/patterns.md](role/references/patterns.md) for complete patt
 |-------|---------|-------|
 | ac-planner | Generate playbook plan | Read, Grep, Glob, WebSearch |
 | ac-generator | Create playbook files | Read, Write, Grep, Glob |
-| ac-validator | Static validation | Read, Grep, Glob |
-| ac-linter | Run ansible-lint | Read, Bash, Grep |
+| ac-validator | Static validation + ansible-lint | Read, Bash, Grep, Glob |
 | ac-fixer | Apply auto-fixes | Read, Edit, Grep |
 
 ## References
