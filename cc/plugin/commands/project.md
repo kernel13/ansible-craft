@@ -1,11 +1,11 @@
 ---
-name: ac:project
 description: Create Ansible project directory structures following official best practices. Use when user asks to create, scaffold, or initialize an Ansible project. Triggers on "create a project", "ansible project structure", "scaffold ansible project". Template-based approach - no AI generation required.
 allowed-tools:
   - AskUserQuestion
   - Read
   - Write
   - Bash
+argument-hint: "[project name or description]"
 ---
 
 # Ansible Project Structure Generator

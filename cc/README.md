@@ -4,7 +4,7 @@ This directory contains all Claude Code integration files for ansible-craft. The
 
 ## Installation
 
-Install skills and agents using the installer script:
+Install commands and agents using the installer script:
 
 ```bash
 # Install to ~/.claude/ (global - recommended)
@@ -25,7 +25,7 @@ npm run install-skills:project
 ```
 
 After installation:
-- Skills are available as `/ac:role`, `/ac:playbook`, `/ac:explain`, `/ac:fix`, `/ac:project`, `/ac:collection`
+- Commands are available as `/ac:role`, `/ac:playbook`, `/ac:explain`, `/ac:fix`, `/ac:project`, `/ac:collection`
 - Agents are available for Task tool invocation with `subagent_type: "ac-*"`
 
 ## Directory Structure
@@ -52,21 +52,21 @@ cc/
 │       ├── project-structure.md    # Ansible project structure
 │       ├── collection-structure.md # Collection structure
 │       └── research-sources.md     # Research source URLs
-├── scripts/
-│   └── install-skills.mjs          # Installation script
-└── skills/
-    └── ac/                         # Slash command definitions
-        ├── role.md                 # /ac:role command
-        ├── playbook.md             # /ac:playbook command
-        ├── project.md              # /ac:project command
-        ├── collection.md           # /ac:collection command
-        ├── explain.md              # /ac:explain command
-        └── fix.md                  # /ac:fix command
+├── plugin/                         # Claude Code integration
+│   └── commands/                   # Slash command definitions (→ ~/.claude/commands/ac/)
+│       ├── role.md                 # /ac:role command
+│       ├── playbook.md             # /ac:playbook command
+│       ├── project.md              # /ac:project command
+│       ├── collection.md           # /ac:collection command
+│       ├── explain.md              # /ac:explain command
+│       └── fix.md                  # /ac:fix command
+└── scripts/
+    └── install-skills.mjs          # Installation script
 ```
 
-## Skills (Slash Commands)
+## Commands (Slash Commands)
 
-Skills are user-invocable slash commands that orchestrate agents to complete tasks.
+Commands are user-invocable slash commands that orchestrate agents to complete tasks.
 
 | Command | Description | Use Case |
 |---------|-------------|----------|
@@ -159,17 +159,17 @@ Reference documents provide shared knowledge for agents. Agents read these files
 
 ## Development
 
-### Adding a New Skill
+### Adding a New Command
 
-1. Create a markdown file in `cc/skills/ac/` with YAML frontmatter:
+1. Create a markdown file in `cc/plugin/commands/` with YAML frontmatter:
    ```yaml
    ---
-   name: ac:new-skill
-   description: What this skill does
+   description: What this command does
    allowed-tools:
      - Task
      - Read
      # ... other tools
+   argument-hint: "[description of arguments]"
    ---
    ```
 
@@ -204,6 +204,6 @@ Reference documents provide shared knowledge for agents. Agents read these files
 
 ### File Naming Conventions
 
-- **Skills**: `cc/skills/ac/{name}.md` -> becomes `/ac:{name}` command
+- **Commands**: `cc/plugin/commands/{name}.md` -> becomes `/ac:{name}` slash command
 - **Agents**: `cc/agents/ac-{name}.md` -> becomes `ac-{name}` subagent_type
 - **References**: `cc/common/references/{topic}.md` -> descriptive topic name

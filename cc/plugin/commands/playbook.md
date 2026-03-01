@@ -1,5 +1,4 @@
 ---
-name: ac:playbook
 description: Generate production-ready Ansible playbooks from natural language descriptions. Use when user asks to create a playbook, deploy stack, configure multiple hosts, or orchestrate tasks. Triggers on "playbook to deploy", "configure servers", "deploy LAMP/LEMP stack", "set up cluster".
 allowed-tools:
   - Task
@@ -8,6 +7,7 @@ allowed-tools:
   - Glob
   - Grep
   - Bash
+argument-hint: "[playbook description]"
 ---
 
 # Ansible Playbook Generator

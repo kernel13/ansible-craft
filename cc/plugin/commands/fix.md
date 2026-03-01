@@ -1,6 +1,6 @@
 ---
-name: ac:fix
 description: Diagnose and fix Ansible errors
+argument-hint: "[error message or file path]"
 ---
 
 # Ansible Error Fixer

@@ -1,9 +1,12 @@
 #!/usr/bin/env node
 /**
- * Skill and agent installer for Claude Code integration.
+ * Command and agent installer for Claude Code integration.
  *
- * Copies ansible-craft skills to Claude Code skills directory
- * and agents to the agents directory.
+ * Copies ansible-craft commands to ~/.claude/commands/ac/
+ * and agents to ~/.claude/agents/.
+ *
+ * Commands in ~/.claude/commands/ac/ are discovered as /ac:<name>
+ * (subdirectory name provides the namespace).
  *
  * Usage:
  *   node cc/scripts/install-skills.mjs [--global|--project]
@@ -15,7 +18,15 @@
  *   --quiet    Suppress output (for postinstall script)
  */
 
-import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -24,24 +35,24 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 /**
- * Get the skills source directory (bundled with package).
- * Skills are stored in skills/ac/ subdirectory.
+ * Get the commands source directory (bundled with package).
+ * Commands are stored in plugin/commands/ subdirectory.
  */
-function getSkillsSourceDir() {
-  // Look for skills/ac/ relative to this script's directory
-  // scripts/install-skills.mjs -> ../skills/ac/
-  const fromScript = resolve(__dirname, '..', 'skills', 'ac');
+function getCommandsSourceDir() {
+  // Look for plugin/commands/ relative to this script's directory
+  // scripts/install-skills.mjs -> ../plugin/commands/
+  const fromScript = resolve(__dirname, '..', 'plugin', 'commands');
   if (existsSync(fromScript)) {
     return fromScript;
   }
 
   // Fallback: look relative to cwd (for development)
-  const fromCwd = resolve(process.cwd(), 'skills', 'ac');
+  const fromCwd = resolve(process.cwd(), 'cc', 'plugin', 'commands');
   if (existsSync(fromCwd)) {
     return fromCwd;
   }
 
-  throw new Error('Could not find skills directory');
+  throw new Error('Could not find commands directory');
 }
 
 /**
@@ -56,7 +67,7 @@ function getAgentsSourceDir() {
   }
 
   // Fallback: look relative to cwd (for development)
-  const fromCwd = resolve(process.cwd(), 'agents');
+  const fromCwd = resolve(process.cwd(), 'cc', 'agents');
   if (existsSync(fromCwd)) {
     return fromCwd;
   }
@@ -66,14 +77,15 @@ function getAgentsSourceDir() {
 }
 
 /**
- * Get the target directory for skill installation.
- * Claude Code uses ~/.claude/skills/[namespace]/ for slash commands.
+ * Get the target directory for command installation.
+ * Claude Code discovers commands from ~/.claude/commands/<namespace>/.
+ * Subdirectory name creates the namespace: ac/ → /ac:<command>.
  */
-function getSkillsTargetDir(options) {
+function getCommandsTargetDir(options) {
   if (options.project) {
-    return resolve(process.cwd(), '.claude', 'skills', 'ac');
+    return resolve(process.cwd(), '.claude', 'commands', 'ac');
   }
-  return join(homedir(), '.claude', 'skills', 'ac');
+  return join(homedir(), '.claude', 'commands', 'ac');
 }
 
 /**
@@ -88,8 +100,8 @@ function getAgentsTargetDir(options) {
 }
 
 /**
- * Recursively list all markdown files in a directory.
- * Returns relative paths from sourceDir (e.g., 'role.md', 'role/references/fqcn.md').
+ * Recursively list markdown files in a directory.
+ * Returns relative paths from sourceDir.
  */
 function listMarkdownFiles(sourceDir, subDir = '') {
   const files = [];
@@ -106,10 +118,8 @@ function listMarkdownFiles(sourceDir, subDir = '') {
         const stat = statSync(entryPath);
 
         if (stat.isDirectory()) {
-          // Recursively get files from subdirectory
           files.push(...listMarkdownFiles(sourceDir, relativePath));
         } else if (entry.endsWith('.md')) {
-          // Add .md files with their relative path
           files.push(relativePath);
         }
       } catch {
@@ -141,7 +151,7 @@ function installFiles(sourceDir, targetDir, files, options) {
       mkdirSync(targetDir, { recursive: true });
     }
 
-    // Copy each file (including files in subdirectories)
+    // Copy each file
     for (const file of files) {
       const sourcePath = join(sourceDir, file);
       const targetPath = join(targetDir, file);
@@ -195,9 +205,86 @@ function installFiles(sourceDir, targetDir, files, options) {
 }
 
 /**
- * Install skills to the target directory.
+ * Remove stale files from previous install approaches.
+ * Cleans up ~/.claude/skills/ac/ and broken plugin cache entries.
  */
-function installSkills(options = {}) {
+function cleanupOldInstalls(options) {
+  const cleaned = [];
+
+  const dirs = options.project
+    ? [resolve(process.cwd(), '.claude', 'skills', 'ac')]
+    : [
+        join(homedir(), '.claude', 'skills', 'ac'),
+        join(homedir(), '.claude', 'plugins', 'cache', 'local', 'ansible-craft'),
+        join(homedir(), '.claude', 'plugins', 'cache', 'local', 'ac'),
+      ];
+
+  for (const dir of dirs) {
+    if (existsSync(dir)) {
+      try {
+        rmSync(dir, { recursive: true, force: true });
+        cleaned.push(dir);
+      } catch {
+        // Ignore cleanup errors
+      }
+    }
+  }
+
+  // Clean up stale plugin registry entries
+  cleanupPluginRegistry(options);
+
+  return cleaned.length > 0 ? cleaned : null;
+}
+
+/**
+ * Remove stale ac@local / ansible-craft@local entries from plugin registry files.
+ */
+function cleanupPluginRegistry(options) {
+  // Clean installed_plugins.json
+  const pluginsPath = options.project
+    ? resolve(process.cwd(), '.claude', 'plugins', 'installed_plugins.json')
+    : join(homedir(), '.claude', 'plugins', 'installed_plugins.json');
+
+  if (existsSync(pluginsPath)) {
+    try {
+      const data = JSON.parse(readFileSync(pluginsPath, 'utf-8'));
+      if (data.plugins) {
+        const { 'ac@local': _a, 'ansible-craft@local': _b, ...cleanPlugins } = data.plugins;
+        data.plugins = cleanPlugins;
+        writeFileSync(pluginsPath, `${JSON.stringify(data, null, 2)}\n`, 'utf-8');
+      }
+    } catch {
+      // Ignore parse errors
+    }
+  }
+
+  // Clean settings.json enabledPlugins
+  const settingsPath = options.project
+    ? resolve(process.cwd(), '.claude', 'settings.json')
+    : join(homedir(), '.claude', 'settings.json');
+
+  if (existsSync(settingsPath)) {
+    try {
+      const settings = JSON.parse(readFileSync(settingsPath, 'utf-8'));
+      if (settings.enabledPlugins) {
+        const {
+          'ac@local': _c,
+          'ansible-craft@local': _d,
+          ...cleanEnabled
+        } = settings.enabledPlugins;
+        settings.enabledPlugins = cleanEnabled;
+        writeFileSync(settingsPath, `${JSON.stringify(settings, null, 2)}\n`, 'utf-8');
+      }
+    } catch {
+      // Ignore parse errors
+    }
+  }
+}
+
+/**
+ * Install commands to the target directory.
+ */
+function installCommands(options = {}) {
   const result = {
     success: true,
     installed: [],
@@ -207,18 +294,18 @@ function installSkills(options = {}) {
   };
 
   try {
-    const sourceDir = getSkillsSourceDir();
-    const targetDir = getSkillsTargetDir(options);
+    const sourceDir = getCommandsSourceDir();
+    const targetDir = getCommandsTargetDir(options);
     result.targetDir = targetDir;
 
-    const skillFiles = listMarkdownFiles(sourceDir);
-    if (skillFiles.length === 0) {
-      result.errors.push('No skill files found in source directory');
+    const commandFiles = listMarkdownFiles(sourceDir);
+    if (commandFiles.length === 0) {
+      result.errors.push('No command files found in source directory');
       result.success = false;
       return result;
     }
 
-    return installFiles(sourceDir, targetDir, skillFiles, options);
+    return installFiles(sourceDir, targetDir, commandFiles, options);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     result.errors.push(message);
@@ -271,16 +358,18 @@ function installAgents(options = {}) {
 }
 
 /**
- * Install both skills and agents.
+ * Install commands and agents.
  */
 function installAll(options = {}) {
-  const skills = installSkills(options);
+  const cleanedUp = cleanupOldInstalls(options);
+  const commands = installCommands(options);
   const agents = installAgents(options);
 
   return {
-    skills,
+    commands,
     agents,
-    success: skills.success && agents.success,
+    cleanedUp,
+    success: commands.success && agents.success,
   };
 }
 
@@ -320,10 +409,10 @@ function formatResult(result, label) {
 function formatFullResult(result) {
   const lines = [];
 
-  const skillsOutput = formatResult(result.skills, 'skill');
-  if (skillsOutput) {
-    lines.push('=== Skills ===');
-    lines.push(skillsOutput);
+  const commandsOutput = formatResult(result.commands, 'command');
+  if (commandsOutput) {
+    lines.push('=== Commands ===');
+    lines.push(commandsOutput);
   }
 
   const agentsOutput = formatResult(result.agents, 'agent');
@@ -333,8 +422,15 @@ function formatFullResult(result) {
     lines.push(agentsOutput);
   }
 
+  if (result.cleanedUp) {
+    if (lines.length > 0) lines.push('');
+    for (const dir of result.cleanedUp) {
+      lines.push(`Cleaned up old install: ${dir}`);
+    }
+  }
+
   if (lines.length === 0) {
-    lines.push('No skills or agents to install.');
+    lines.push('No commands or agents to install.');
   }
 
   return lines.join('\n');
@@ -357,14 +453,14 @@ function main() {
     console.log(formatFullResult(result));
 
     if (result.success) {
-      const skillCount = result.skills.installed.length;
+      const commandCount = result.commands.installed.length;
       const agentCount = result.agents.installed.length;
 
-      if (skillCount > 0 || agentCount > 0) {
+      if (commandCount > 0 || agentCount > 0) {
         console.log('\nClaude Code integration installed successfully!');
-        if (skillCount > 0) {
+        if (commandCount > 0) {
           console.log(
-            'Skills: /ac:role, /ac:playbook, /ac:explain, /ac:fix, /ac:project, /ac:collection',
+            'Commands: /ac:role, /ac:playbook, /ac:explain, /ac:fix, /ac:project, /ac:collection',
           );
         }
         if (agentCount > 0) {

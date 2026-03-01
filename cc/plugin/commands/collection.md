@@ -1,5 +1,4 @@
 ---
-name: ac:collection
 description: Generate Ansible collections with plugins, roles, and tests. Use when user asks to create or generate an Ansible collection. Triggers on "create a collection", "ansible collection for", "collection to package".
 allowed-tools:
   - AskUserQuestion
@@ -8,6 +7,7 @@ allowed-tools:
   - Bash
   - Grep
   - Glob
+argument-hint: "[collection description]"
 ---
 
 # Ansible Collection Generator

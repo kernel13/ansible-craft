@@ -1,6 +1,6 @@
 ---
-name: ac:explain
 description: Explain existing Ansible code in plain English
+argument-hint: "[file or directory path]"
 ---
 
 # Ansible Code Explainer

@@ -23,7 +23,7 @@ ansible-craft provides slash commands and specialized agents for [Claude Code](h
 npm install -g ansible-craft
 ```
 
-Skills and agents are automatically installed to `~/.claude/` via the postinstall hook.
+Commands and agents are automatically installed to `~/.claude/` via the postinstall hook.
 
 ### Manual install from repository
 
@@ -39,7 +39,7 @@ node cc/scripts/install-skills.mjs
 node cc/scripts/install-skills.mjs --project
 ```
 
-This installs skills to `./.claude/commands/ac/` and agents to `./.claude/agents/` in the current directory.
+This installs commands to `./.claude/commands/ac/` and agents to `./.claude/agents/` in the current directory.
 
 ## Usage
 
@@ -108,7 +108,7 @@ that reference shared documentation (references).
                                                        ac-fixer
 ```
 
-- **Skills** (`cc/skills/ac/`) - User-facing slash commands that define workflows
+- **Commands** (`cc/plugin/commands/`) - User-facing slash commands that define workflows
 - **Agents** (`cc/agents/`) - Specialized workers invoked via Claude Code's Task tool
 - **References** (`cc/common/references/`) - Shared Ansible knowledge (FQCN mappings, patterns, structure guides)
 

@@ -4,7 +4,7 @@
   "description": "Claude Code skills for generating production-ready Ansible roles and playbooks",
   "type": "module",
   "files": [
-    "cc/skills",
+    "cc/plugin",
     "cc/agents",
     "cc/common",
     "cc/scripts/install-skills.mjs",

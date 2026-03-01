@@ -1,5 +1,4 @@
 ---
-name: ac:role
 description: Generate production-ready Ansible roles from natural language descriptions. Use when user asks to create, generate, or build an Ansible role. Triggers on "create a role for", "ansible role that", "role to install/configure". Covers 10 topics through interactive questions with sensible defaults.
 allowed-tools:
   - Task
@@ -8,6 +7,7 @@ allowed-tools:
   - Glob
   - Grep
   - Bash
+argument-hint: "[role description]"
 ---
 
 # Ansible Role Generator
