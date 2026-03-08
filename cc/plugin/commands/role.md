@@ -392,11 +392,70 @@ mkdir -p roles/[role_name]/{defaults,vars,tasks,handlers,templates,files,meta,mo
 
 These rules are **mandatory** for all generated files:
 
+### Task Comment Rules
+
+Every task file **must** be commented at two levels:
+
+**1. File header** — first line after `---`, explains the file's purpose:
+```yaml
+---
+# tasks/install.yml
+# Installs the [service] package on Debian and RedHat families.
+# Notifies the restart handler so the service picks up any version change.
+```
+
+**2. Logical group comments** — a blank line + comment before each group of related tasks:
+```yaml
+# --- Package installation ---
+- name: Install nginx package
+  ...
+
+# --- Pin version (optional) ---
+# Only runs when role_name_version != "latest"
+- name: Hold nginx package version
+  ...
+```
+
+**Rules:**
+- Every file starts with a 2-line header: filename + one-sentence purpose
+- Group tasks by concern; precede each group with a `# --- Group name ---` comment
+- Add a plain-English comment above any task that is non-obvious: conditional logic, loops, changed_when, notify chains
+- Comments explain *why*, not *what* — bad: `# installs apache`, good: `# Installs apache; notifies restart so config changes take effect immediately`
+- Do NOT comment every single task — only groups and non-obvious ones
+
+**Example — tasks/configure.yml:**
+```yaml
+---
+# tasks/configure.yml
+# Deploys virtual host configurations and manages Apache modules.
+# Runs after install.yml. Triggers reload (not restart) to avoid downtime.
+
+# --- Remove default virtual host ---
+# Prevents the distribution default page from being served alongside custom vhosts.
+- name: Remove default virtual host (Debian)
+  ansible.builtin.file:
+    ...
+
+# --- Deploy virtual host configs ---
+- name: Create document root directories
+  ...
+
+- name: Deploy virtual host configurations
+  ...
+  notify: "reload apache"
+
+# --- Manage modules (Debian only) ---
+# a2enmod/a2dismod are Debian-specific; RedHat uses LoadModule directives in conf files.
+- name: Enable Apache modules
+  ...
+```
+
 ### tasks/main.yml Rules
 - **INCLUDES ONLY** — never inline assertion tasks
 - Include `validate_params.yml` as FIRST task
 - Include `validate.yml` as LAST task
 - Each include uses `ansible.builtin.include_tasks`
+- File header explains the execution order and overall role flow
 
 ### tasks/validate_params.yml Rules
 - **ALWAYS a separate file** — never inline in main.yml
@@ -406,12 +465,14 @@ These rules are **mandatory** for all generated files:
 - Required variables validation
 - Range validation (ports 1-65535)
 - Enum validation (service_state in started/stopped/restarted/reloaded)
+- Group assertions by concern with `# --- Section ---` comments
 
 ### tasks/validate.yml Rules
 - Post-installation verification — runs LAST
 - Service status check (service_facts or win_service_info)
 - Port listening validation (wait_for or win_wait_for)
 - Configuration file existence (stat or win_stat)
+- Group checks by concern with `# --- Section ---` comments
 
 ### FQCN Rules
 - ALL modules must use fully qualified names (from fqcn.md mappings)
