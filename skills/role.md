@@ -1,5 +1,5 @@
 ---
-description: Generate production-ready Ansible roles from natural language descriptions. Use when user asks to create, generate, or build an Ansible role. Triggers on "create a role for", "ansible role that", "role to install/configure". Covers 10 topics through interactive questions with sensible defaults.
+description: Generate production-ready Ansible roles from natural language descriptions. Use when user asks to create, generate or build an Ansible role. It should be called if the user required to update, upgrade or improve an existing Ansible role as well. Triggers on "create a role for", "ansible role that", "role to install/configure", "upgrade that/this roles", "improve this/that role". Covers 10 topics through interactive questions with sensible defaults.
 allowed-tools:
   - AskUserQuestion
   - Read
@@ -57,10 +57,12 @@ ls roles/[role_name]/ 2>/dev/null || ls [role_name]/ 2>/dev/null
    - `meta/main.yml` — extract role metadata (platforms, dependencies)
 
 2. Scan ALL task files and templates to audit variable usage:
+
    ```bash
    # Find all role-prefixed variables used across tasks and templates
    grep -Eoh "[a-z]+_[a-z_]+" roles/[role_name]/tasks/*.yml roles/[role_name]/templates/*.j2 2>/dev/null | sort -u
    ```
+
    - Separate top-level variables (e.g. `apache_port`) from sub-keys of list/dict variables (e.g. `item.serveralias`)
    - Sub-keys of list/dict variables belong as **commented examples** inside the parent variable definition in defaults/main.yml, not as standalone entries
 
@@ -70,6 +72,7 @@ ls roles/[role_name]/ 2>/dev/null || ls [role_name]/ 2>/dev/null
    - List/dict variables whose optional sub-keys are used in templates but not documented in defaults/main.yml → must add commented sub-key examples
 
 4. Display a brief update notice:
+
    ```
    ## Updating existing role: [role_name]
    Found: 10 existing variables, 2 missing from defaults, 3 sub-keys undocumented.
@@ -83,6 +86,7 @@ ls roles/[role_name]/ 2>/dev/null || ls [role_name]/ 2>/dev/null
 **For common software** (nginx, docker, postgresql, apache, mysql, redis, etc.): Skip research — Claude's training + reference files provide sufficient knowledge.
 
 **For uncommon software** (niche tools, new projects, internal apps): Use WebSearch to discover:
+
 - Package names per platform (apt vs dnf vs choco)
 - Configuration file paths
 - Service names
@@ -139,6 +143,7 @@ What would you like to explore? (type topic name or "continue" for defaults)
 When user selects a topic, enter a **focused conversation**:
 
 **Display topic context:**
+
 ```
 Research found 3 SSL approaches:
 - Let's Encrypt (recommended): Auto-renewing, free, requires certbot
@@ -207,6 +212,7 @@ Does this look right?
 **Handle modifications:**
 
 If user types something other than "yes", parse their request:
+
 - "add CentOS support" -> Add RHEL to platforms
 - "skip molecule tests" -> Disable molecule
 - "make SSL optional" -> Add feature toggle variable
@@ -219,16 +225,18 @@ If user types something other than "yes", parse their request:
 Read reference files directly using the Read tool. Lazy load only what's needed:
 
 **Always read:**
-- `cc/common/references/role-structure.md` — Full Galaxy structure
-- `cc/common/references/fqcn.md` — Filter by platform:
+
+- `references/role-structure.md` — Full Galaxy structure
+- `references/fqcn.md` — Filter by platform:
   - Linux-only: include `ansible.builtin.*`, `ansible.posix.*`, skip Windows
   - Windows-only: include `ansible.windows.*`, `chocolatey.*`, skip Linux
   - Multi-platform: include all
-- `cc/common/references/patterns.md` — Idempotency, validation, variable naming
+- `references/patterns.md` — Idempotency, validation, variable naming
 
 **Conditional reads:**
-- If molecule enabled: `cc/common/references/molecule.md`
-- If fixing needed later (Step 10): `cc/common/references/lint-fixes.md`
+
+- If molecule enabled: `references/molecule.md`
+- If fixing needed later (Step 10): `references/lint-fixes.md`
 
 ## Step 6: Generate Plan Inline
 
@@ -237,6 +245,7 @@ Design the role plan directly — do NOT spawn an agent. The plan must include:
 ### Variable Design
 
 **defaults/main.yml** (user-overridable):
+
 ```yaml
 role_name_package_name: "package"
 role_name_version: "latest"
@@ -246,6 +255,7 @@ role_name_service_enabled: true
 ```
 
 **vars/main.yml** (internal):
+
 ```yaml
 role_name_supported_os:
   - Ubuntu
@@ -258,6 +268,7 @@ role_name_packages:
 ```
 
 **When MODE=update**, use the variable gap report from Step 0 to drive the plan:
+
 - List every variable to be added to defaults/main.yml (with its comment and default value)
 - List every list/dict variable whose optional sub-keys need to be added as commented examples
 - Do NOT redesign variables that already exist — only fill the gaps
@@ -265,6 +276,7 @@ role_name_packages:
 ### Task Flow Ordering
 
 Standard sequence for tasks/main.yml (includes only):
+
 1. `validate_params.yml` — Input validation (ALWAYS FIRST)
 2. `install.yml` — Package installation
 3. `configure.yml` — Configuration files
@@ -272,6 +284,7 @@ Standard sequence for tasks/main.yml (includes only):
 5. `validate.yml` — Post-install verification (ALWAYS LAST)
 
 ### Handler and Template Identification
+
 - Identify restart/reload handlers needed
 - List templates with their config file targets
 - Include `{{ ansible_managed }}` header in all templates
@@ -357,6 +370,7 @@ Proceed immediately to Step 8. Generate all files directly with Write tool.
 ### Modification Loop
 
 When user selects "Modify" or provides modification text:
+
 1. **DO NOT proceed to generation (Step 8)**
 2. Collect the user's requested changes
 3. Regenerate the plan inline with modifications applied
@@ -368,6 +382,7 @@ When user selects "Modify" or provides modification text:
 Generate all role files directly using the Write tool. Follow this order:
 
 ### 8.1: Create directory structure
+
 ```bash
 mkdir -p roles/[role_name]/{defaults,vars,tasks,handlers,templates,files,meta,molecule/default}
 ```
@@ -397,6 +412,7 @@ These rules are **mandatory** for all generated files:
 Every task file **must** be commented at two levels:
 
 **1. File header** — first line after `---`, explains the file's purpose:
+
 ```yaml
 ---
 # tasks/install.yml
@@ -405,6 +421,7 @@ Every task file **must** be commented at two levels:
 ```
 
 **2. Logical group comments** — a blank line + comment before each group of related tasks:
+
 ```yaml
 # --- Package installation ---
 - name: Install nginx package
@@ -417,6 +434,7 @@ Every task file **must** be commented at two levels:
 ```
 
 **Rules:**
+
 - Every file starts with a 2-line header: filename + one-sentence purpose
 - Group tasks by concern; precede each group with a `# --- Group name ---` comment
 - Add a plain-English comment above any task that is non-obvious: conditional logic, loops, changed_when, notify chains
@@ -424,6 +442,7 @@ Every task file **must** be commented at two levels:
 - Do NOT comment every single task — only groups and non-obvious ones
 
 **Example — tasks/configure.yml:**
+
 ```yaml
 ---
 # tasks/configure.yml
@@ -451,6 +470,7 @@ Every task file **must** be commented at two levels:
 ```
 
 ### tasks/main.yml Rules
+
 - **INCLUDES ONLY** — never inline assertion tasks
 - Include `validate_params.yml` as FIRST task
 - Include `validate.yml` as LAST task
@@ -458,6 +478,7 @@ Every task file **must** be commented at two levels:
 - File header explains the execution order and overall role flow
 
 ### tasks/validate_params.yml Rules
+
 - **ALWAYS a separate file** — never inline in main.yml
 - Ansible version check
 - OS family validation
@@ -468,6 +489,7 @@ Every task file **must** be commented at two levels:
 - Group assertions by concern with `# --- Section ---` comments
 
 ### tasks/validate.yml Rules
+
 - Post-installation verification — runs LAST
 - Service status check (service_facts or win_service_info)
 - Port listening validation (wait_for or win_wait_for)
@@ -475,12 +497,14 @@ Every task file **must** be commented at two levels:
 - Group checks by concern with `# --- Section ---` comments
 
 ### FQCN Rules
+
 - ALL modules must use fully qualified names (from fqcn.md mappings)
 - `ansible.builtin.apt:` not `apt:`
 - `ansible.builtin.template:` not `template:`
 - `ansible.builtin.service:` not `service:`
 
 ### Variable Rules
+
 - ALL variables must be role-prefixed: `nginx_port` not `port`
 - defaults/main.yml = user-overridable values
 - vars/main.yml = internal/computed values
@@ -538,6 +562,7 @@ role_name_items:
 ```
 
 **When MODE=update** (existing role):
+
 - Read current `defaults/main.yml` first (already done in Step 0)
 - Preserve ALL existing variables and their current values exactly
 - Preserve existing comments; improve them only if they are missing or incorrect
@@ -548,6 +573,7 @@ role_name_items:
 - Never remove a variable that already exists, even if unused in the new plan
 
 ### YAML Formatting Rules
+
 - 2-space indentation, never tabs
 - Booleans: `true`/`false` (never `yes`/`no`)
 - Jinja2 variables quoted: `"{{ var }}"`
@@ -556,21 +582,25 @@ role_name_items:
 - Files end with newline
 
 ### Template Rules
+
 - ALL templates start with `{{ ansible_managed }}` header comment
 - Use role-prefixed variables
 - Use `| default()` for optional values
 - Use conditionals for optional sections
 
 ### Tag Rules
+
 - Format: `rolename:action` (e.g., `nginx:install`, `nginx:config`)
 - Never use generic tags like `install` or `config`
 
 ### Handler Rules
+
 - Use FQCN: `ansible.builtin.service`
 - Include `listen:` directive
 - Name format: `Restart [service]`, `Reload [service]`
 
 ### README Rules
+
 - Include ALL variables from defaults/main.yml in a table
 - Include example playbook
 - Include requirements and dependencies
@@ -582,6 +612,7 @@ Run validation directly — do NOT spawn an agent.
 ### Static Checks
 
 Perform inline checks on generated files:
+
 - **FQCN compliance**: grep for short module names (apt, yum, template, service, etc.)
 - **Variable naming**: verify all defaults/vars use role prefix
 - **Boolean values**: no yes/no, only true/false
@@ -592,6 +623,7 @@ Perform inline checks on generated files:
 ### ansible-lint
 
 Run via Bash:
+
 ```bash
 ansible-lint roles/[role_name]/ 2>&1
 ```
@@ -604,7 +636,7 @@ Parse output for violations, categorize as errors vs warnings, identify auto-fix
 
 If violations found in Step 9:
 
-1. Read `cc/common/references/lint-fixes.md` for fix patterns
+1. Read `references/lint-fixes.md` for fix patterns
 2. Apply fixes using the Edit tool:
    - FQCN conversion (short name -> fully qualified)
    - Trailing whitespace removal
@@ -653,6 +685,7 @@ Use AskUserQuestion to gather requirements. **IMPORTANT: Incorporate research fi
 **Features Question (Research-Informed):**
 
 If research discovered features, present them as options:
+
 ```json
 {
   "question": "What features do you need? (select all that apply)",
@@ -697,6 +730,7 @@ If research discovered features, present them as options:
 ```
 
 **Apply defaults for non-selected/skipped topics:**
+
 - Platform: Generic
 - Ansible: 2.14
 - Variables: prefixed (e.g., nginx_port)
@@ -707,6 +741,7 @@ If research discovered features, present them as options:
 - Molecule: basic level, docker driver, ansible verifier
 
 **Molecule Testing Levels:**
+
 - **none**: Disabled, no molecule files generated
 - **basic**: Docker driver, geerlingguy images, standard test sequence, ansible verifier
 - **advanced**: Full configuration with follow-up questions (driver, images, sequence, verifier)
@@ -736,6 +771,7 @@ If research discovered features, present them as options:
 ### Driver-Specific Questions
 
 **For Docker or Podman:**
+
 ```json
 {
   "questions": [
@@ -753,6 +789,7 @@ If research discovered features, present them as options:
 ```
 
 **For Vagrant:**
+
 ```json
 {
   "questions": [
@@ -773,6 +810,7 @@ If research discovered features, present them as options:
 ## Key Requirements
 
 ### FQCN - Always use fully qualified names
+
 ```yaml
 # Correct
 ansible.builtin.apt:
@@ -785,12 +823,14 @@ win_service:
 ```
 
 ### Idempotency
+
 - Always specify `state:` parameter
 - Use handlers for service restarts (notify:)
 - Add `creates:` for command idempotency
 - Use `changed_when: false` for read-only commands
 
 ### YAML Formatting
+
 - 2-space indentation
 - `true`/`false` not `yes`/`no`
 - Quote Jinja2: `"{{ var }}"`
@@ -798,6 +838,7 @@ win_service:
 - Prefix variables: `role_name_varname`
 
 ### Windows Considerations
+
 - Use `ansible.windows.*` modules
 - Use `chocolatey.chocolatey.win_chocolatey` for packages
 - Molecule requires `delegated` driver (not docker)
@@ -806,8 +847,9 @@ win_service:
 ## Reference Files
 
 Read directly for guidance:
-- Role structure: [role-structure.md](../../common/references/role-structure.md)
-- FQCN modules: [fqcn.md](../../common/references/fqcn.md)
-- Patterns: [patterns.md](../../common/references/patterns.md)
-- Lint fixes: [lint-fixes.md](../../common/references/lint-fixes.md)
-- Molecule: [molecule.md](../../common/references/molecule.md)
+
+- Role structure: [role-structure.md](references/role-structure.md)
+- FQCN modules: [fqcn.md](references/fqcn.md)
+- Patterns: [patterns.md](references/patterns.md)
+- Lint fixes: [lint-fixes.md](references/lint-fixes.md)
+- Molecule: [molecule.md](references/molecule.md)
