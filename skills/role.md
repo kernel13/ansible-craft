@@ -400,8 +400,42 @@ mkdir -p roles/[role_name]/{defaults,vars,tasks,handlers,templates,files,meta,mo
 9. `tasks/service.yml` — Service management
 10. `tasks/validate.yml` — Post-install verification (runs LAST)
 11. `templates/*.j2` — All Jinja2 templates
-12. `molecule/default/*` — Molecule files (if enabled)
+12. `molecule/default/*` — Molecule files (if enabled) — see OS inference below
 13. `README.md` — Documentation with variable table
+
+### 8.3: OS-Aware Molecule Template Selection
+
+Before generating molecule files, infer the target OS from the role description and collected context:
+
+**Windows signals:** `win_`, `windows`, `winrm`, `chocolatey`, `powershell`, `ansible.windows` module references
+**Linux signals:** `linux`, `ubuntu`, `debian`, `redhat`, `centos`, `apt`, `yum`, `dnf`, `systemd`
+
+- If Windows signals detected → use Windows molecule set (vagrant + libvirt/KVM + WinRM)
+- If Linux signals detected → use Linux molecule set (Docker + geerlingguy images)
+- If ambiguous (no clear signals) → ask:
+
+```json
+{
+  "questions": [{
+    "question": "What OS does this role target?",
+    "header": "Target OS",
+    "options": [
+      {"label": "Linux", "description": "Docker with geerlingguy images"},
+      {"label": "Windows", "description": "Vagrant + libvirt/KVM with WinRM"}
+    ],
+    "multiSelect": false
+  }]
+}
+```
+
+**Template mapping:**
+
+| OS | molecule.yml | converge.yml | prepare.yml | verify.yml |
+|----|-------------|-------------|------------|-----------|
+| Linux | Docker driver, geerlingguy images | `roles:` block | Linux prereqs | Standard service/port checks |
+| Windows | Vagrant + libvirt/KVM, WinRM, `provider_raw_config_args` | `ansible.builtin.include_role` | Two-play (localhost + Windows) | Sectioned VERIFY/ASSERT/REPORT |
+
+Read `references/molecule.md` for the exact templates to use per OS.
 
 ## Generation Requirements
 
@@ -841,7 +875,7 @@ win_service:
 
 - Use `ansible.windows.*` modules
 - Use `chocolatey.chocolatey.win_chocolatey` for packages
-- Molecule requires `delegated` driver (not docker)
+- Molecule uses `vagrant` driver with libvirt/KVM provider
 - WinRM connection settings in molecule.yml
 
 ## Reference Files

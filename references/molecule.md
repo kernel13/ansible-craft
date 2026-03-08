@@ -63,7 +63,7 @@ Full control over all Molecule configuration. Includes driver-specific questions
 | **delegated** | Windows, cloud, custom | Maximum flexibility | Manual setup required |
 
 ### Windows Roles
-Windows roles **must** use `delegated` driver - Docker/Podman cannot run Windows containers for Ansible testing.
+Windows roles use the `vagrant` driver with libvirt/KVM provider and WinRM — Docker/Podman cannot run Windows containers for Ansible testing.
 
 ## molecule.yml Templates
 
@@ -267,6 +267,7 @@ driver:
   name: vagrant
   provider:
     name: libvirt
+    type: libvirt
 
 platforms:
   - name: ubuntu2204
@@ -276,6 +277,95 @@ platforms:
     provider_options:
       driver: kvm
       cpu_mode: host-passthrough
+```
+
+### Vagrant Driver (libvirt/KVM - Windows)
+
+Use `${USER}` in platform names to avoid conflicts in multi-user environments.
+Use `provider_raw_config_args` for libvirt-specific memory/device settings.
+Use `instance_raw_config_args` for Vagrant guest/communicator configuration.
+
+```yaml
+---
+dependency:
+  name: galaxy
+  options:
+    role-file: ./molecule/requirements.yml
+    requirements-file: ./molecule/requirements.yml
+
+driver:
+  name: vagrant
+  provider:
+    name: libvirt
+    type: libvirt
+
+platforms:
+  - name: "win-${ROLE_NAME}-${USER}-test"
+    box: "jborean93/WindowsServer2019"
+    memory: 4096
+    cpus: 2
+    groups:
+      - windows
+      - test_servers
+    provider_options:
+      driver: kvm
+      video_type: 'vga'
+      storage_pool_name: 'default'
+    provider_raw_config_args:
+      - "memorybacking :access, :mode => 'shared'"
+    instance_raw_config_args:
+      - "vm.guest = :windows"
+      - "vm.communicator = 'winrm'"
+      - "vm.network 'forwarded_port', guest: 5985, host: 55985, auto_correct: true"
+      - "vm.network 'forwarded_port', guest: 5986, host: 55986, auto_correct: true"
+
+provisioner:
+  name: ansible
+  config_options:
+    defaults:
+      interpreter_python: auto_silent
+      callback_whitelist: profile_tasks, timer, yaml
+      stdout_callback: yaml
+  connection_options:
+    ansible_user: vagrant
+    ansible_password: vagrant
+    ansible_connection: winrm
+    ansible_port: 5985
+    ansible_winrm_transport: credssp
+    ansible_winrm_scheme: http
+    ansible_winrm_server_cert_validation: ignore
+  inventory:
+    group_vars:
+      all:
+        ansible_user: vagrant
+        ansible_password: vagrant
+        ansible_port: 55985
+        ansible_host: 127.0.0.1
+        ansible_connection: winrm
+        ansible_winrm_scheme: http
+        ansible_winrm_transport: credssp
+        ansible_become: false
+        ansible_winrm_server_cert_validation: ignore
+        # Role-specific variables for testing
+        role_variable_example: "test_value"
+
+verifier:
+  name: ansible
+
+scenario:
+  name: default
+  test_sequence:
+    - dependency
+    - cleanup
+    - destroy
+    - syntax
+    - create
+    - prepare
+    - converge
+    - idempotence
+    - verify
+    - cleanup
+    - destroy
 ```
 
 ### Vagrant Driver (Parallels/macOS)
@@ -393,8 +483,8 @@ scenario:
 
   vars:
     # Test-specific variable overrides
-    apache_windows_port: 8080
-    apache_windows_install_path: 'C:\Apache24'
+    role_name_port: 8080
+    role_name_install_path: 'C:\RoleName'
 
   pre_tasks:
     - name: Ensure WinRM is working
@@ -405,8 +495,10 @@ scenario:
         gather_subset:
           - min
 
-  roles:
-    - role: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') | basename }}"
+  tasks:
+    - name: Include role under test
+      ansible.builtin.include_role:
+        name: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') | basename }}"
 ```
 
 ### Multi-Platform Role
@@ -435,6 +527,85 @@ scenario:
 
   roles:
     - role: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') | basename }}"
+```
+
+## prepare.yml Templates
+
+### Linux (Install Prerequisites)
+
+```yaml
+---
+- name: Prepare
+  hosts: all
+  become: true
+  gather_facts: true
+
+  tasks:
+    # --- Update package cache ---
+    - name: Update apt cache (Debian)
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+      when: ansible_os_family == "Debian"
+      changed_when: false
+
+    # --- Install prerequisite packages ---
+    - name: Install prerequisite packages (Debian)
+      ansible.builtin.apt:
+        name:
+          - python3
+          - python3-pip
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Install prerequisite packages (RedHat)
+      ansible.builtin.dnf:
+        name:
+          - python3
+          - python3-pip
+        state: present
+      when: ansible_os_family == "RedHat"
+```
+
+### Windows (Two-Play Pattern)
+
+Two plays: first on localhost to verify libvirt/KVM infrastructure, second on the Windows guest to confirm WinRM connectivity before converge.
+
+```yaml
+---
+# Play 1: Infrastructure verification on localhost
+- name: Prepare infrastructure (localhost)
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  tasks:
+    # --- Verify libvirt prerequisites ---
+    - name: Check libvirt is available
+      ansible.builtin.command: virsh list --all
+      changed_when: false
+      register: virsh_check
+
+    - name: Assert libvirt is available
+      ansible.builtin.assert:
+        that:
+          - virsh_check.rc == 0
+        fail_msg: "libvirt is not available on the host — install libvirt and KVM"
+
+# Play 2: Windows guest preparation
+- name: Prepare Windows guest
+  hosts: windows
+  gather_facts: false
+
+  tasks:
+    # --- Verify WinRM connectivity ---
+    - name: Verify WinRM connection
+      ansible.windows.win_ping:
+
+    - name: Gather minimal Windows facts
+      ansible.builtin.setup:
+        gather_subset:
+          - min
 ```
 
 ## verify.yml Templates
@@ -508,36 +679,26 @@ scenario:
   gather_facts: true
 
   tasks:
+    # --- VERIFY: Collect service state ---
     - name: Gather service facts
       ansible.windows.win_service_info:
-        name: Apache2.4
-      register: apache_service
+        name: RoleService
+      register: role_service
 
-    - name: Verify Apache service exists
-      ansible.builtin.assert:
-        that:
-          - apache_service.services | length > 0
-        fail_msg: "Apache service not found"
-        success_msg: "Apache service exists"
-
-    - name: Verify Apache service is running
-      ansible.builtin.assert:
-        that:
-          - apache_service.services[0].state == 'started'
-        fail_msg: "Apache service is not running"
-        success_msg: "Apache service is running"
-
-    - name: Verify Apache service is set to auto start
-      ansible.builtin.assert:
-        that:
-          - apache_service.services[0].start_mode == 'auto'
-        fail_msg: "Apache service is not set to auto start"
-        success_msg: "Apache service start mode is auto"
-
-    - name: Check port is listening
+    - name: Gather port state
       ansible.windows.win_wait_for:
         port: 80
         timeout: 30
+
+    - name: Collect installation directory stat
+      ansible.windows.win_stat:
+        path: 'C:\RoleName'
+      register: install_dir
+
+    - name: Collect configuration file stat
+      ansible.windows.win_stat:
+        path: 'C:\RoleName\conf\role.conf'
+      register: role_conf
 
     - name: Test HTTP response
       ansible.windows.win_uri:
@@ -545,37 +706,62 @@ scenario:
         return_content: true
       register: http_response
 
-    - name: Verify HTTP response
+    # --- ASSERT: Validate service ---
+    - name: Assert service exists
+      ansible.builtin.assert:
+        that:
+          - role_service.services | length > 0
+        fail_msg: "Service not found"
+        success_msg: "Service exists"
+
+    - name: Assert service is running
+      ansible.builtin.assert:
+        that:
+          - role_service.services[0].state == 'started'
+        fail_msg: "Service is not running"
+        success_msg: "Service is running"
+
+    - name: Assert service is set to auto start
+      ansible.builtin.assert:
+        that:
+          - role_service.services[0].start_mode == 'auto'
+        fail_msg: "Service is not set to auto start"
+        success_msg: "Service start mode is auto"
+
+    # --- ASSERT: Validate filesystem ---
+    - name: Assert installation directory exists
+      ansible.builtin.assert:
+        that:
+          - install_dir.stat.exists
+          - install_dir.stat.isdir
+        fail_msg: "Installation directory not found"
+        success_msg: "Installation directory exists"
+
+    - name: Assert configuration file exists
+      ansible.builtin.assert:
+        that:
+          - role_conf.stat.exists
+        fail_msg: "Configuration file not found"
+        success_msg: "Configuration file exists"
+
+    # --- TEST: Validate connectivity ---
+    - name: Assert HTTP response is 200
       ansible.builtin.assert:
         that:
           - http_response.status_code == 200
         fail_msg: "HTTP response was not 200"
         success_msg: "HTTP response is 200 OK"
 
-    - name: Verify installation directory exists
-      ansible.windows.win_stat:
-        path: 'C:\Apache24'
-      register: install_dir
-
-    - name: Assert installation directory exists
-      ansible.builtin.assert:
-        that:
-          - install_dir.stat.exists
-          - install_dir.stat.isdir
-        fail_msg: "Apache installation directory not found"
-        success_msg: "Apache installation directory exists"
-
-    - name: Verify httpd.conf exists
-      ansible.windows.win_stat:
-        path: 'C:\Apache24\conf\httpd.conf'
-      register: httpd_conf
-
-    - name: Assert httpd.conf exists
-      ansible.builtin.assert:
-        that:
-          - httpd_conf.stat.exists
-        fail_msg: "httpd.conf not found"
-        success_msg: "httpd.conf exists"
+    # --- DISPLAY/REPORT: Verification summary ---
+    - name: Report verification results
+      ansible.builtin.debug:
+        msg:
+          - "=== Molecule Verify: PASSED ==="
+          - "Service state  : {{ role_service.services[0].state }}"
+          - "Start mode     : {{ role_service.services[0].start_mode }}"
+          - "Install dir    : {{ install_dir.stat.exists }}"
+          - "Config file    : {{ role_conf.stat.exists }}"
+          - "HTTP status    : {{ http_response.status_code }}"
 ```
 
 ## requirements.yml (for collections)
