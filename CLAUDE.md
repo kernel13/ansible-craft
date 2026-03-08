@@ -12,7 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-ansible-craft is a set of Claude Code slash commands and agents for generating production-ready Ansible roles and playbooks from natural language descriptions. Distributed via npm with a postinstall hook that installs commands to `~/.claude/commands/ac/` and agents to `~/.claude/agents/`.
+ansible-craft is a set of Claude Code slash commands for generating production-ready Ansible roles and playbooks from natural language descriptions. Distributed via npm with a postinstall hook that installs commands to `~/.claude/commands/ac/`.
 
 ## Project Structure
 
@@ -20,7 +20,6 @@ ansible-craft is a set of Claude Code slash commands and agents for generating p
 ansible-craft/
 ├── .claude/                    # Claude Code IDE configuration (DO NOT MOVE)
 ├── cc/                         # Claude Code distributable integration
-│   ├── agents/                 # Agent definitions (ac-*.md)
 │   ├── plugin/                 # Claude Code integration
 │   │   └── commands/           # Slash command definitions (→ ~/.claude/commands/ac/)
 │   ├── common/references/      # Shared reference documentation
@@ -42,7 +41,7 @@ ansible-craft/
 bun run lint             # Check code with Biome
 bun run format           # Format code with Biome
 
-# Install commands/agents
+# Install commands
 node cc/scripts/install-skills.mjs              # Install to ~/.claude/ (global)
 node cc/scripts/install-skills.mjs --project    # Install to ./.claude/ (project-local)
 node cc/scripts/install-skills.mjs --force      # Force overwrite existing files
@@ -58,19 +57,6 @@ node cc/scripts/install-skills.mjs --force      # Force overwrite existing files
 | `/ac:collection` | Generate Ansible collections with plugins, roles, and tests |
 | `/ac:explain` | Explain existing Ansible code in plain English |
 | `/ac:fix` | Diagnose and fix Ansible errors |
-
-## Agents
-
-| Agent | Purpose |
-|-------|---------|
-| `ac-researcher` | Research docs, features, best practices, and implementation details |
-| `ac-planner` | Synthesize structured plans from all inputs |
-| `ac-generator` | Generate playbook files from plans |
-| `ac-generator-core` | Generate role core files (defaults, vars, handlers, meta, README) and templates (templates/*.j2) |
-| `ac-generator-tasks` | Generate role task files (tasks/*.yml) |
-| `ac-generator-molecule` | Generate Molecule test files |
-| `ac-validator` | Static validation (YAML, FQCN, idempotency) + ansible-lint execution |
-| `ac-fixer` | Auto-fix lint violations |
 
 ## References
 
@@ -109,13 +95,7 @@ node cc/scripts/install-skills.mjs --project
 2. Define the workflow in the markdown body
 3. Run `node cc/scripts/install-skills.mjs --force`
 
-### Adding a New Agent
-
-1. Create `cc/agents/ac-{name}.md` with YAML frontmatter (`name`, `description`, `tools`)
-2. Define the agent's role and process in the markdown body
-3. Run `node cc/scripts/install-skills.mjs --force`
-
 ### Adding a Reference Document
 
 1. Create `cc/common/references/{topic}.md`
-2. Update relevant commands/agents to read the new reference
+2. Update relevant commands to read the new reference

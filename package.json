@@ -1,16 +1,9 @@
 {
   "name": "ansible-craft",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Claude Code skills for generating production-ready Ansible roles and playbooks",
   "type": "module",
-  "files": [
-    "cc/plugin",
-    "cc/agents",
-    "cc/common",
-    "cc/scripts/install-skills.mjs",
-    "README.md",
-    "LICENSE"
-  ],
+  "files": ["cc/plugin", "cc/common", "cc/scripts/install-skills.mjs", "README.md", "LICENSE"],
   "scripts": {
     "postinstall": "node cc/scripts/install-skills.mjs --quiet || true",
     "install-skills": "node cc/scripts/install-skills.mjs",

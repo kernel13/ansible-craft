@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 /**
- * Command and agent installer for Claude Code integration.
+ * Command installer for Claude Code integration.
  *
- * Copies ansible-craft commands to ~/.claude/commands/ac/
- * and agents to ~/.claude/agents/.
+ * Copies ansible-craft commands to ~/.claude/commands/ac/.
  *
  * Commands in ~/.claude/commands/ac/ are discovered as /ac:<name>
  * (subdirectory name provides the namespace).
@@ -56,27 +55,6 @@ function getCommandsSourceDir() {
 }
 
 /**
- * Get the agents source directory (bundled with package).
- * Agents are stored in agents/ subdirectory.
- */
-function getAgentsSourceDir() {
-  // Look for agents/ relative to this script's directory
-  const fromScript = resolve(__dirname, '..', 'agents');
-  if (existsSync(fromScript)) {
-    return fromScript;
-  }
-
-  // Fallback: look relative to cwd (for development)
-  const fromCwd = resolve(process.cwd(), 'cc', 'agents');
-  if (existsSync(fromCwd)) {
-    return fromCwd;
-  }
-
-  // Agents are optional - return null if not found
-  return null;
-}
-
-/**
  * Get the target directory for command installation.
  * Claude Code discovers commands from ~/.claude/commands/<namespace>/.
  * Subdirectory name creates the namespace: ac/ → /ac:<command>.
@@ -86,17 +64,6 @@ function getCommandsTargetDir(options) {
     return resolve(process.cwd(), '.claude', 'commands', 'ac');
   }
   return join(homedir(), '.claude', 'commands', 'ac');
-}
-
-/**
- * Get the target directory for agent installation.
- * Claude Code uses ~/.claude/agents/ for custom agents.
- */
-function getAgentsTargetDir(options) {
-  if (options.project) {
-    return resolve(process.cwd(), '.claude', 'agents');
-  }
-  return join(homedir(), '.claude', 'agents');
 }
 
 /**
@@ -206,7 +173,8 @@ function installFiles(sourceDir, targetDir, files, options) {
 
 /**
  * Remove stale files from previous install approaches.
- * Cleans up ~/.claude/skills/ac/ and broken plugin cache entries.
+ * Cleans up ~/.claude/skills/ac/, broken plugin cache entries,
+ * and legacy agent files from ~/.claude/agents/.
  */
 function cleanupOldInstalls(options) {
   const cleaned = [];
@@ -227,6 +195,30 @@ function cleanupOldInstalls(options) {
       } catch {
         // Ignore cleanup errors
       }
+    }
+  }
+
+  // Clean up legacy agent files (ac-*.md) from agents directory
+  const agentsDir = options.project
+    ? resolve(process.cwd(), '.claude', 'agents')
+    : join(homedir(), '.claude', 'agents');
+
+  if (existsSync(agentsDir)) {
+    try {
+      const entries = readdirSync(agentsDir);
+      for (const entry of entries) {
+        if (entry.startsWith('ac-') && entry.endsWith('.md')) {
+          const agentPath = join(agentsDir, entry);
+          try {
+            rmSync(agentPath, { force: true });
+            cleaned.push(agentPath);
+          } catch {
+            // Ignore individual file cleanup errors
+          }
+        }
+      }
+    } catch {
+      // Ignore directory read errors
     }
   }
 
@@ -316,60 +308,16 @@ function installCommands(options = {}) {
 }
 
 /**
- * Install agents to the target directory.
- */
-function installAgents(options = {}) {
-  const result = {
-    success: true,
-    installed: [],
-    skipped: [],
-    errors: [],
-    targetDir: '',
-  };
-
-  try {
-    const sourceDir = getAgentsSourceDir();
-    if (!sourceDir) {
-      // Agents are optional - not an error if not found
-      result.skipped.push('(no agents directory found)');
-      return result;
-    }
-
-    const targetDir = getAgentsTargetDir(options);
-    result.targetDir = targetDir;
-
-    // Only install ac-* agents (ansible-craft specific)
-    const allFiles = listMarkdownFiles(sourceDir);
-    const agentFiles = allFiles.filter((f) => f.startsWith('ac-'));
-
-    if (agentFiles.length === 0) {
-      result.skipped.push('(no ansible-craft agents found)');
-      return result;
-    }
-
-    return installFiles(sourceDir, targetDir, agentFiles, options);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    result.errors.push(message);
-    result.success = false;
-  }
-
-  return result;
-}
-
-/**
- * Install commands and agents.
+ * Install commands and clean up legacy agents.
  */
 function installAll(options = {}) {
   const cleanedUp = cleanupOldInstalls(options);
   const commands = installCommands(options);
-  const agents = installAgents(options);
 
   return {
     commands,
-    agents,
     cleanedUp,
-    success: commands.success && agents.success,
+    success: commands.success,
   };
 }
 
@@ -415,13 +363,6 @@ function formatFullResult(result) {
     lines.push(commandsOutput);
   }
 
-  const agentsOutput = formatResult(result.agents, 'agent');
-  if (agentsOutput) {
-    if (lines.length > 0) lines.push('');
-    lines.push('=== Agents ===');
-    lines.push(agentsOutput);
-  }
-
   if (result.cleanedUp) {
     if (lines.length > 0) lines.push('');
     for (const dir of result.cleanedUp) {
@@ -430,7 +371,7 @@ function formatFullResult(result) {
   }
 
   if (lines.length === 0) {
-    lines.push('No commands or agents to install.');
+    lines.push('No commands to install.');
   }
 
   return lines.join('\n');
@@ -454,18 +395,12 @@ function main() {
 
     if (result.success) {
       const commandCount = result.commands.installed.length;
-      const agentCount = result.agents.installed.length;
 
-      if (commandCount > 0 || agentCount > 0) {
+      if (commandCount > 0) {
         console.log('\nClaude Code integration installed successfully!');
-        if (commandCount > 0) {
-          console.log(
-            'Commands: /ac:role, /ac:playbook, /ac:explain, /ac:fix, /ac:project, /ac:collection',
-          );
-        }
-        if (agentCount > 0) {
-          console.log('Agents: ac-planner, ac-generator, ac-validator, ac-fixer');
-        }
+        console.log(
+          'Commands: /ac:role, /ac:playbook, /ac:explain, /ac:fix, /ac:project, /ac:collection',
+        );
       }
     }
   }

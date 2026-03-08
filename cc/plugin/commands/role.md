@@ -1,72 +1,54 @@
 ---
 description: Generate production-ready Ansible roles from natural language descriptions. Use when user asks to create, generate, or build an Ansible role. Triggers on "create a role for", "ansible role that", "role to install/configure". Covers 10 topics through interactive questions with sensible defaults.
 allowed-tools:
-  - Task
   - AskUserQuestion
   - Read
+  - Write
+  - Edit
   - Glob
   - Grep
   - Bash
+  - WebSearch
 argument-hint: "[role description]"
 ---
 
 # Ansible Role Generator
 
-Generate Galaxy-standard Ansible roles with conversational exploration using specialized agents.
-
-## CRITICAL: Agent Usage Required
-
-**YOU MUST use the Task tool to invoke specialized agents.** Do NOT generate role files directly with Write tool. The agents provide validated, production-ready output.
+Generate Galaxy-standard Ansible roles with conversational exploration. Generate files directly — do NOT use the Task tool.
 
 ```
-╔═══════════════════════════════════════════════════════════════════════╗
-║  MANDATORY: Use Task tool with subagent_type parameter                ║
-║                                                                       ║
-║  You MUST call the Task tool like this:                               ║
-║                                                                       ║
-║  Task tool parameters:                                                ║
-║    subagent_type: "ac-planner"     (or ac-generator, etc.)            ║
-║    description: "Plan nginx role"  (short 3-5 word description)       ║
-║    prompt: "Generate a role plan for..."  (full instructions)         ║
-║                                                                       ║
-║  DO NOT skip agents. DO NOT use Write tool directly for role files.   ║
-╚═══════════════════════════════════════════════════════════════════════╝
++=====================================================================+
+|  GENERATE FILES DIRECTLY using Write/Edit tools.                    |
+|  Do NOT use the Task tool. Do NOT spawn agents.                     |
++=====================================================================+
 ```
 
-## Workflow Overview: Simplified Pipeline
-
-The workflow uses a **research-driven, conversational exploration** approach with a streamlined agent pipeline (7-9 agent calls, down from 11-13).
+## Workflow Overview
 
 ```
-Step 1:  Task(ac-researcher)           — single consolidated research pass
-Step 2:  Interactive Overview           — display findings, smart defaults
-Step 3:  Topic Exploration Loop         — user selects topics or continues
-Step 4:  Summary & Modification         — confirm or describe changes
-Step 5:  [Optional] Task(ac-researcher) — deeper dive on selected features
-Step 6:  Read reference files           — direct Read, no agent
-Step 7:  Task(ac-planner)              — synthesis (receives research + refs)
-Step 8:  Plan Approval Loop             — approve/modify/cancel
-Step 9:  3x generators in parallel      — core+templates/tasks/molecule
-Step 10: ac-validator                   — static checks + ansible-lint
-Step 11: ac-fixer (conditional)         — only if violations found
-Step 12: Final report                   — no agent
+Step 1:  Research (optional)        — WebSearch for uncommon software only
+Step 2:  Interactive Overview        — display findings, smart defaults
+Step 3:  Topic Exploration Loop      — user selects topics or continues
+Step 4:  Summary & Modification      — confirm or describe changes
+Step 5:  Read Reference Files        — lazy load only what's needed
+Step 6:  Generate Plan Inline        — variable design, task flow, handlers
+Step 7:  Plan Approval Loop          — approve/modify/cancel
+Step 8:  Generate Files (Write)      — create all role files directly
+Step 9:  Validate                    — ansible-lint + static checks
+Step 10: Fix                         — read lint-fixes.md, apply Edit fixes
+Step 11: Final Report                — file tree, validation, next steps
 ```
 
-**Agent calls: 6-8** (1 researcher + 1 planner + 3 generators + 1 validator + conditional fixer)
+## Step 1: Research Phase (Optional)
 
-## Step 1: Research Phase (Single Agent)
+**For common software** (nginx, docker, postgresql, apache, mysql, redis, etc.): Skip research — Claude's training + reference files provide sufficient knowledge.
 
-**Launch 1 researcher agent for a comprehensive research pass:**
-
-```json
-{
-  "subagent_type": "ac-researcher",
-  "description": "Research [role_name] documentation",
-  "prompt": "Research documentation, best practices, and implementation details for: [user_description]\n\nRole name: [sanitized_role_name]\n\nConduct a comprehensive single-pass research covering:\n- Galaxy API search for popular roles\n- Feature discovery and classification (essential/recommended/optional)\n- Service configuration: config paths, service names, ports per platform\n- Platform differences (Debian vs RHEL vs Windows)\n- Best practices and security recommendations\n- Common pitfalls\n\nReturn structured JSON with features (including exploreHint and alternatives for complex ones), bestPractices, galaxyRoles, serviceConfig, platformDifferences, securityRecommendations, and commonPitfalls."
-}
-```
-
-**After research completes, display the Interactive Overview:**
+**For uncommon software** (niche tools, new projects, internal apps): Use WebSearch to discover:
+- Package names per platform (apt vs dnf vs choco)
+- Configuration file paths
+- Service names
+- Default ports
+- Common configuration patterns
 
 ## Step 2: Interactive Overview
 
@@ -77,25 +59,21 @@ Present a **scannable overview** organized by exploration value:
 
 ### Interesting Findings (explore these)
 Topics with depth worth exploring:
-  • **SSL/TLS Configuration** - 3 approaches found (Let's Encrypt, self-signed, custom CA)
-  • **Virtual Hosts** - Multiple patterns for multi-site setup
-  • **Reverse Proxy** - Load balancing options available
+  * **SSL/TLS Configuration** - 3 approaches found (Let's Encrypt, self-signed, custom CA)
+  * **Virtual Hosts** - Multiple patterns for multi-site setup
 
 ### Standard Decisions (smart defaults ready)
 Topics with obvious choices:
-  ✓ Package: nginx (official)
-  ✓ Platforms: Generic
-  ✓ Privilege escalation: Required
+  . Package: nginx (official)
+  . Platforms: Generic
+  . Privilege escalation: Required
 
 ### Optional Topics (hidden by default)
   Molecule testing, Tags strategy, Variable naming...
 
 ### Best Practices
   ! Use FQCN for all modules
-  • Implement idempotency with changed_when
-
-### Reference Galaxy Roles
-  1. geerlingguy.nginx (⭐⭐⭐⭐⭐ 1.5M downloads)
+  * Implement idempotency with changed_when
 
 What would you like to explore? (type topic name or "continue" for defaults)
 ```
@@ -173,14 +151,14 @@ Present final summary with **natural language modification** capability:
 ## Role Summary: nginx-ssl
 
 ### Explored Topics
-  ✓ SSL/TLS: Let's Encrypt with webroot
-  ✓ Virtual hosts: Multi-site with separate configs
+  . SSL/TLS: Let's Encrypt with webroot
+  . Virtual hosts: Multi-site with separate configs
 
 ### Applied Defaults
-  • Package: nginx from official repos
-  • Platforms: Generic
-  • Molecule: Basic Docker tests
-  • Tags: Per-task strategy
+  * Package: nginx from official repos
+  * Platforms: Generic
+  * Molecule: Basic Docker tests
+  * Tags: Per-task strategy
 
 Does this look right?
   - Type "yes" to generate
@@ -190,85 +168,128 @@ Does this look right?
 **Handle modifications:**
 
 If user types something other than "yes", parse their request:
-- "add CentOS support" → Add RHEL to platforms
-- "skip molecule tests" → Disable molecule
-- "make SSL optional" → Add feature toggle variable
-- "remove virtual hosts" → Simplify to single-site config
+- "add CentOS support" -> Add RHEL to platforms
+- "skip molecule tests" -> Disable molecule
+- "make SSL optional" -> Add feature toggle variable
+- "remove virtual hosts" -> Simplify to single-site config
 
 **Apply modifications and show updated summary**, then ask again until user approves.
 
-## Step 5: Optional Deep Dive Research (Conditional)
+## Step 5: Read Reference Files
 
-**IMPORTANT:** Only execute this step if:
-1. User selected 3+ features
-2. Features include complex options (SSL/TLS, virtual hosts, caching, etc.)
+Read reference files directly using the Read tool. Lazy load only what's needed:
 
-**Ask user first:**
-```
-Deep dive research provides detailed implementation guidance for your selected features.
-This adds approximately 30 seconds to the planning phase.
+**Always read:**
+- `cc/common/references/role-structure.md` — Full Galaxy structure
+- `cc/common/references/fqcn.md` — Filter by platform:
+  - Linux-only: include `ansible.builtin.*`, `ansible.posix.*`, skip Windows
+  - Windows-only: include `ansible.windows.*`, `chocolatey.*`, skip Linux
+  - Multi-platform: include all
+- `cc/common/references/patterns.md` — Idempotency, validation, variable naming
 
-Would you like deep dive research on your selected features? (y/N)
-```
+**Conditional reads:**
+- If molecule enabled: `cc/common/references/molecule.md`
+- If fixing needed later (Step 10): `cc/common/references/lint-fixes.md`
 
-**If user confirms, re-invoke ac-researcher with a focused prompt:**
+## Step 6: Generate Plan Inline
 
-```json
-{
-  "subagent_type": "ac-researcher",
-  "description": "Deep dive on selected features",
-  "prompt": "Deep dive research on selected features for: [user_description]\n\nRole name: [sanitized_role_name]\n\nSelected features:\n- [feature 1]\n- [feature 2]\n- [feature 3]\n\nFor each feature, research:\n- Multiple implementation approaches (simple → complex)\n- Configuration details and best practices\n- Security considerations\n- Common pitfalls to avoid\n\nReturn structured findings with expanded sub-features and feature-specific best practices."
-}
-```
+Design the role plan directly — do NOT spawn an agent. The plan must include:
 
-## Step 6: Read Reference Files (Direct — No Agent)
+### Variable Design
 
-**Read reference files directly** using the Read tool. Do NOT spawn an agent for this.
-
-Read these files and extract relevant sections based on the role's platforms and features:
-
-1. **`cc/common/references/role-structure.md`** — Always include full structure
-2. **`cc/common/references/fqcn.md`** — Filter by platform:
-   - Linux-only: include `ansible.builtin.*`, `ansible.posix.*`, skip Windows
-   - Windows-only: include `ansible.windows.*`, `chocolatey.*`, skip Linux
-   - Multi-platform: include all
-3. **`cc/common/references/patterns.md`** — Include idempotency, validation, variable naming. Filter by features (SSL patterns if SSL selected, etc.)
-4. **`cc/common/references/molecule.md`** — Skip if molecule=none. Filter by driver (docker/vagrant/delegated).
-
-Pass the relevant excerpts to ac-planner in the next step.
-
-## Step 7: Generate Plan ⚠️ AGENT REQUIRED
-
-**Invoke the Task tool** with ac-planner, passing ALL context in the prompt:
-
-```json
-{
-  "tool": "Task",
-  "parameters": {
-    "subagent_type": "ac-planner",
-    "description": "Plan [role_name] role",
-    "prompt": "Generate a role plan for: [user description]\n\n## Research Findings (from ac-researcher)\n\n[Paste full output from ac-researcher agent]\n\n[If deep dive was performed:]\n## Deep Dive Implementation Details\n\n[Paste deep dive output]\n\n## User Requirements (from exploration)\n\n- Platforms: [value]\n- Ansible: [version]\n- Variables: [naming]\n- Handlers: [list]\n- Tags: [strategy]\n- Molecule: [none/basic/advanced]\n- Selected Features: [list from user]\n\n[If Molecule is basic:]\nMolecule config: basic\n  Driver: docker\n  Images: pre-built (geerlingguy/*-ansible)\n  Sequence: standard\n  Verifier: ansible\n\n[If Molecule is advanced:]\nMolecule config: advanced\n  Driver: [docker/podman/vagrant/delegated]\n  [driver-specific options...]\n  Sequence: [standard/with-prepare/with-side-effect/minimal]\n  Verifier: [ansible/testinfra]\n\nService-specific: [answers]\n\nNaming convention:\n- Variables MUST use role name prefix (e.g., nginx_port, apache_user)\n\n## Reference Context\n\n[Paste relevant excerpts from reference files read in Step 6]\n\nReturn complete plan with: config summary, variables, tasks with FQCN, handlers, templates, file tree, and Molecule configuration details"
-  }
-}
+**defaults/main.yml** (user-overridable):
+```yaml
+role_name_package_name: "package"
+role_name_version: "latest"
+role_name_port: 8080
+role_name_config_path: "/etc/role_name"
+role_name_service_enabled: true
 ```
 
-## Step 8: Plan Approval (Direct) - WITH MODIFICATION LOOP
+**vars/main.yml** (internal):
+```yaml
+role_name_supported_os:
+  - Ubuntu
+  - RedHat
+role_name_packages:
+  Debian:
+    - package1
+  RedHat:
+    - package1
+```
 
-Display the plan from ac-planner and ask user to approve:
+### Task Flow Ordering
+
+Standard sequence for tasks/main.yml (includes only):
+1. `validate_params.yml` — Input validation (ALWAYS FIRST)
+2. `install.yml` — Package installation
+3. `configure.yml` — Configuration files
+4. `service.yml` — Service management
+5. `validate.yml` — Post-install verification (ALWAYS LAST)
+
+### Handler and Template Identification
+- Identify restart/reload handlers needed
+- List templates with their config file targets
+- Include `{{ ansible_managed }}` header in all templates
+
+### Output Plan Format
+
+Present the plan in this format for user review:
 
 ```
 ## Role Plan: [role_name]
 
-[Plan content from ac-planner agent]
+### Configuration Summary
+| Setting | Value |
+|---------|-------|
+| Role Name | [name] |
+| Target Platforms | [platforms] |
+| Ansible Version | [min version] |
+| Molecule Testing | [yes/no] |
 
----
-Approve this plan? (yes/modify/no)
+### Variables
+defaults/main.yml: [list with comments]
+vars/main.yml: [internal variables]
+
+### Tasks Structure
+tasks/main.yml - Entry point (includes only)
+tasks/validate_params.yml - Input validation (runs first)
+tasks/install.yml - Installation
+tasks/configure.yml - Configuration
+tasks/service.yml - Service management
+tasks/validate.yml - Post-install verification (runs last)
+
+### Handlers
+handlers/main.yml: Restart [service], Reload [service]
+
+### Templates
+templates/[config].j2: [purpose]
+
+### Molecule (if enabled)
+molecule/default/: [driver], [platforms], [verifier]
+
+### File Tree
+roles/[role_name]/
+├── defaults/main.yml
+├── vars/main.yml
+├── handlers/main.yml
+├── tasks/
+│   ├── main.yml
+│   ├── validate_params.yml
+│   ├── install.yml
+│   ├── configure.yml
+│   ├── service.yml
+│   └── validate.yml
+├── templates/
+│   └── [config].j2
+├── meta/main.yml
+├── molecule/default/ (if enabled)
+└── README.md
 ```
 
-Use AskUserQuestion for approval with these options:
-- **Yes, generate the role** - Proceed to Step 9
-- **Modify the plan** - User provides changes
-- **Cancel** - Stop generation
+## Step 7: Plan Approval Loop
+
+Display the plan and ask user to approve:
 
 ```json
 {
@@ -285,82 +306,152 @@ Use AskUserQuestion for approval with these options:
 }
 ```
 
-### When User Approves ("Yes, generate the role")
+### When User Approves
 
-Your NEXT response after approval MUST contain exactly 3 Task tool calls to the generator agents (Step 9). Do NOT use Write, Edit, or Bash to create any role files. The generators load reference files, validate FQCN usage, and apply idempotency patterns that writing directly would skip. Proceed immediately to Step 9.
+Proceed immediately to Step 8. Generate all files directly with Write tool.
 
-### CRITICAL: Modification Loop
+### Modification Loop
 
-**When user selects "Modify" or provides modification text:**
+When user selects "Modify" or provides modification text:
+1. **DO NOT proceed to generation (Step 8)**
+2. Collect the user's requested changes
+3. Regenerate the plan inline with modifications applied
+4. Display the updated plan
+5. Ask for approval again — repeat until user approves or cancels
 
-1. **DO NOT proceed to generation (Step 9)**
-2. **Collect the user's requested changes**
-3. **Re-invoke ac-planner** with the original requirements PLUS the modifications:
+## Step 8: Generate Files (Direct Write)
 
-```json
-{
-  "subagent_type": "ac-planner",
-  "description": "Re-plan [role_name] with changes",
-  "prompt": "Regenerate role plan with these modifications:\n\nORIGINAL REQUIREMENTS:\n[original requirements]\n\nUSER MODIFICATIONS:\n[changes requested by user]\n\n[Include cached research + reference context]\n\nReturn updated plan..."
-}
+Generate all role files directly using the Write tool. Follow this order:
+
+### 8.1: Create directory structure
+```bash
+mkdir -p roles/[role_name]/{defaults,vars,tasks,handlers,templates,files,meta,molecule/default}
 ```
 
-4. **Display the UPDATED plan** to the user
-5. **Ask for approval again** — repeat until user approves or cancels
+### 8.2: Generate files in order
 
-**IMPORTANT:** Do NOT re-run ac-researcher or re-read reference files during modifications. Re-invoke only ac-planner with the cached research + refs plus the user's modifications.
+1. `defaults/main.yml` — Default variables
+2. `vars/main.yml` — Internal variables
+3. `handlers/main.yml` — Service handlers (FQCN, listen directive)
+4. `meta/main.yml` — Galaxy metadata
+5. `tasks/main.yml` — Entry point (includes ONLY)
+6. `tasks/validate_params.yml` — Input validation (ALWAYS separate, runs FIRST)
+7. `tasks/install.yml` — Installation tasks
+8. `tasks/configure.yml` — Configuration tasks
+9. `tasks/service.yml` — Service management
+10. `tasks/validate.yml` — Post-install verification (runs LAST)
+11. `templates/*.j2` — All Jinja2 templates
+12. `molecule/default/*` — Molecule files (if enabled)
+13. `README.md` — Documentation with variable table
 
-## Step 9: Generate Files ⚠️ AGENTS REQUIRED (Parallel)
+## Generation Requirements
 
-**STOP — DO NOT use Write tool here.** Pass the plan to the 3 generator agents below.
+These rules are **mandatory** for all generated files:
 
-After approval, **invoke 3 Task tool calls in PARALLEL**:
+### tasks/main.yml Rules
+- **INCLUDES ONLY** — never inline assertion tasks
+- Include `validate_params.yml` as FIRST task
+- Include `validate.yml` as LAST task
+- Each include uses `ansible.builtin.include_tasks`
 
-```json
-[
-  {
-    "subagent_type": "ac-generator-core",
-    "description": "Generate [role_name] core files",
-    "prompt": "Generate core role files and templates based on this approved plan:\n\n[Full plan from ac-planner]\n\nOutput directory: roles/[role_name]/\n\nYour scope: defaults/main.yml, vars/main.yml, handlers/main.yml, meta/main.yml, README.md, templates/*.j2"
-  },
-  {
-    "subagent_type": "ac-generator-tasks",
-    "description": "Generate [role_name] task files",
-    "prompt": "Generate task files based on this approved plan:\n\n[Full plan from ac-planner]\n\nOutput directory: roles/[role_name]/\n\nYour scope: tasks/main.yml, tasks/validate_params.yml, tasks/install.yml, tasks/configure.yml, tasks/service.yml, tasks/validate.yml, and any additional task files from plan"
-  },
-  {
-    "subagent_type": "ac-generator-molecule",
-    "description": "Generate [role_name] molecule tests",
-    "prompt": "Generate Molecule test files based on this approved plan:\n\n[Full plan from ac-planner]\n\nMolecule configuration from plan:\n[Include the Molecule config block]\n\nOutput directory: roles/[role_name]/\n\nYour scope: molecule/default/* and tests/ (if testinfra)"
-  }
-]
+### tasks/validate_params.yml Rules
+- **ALWAYS a separate file** — never inline in main.yml
+- Ansible version check
+- OS family validation
+- Variable type validation (string, number, boolean)
+- Required variables validation
+- Range validation (ports 1-65535)
+- Enum validation (service_state in started/stopped/restarted/reloaded)
+
+### tasks/validate.yml Rules
+- Post-installation verification — runs LAST
+- Service status check (service_facts or win_service_info)
+- Port listening validation (wait_for or win_wait_for)
+- Configuration file existence (stat or win_stat)
+
+### FQCN Rules
+- ALL modules must use fully qualified names (from fqcn.md mappings)
+- `ansible.builtin.apt:` not `apt:`
+- `ansible.builtin.template:` not `template:`
+- `ansible.builtin.service:` not `service:`
+
+### Variable Rules
+- ALL variables must be role-prefixed: `nginx_port` not `port`
+- defaults/main.yml = user-overridable values
+- vars/main.yml = internal/computed values
+
+### YAML Formatting Rules
+- 2-space indentation, never tabs
+- Booleans: `true`/`false` (never `yes`/`no`)
+- Jinja2 variables quoted: `"{{ var }}"`
+- File modes quoted: `mode: '0644'`
+- Files start with `---`
+- Files end with newline
+
+### Template Rules
+- ALL templates start with `{{ ansible_managed }}` header comment
+- Use role-prefixed variables
+- Use `| default()` for optional values
+- Use conditionals for optional sections
+
+### Tag Rules
+- Format: `rolename:action` (e.g., `nginx:install`, `nginx:config`)
+- Never use generic tags like `install` or `config`
+
+### Handler Rules
+- Use FQCN: `ansible.builtin.service`
+- Include `listen:` directive
+- Name format: `Restart [service]`, `Reload [service]`
+
+### README Rules
+- Include ALL variables from defaults/main.yml in a table
+- Include example playbook
+- Include requirements and dependencies
+
+## Step 9: Validate
+
+Run validation directly — do NOT spawn an agent.
+
+### Static Checks
+
+Perform inline checks on generated files:
+- **FQCN compliance**: grep for short module names (apt, yum, template, service, etc.)
+- **Variable naming**: verify all defaults/vars use role prefix
+- **Boolean values**: no yes/no, only true/false
+- **Jinja2 quoting**: all `{{ }}` expressions quoted
+- **File mode quoting**: all mode values quoted strings
+- **When conditions**: no Jinja2 braces in when clauses
+
+### ansible-lint
+
+Run via Bash:
+```bash
+ansible-lint roles/[role_name]/ 2>&1
 ```
 
-## Step 10: Validation ⚠️ AGENT REQUIRED
+If ansible-lint is not installed, report and suggest `pip install ansible-lint`.
 
-Run combined validation (static checks + ansible-lint):
+Parse output for violations, categorize as errors vs warnings, identify auto-fixable issues.
 
-```json
-{
-  "subagent_type": "ac-validator",
-  "description": "Validate [role_name] role",
-  "prompt": "Validate role at: roles/[role_name]/\n\nPhase 1: Static checks — YAML syntax, FQCN compliance, idempotency patterns, variable naming.\nPhase 2: Run ansible-lint — execute `ansible-lint roles/[role_name]/`, parse violations.\n\nReturn combined validation report with file:line references, auto-fixable issues, and fix suggestions."
-}
-```
+## Step 10: Fix (If Violations Found)
 
-## Step 11: Auto-Fix ⚠️ AGENT REQUIRED (If Needed)
+If violations found in Step 9:
 
-If violations found, **invoke ac-fixer**:
+1. Read `cc/common/references/lint-fixes.md` for fix patterns
+2. Apply fixes using the Edit tool:
+   - FQCN conversion (short name -> fully qualified)
+   - Trailing whitespace removal
+   - Missing newline at EOF
+   - Task name capitalization
+   - Boolean value fixes (yes/no -> true/false)
+   - Jinja2 quoting fixes
+   - File mode quoting fixes
+   - Missing state: parameter
+   - Missing mode: parameter (config files: '0644', scripts: '0755', secrets: '0600')
+   - changed_when: false for read-only commands
+3. Report what was fixed vs what requires manual intervention
 
-```json
-{
-  "subagent_type": "ac-fixer",
-  "description": "Fix [role_name] violations",
-  "prompt": "Apply fixes for these violations:\n\n[Violations from ac-validator]\n\nRole path: roles/[role_name]/\n\nApply auto-fixes and report what was fixed vs requires manual intervention."
-}
-```
-
-## Step 12: Final Report (Direct)
+## Step 11: Final Report
 
 Display final results using Bash to show file tree:
 
@@ -545,21 +636,9 @@ win_service:
 - Molecule requires `delegated` driver (not docker)
 - WinRM connection settings in molecule.yml
 
-## Agents Reference
-
-| Agent | Purpose | Tools Available |
-|-------|---------|-----------------|
-| ac-researcher | Research docs, features, implementation details | Read, Grep, Glob, WebSearch, Context7 |
-| ac-planner | Synthesize role plan from all inputs | Read |
-| ac-generator-core | Core files + templates: defaults, vars, handlers, meta, README, templates/*.j2 | Read, Write, Grep, Glob |
-| ac-generator-tasks | Task files: tasks/*.yml | Read, Write, Grep, Glob |
-| ac-generator-molecule | Molecule tests: molecule/**/* | Read, Write, Grep, Glob |
-| ac-validator | Static validation + ansible-lint | Read, Bash, Grep, Glob |
-| ac-fixer | Apply lint auto-fixes | Read, Edit, Grep, Glob |
-
 ## Reference Files
 
-Read directly (no agent needed) for guidance:
+Read directly for guidance:
 - Role structure: [role-structure.md](../../common/references/role-structure.md)
 - FQCN modules: [fqcn.md](../../common/references/fqcn.md)
 - Patterns: [patterns.md](../../common/references/patterns.md)

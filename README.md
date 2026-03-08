@@ -8,7 +8,7 @@ Claude Code skills for generating production-ready Ansible roles and playbooks f
 
 ## What is ansible-craft?
 
-ansible-craft provides slash commands and specialized agents for [Claude Code](https://docs.anthropic.com/en/docs/claude-code) that generate Ansible roles, playbooks, projects, and collections from natural language descriptions. All generated code follows Ansible best practices: FQCN-compliant modules, idempotent tasks, Galaxy-standard structure, and ansible-lint clean output.
+ansible-craft provides slash commands for [Claude Code](https://docs.anthropic.com/en/docs/claude-code) that generate Ansible roles, playbooks, projects, and collections from natural language descriptions. All generated code follows Ansible best practices: FQCN-compliant modules, idempotent tasks, Galaxy-standard structure, and ansible-lint clean output.
 
 ## Requirements
 
@@ -23,7 +23,7 @@ ansible-craft provides slash commands and specialized agents for [Claude Code](h
 npm install -g ansible-craft
 ```
 
-Commands and agents are automatically installed to `~/.claude/` via the postinstall hook.
+Commands are automatically installed to `~/.claude/commands/ac/` via the postinstall hook.
 
 ### Manual install from repository
 
@@ -39,7 +39,7 @@ node cc/scripts/install-skills.mjs
 node cc/scripts/install-skills.mjs --project
 ```
 
-This installs commands to `./.claude/commands/ac/` and agents to `./.claude/agents/` in the current directory.
+This installs commands to `./.claude/commands/ac/` in the current directory.
 
 ## Usage
 
@@ -101,18 +101,14 @@ Diagnose errors and get suggested fixes.
 ## Architecture
 
 ```
-Skills (slash commands) orchestrate Agents (specialized workers)
-that reference shared documentation (references).
+Commands read shared reference documentation to generate
+production-ready Ansible code directly.
 
-/ac:role  ──→  ac-planner  ──→  ac-generator-*  ──→  ac-validator
-                                                       ac-fixer
+/ac:role  ──→  references  ──→  generate files  ──→  validate + fix
 ```
 
 - **Commands** (`cc/plugin/commands/`) - User-facing slash commands that define workflows
-- **Agents** (`cc/agents/`) - Specialized workers invoked via Claude Code's Task tool
 - **References** (`cc/common/references/`) - Shared Ansible knowledge (FQCN mappings, patterns, structure guides)
-
-See [cc/README.md](cc/README.md) for detailed architecture documentation.
 
 ## Contributing
 

@@ -1,54 +1,39 @@
 ---
 description: Generate production-ready Ansible playbooks from natural language descriptions. Use when user asks to create a playbook, deploy stack, configure multiple hosts, or orchestrate tasks. Triggers on "playbook to deploy", "configure servers", "deploy LAMP/LEMP stack", "set up cluster".
 allowed-tools:
-  - Task
   - AskUserQuestion
   - Read
+  - Write
+  - Edit
   - Glob
   - Grep
   - Bash
+  - WebSearch
 argument-hint: "[playbook description]"
 ---
 
 # Ansible Playbook Generator
 
-Generate production-ready playbooks with multi-play structure, group variables, and inventory templates using specialized agents.
-
-## CRITICAL: Agent Usage Required
-
-**YOU MUST use the Task tool to invoke specialized agents.** Do NOT generate playbook files directly with Write tool. The agents provide validated, production-ready output.
+Generate production-ready playbooks with multi-play structure, group variables, and inventory templates. Generate files directly — do NOT use the Task tool.
 
 ```
-╔═══════════════════════════════════════════════════════════════════════╗
-║  MANDATORY: Use Task tool with subagent_type parameter                ║
-║                                                                       ║
-║  You MUST call the Task tool like this:                               ║
-║                                                                       ║
-║  Task tool parameters:                                                ║
-║    subagent_type: "ac-planner"     (or ac-generator, etc.)            ║
-║    description: "Plan LAMP playbook"  (short 3-5 word description)    ║
-║    prompt: "Generate a playbook plan for..."  (full instructions)     ║
-║                                                                       ║
-║  DO NOT skip agents. DO NOT use Write tool directly for playbook      ║
-║  files.                                                               ║
-╚═══════════════════════════════════════════════════════════════════════╝
++=====================================================================+
+|  GENERATE FILES DIRECTLY using Write/Edit tools.                    |
+|  Do NOT use the Task tool. Do NOT spawn agents.                     |
++=====================================================================+
 ```
 
 ## Workflow Overview
 
 ```
-Step 1: AskUserQuestion → Gather requirements (this skill)
-Step 2: Task(ac-planner) → Generate structured plan
-Step 3: Display plan → User approval (this skill)
-        ↓
-        ├── "Yes" → Proceed to Step 4
-        ├── "Modify" → Collect changes, LOOP BACK to Step 2 with modifications
-        └── "No" → Cancel generation
-
-Step 4: Task(ac-generator) → Generate playbook files
-Step 5: Task(ac-validator) → Validate code + run ansible-lint
-Step 6: Task(ac-fixer) → Auto-fix violations (if any)
-Step 7: Display results → Show file tree (this skill)
+Step 1: AskUserQuestion      -> Gather requirements
+Step 2: Read References       -> Load playbook-structure, fqcn, patterns
+Step 3: Generate Plan Inline  -> Design plays, variables, inventory
+Step 4: Plan Approval Loop    -> approve/modify/cancel
+Step 5: Generate Files (Write)-> Create all playbook files directly
+Step 6: Validate              -> ansible-lint + static checks
+Step 7: Fix (if needed)       -> Apply fixes via Edit
+Step 8: Final Report          -> File tree, validation, next steps
 ```
 
 ## Step 1: Requirements Gathering
@@ -113,39 +98,27 @@ Use AskUserQuestion:
 - Health checks (post_tasks verification)
 - Rolling updates (serial: option)
 
-## Step 2: Generate Plan
+## Step 2: Read Reference Files
 
-After gathering requirements, invoke the planner agent:
+Read these references directly using the Read tool:
+- `cc/common/references/playbook-structure.md` — Directory conventions
+- `cc/common/references/fqcn.md` — Module FQCN mappings (filter by platform)
+- `cc/common/references/patterns.md` — Idempotency, validation, formatting
 
-```
-Task(ac-planner):
-  prompt: |
-    Generate a playbook plan for: [user's description]
+## Step 3: Generate Plan Inline
 
-    Requirements gathered:
-    - Platforms: [from questions]
-    - Architecture: [single/multi-server]
-    - Task organization: [inline/roles/mixed]
-    - Features: [firewall, DB init, SSL, validation, health checks, rolling]
+Design the playbook plan directly — do NOT spawn an agent. Include:
 
-    Load references:
-    - cc/common/references/playbook-structure.md
-    - cc/common/references/fqcn.md
-    - cc/common/references/patterns.md
+- Playbook description
+- Plays with hosts and tasks (FQCN modules)
+- pre_tasks for validation
+- post_tasks for verification
+- Handlers per play
+- Group variables structure
+- Inventory groups needed
+- File tree preview
 
-    Return a complete plan with:
-    - Playbook description
-    - Plays with hosts and tasks
-    - pre_tasks for validation
-    - post_tasks for verification
-    - Group variables structure
-    - Inventory groups needed
-    - File tree preview
-```
-
-## Step 3: Plan Approval - WITH MODIFICATION LOOP
-
-Display the plan:
+Present in this format:
 
 ```
 ## Playbook Plan: [playbook_name]
@@ -164,16 +137,20 @@ Display the plan:
 
 **Inventory Groups**: [required groups]
 
----
-Approve this plan? (yes/modify/no)
+**File Tree**:
+[playbook_name]/
+├── playbook.yml
+├── inventory.example
+├── group_vars/
+│   ├── all.yml
+│   └── [group].yml
+└── README.md
 ```
 
-Use AskUserQuestion for approval with these options:
-- **Yes, generate the playbook** - Proceed to Step 4
-- **Modify the plan** - User provides changes
-- **Cancel** - Stop generation
+## Step 4: Plan Approval Loop
 
-**AskUserQuestion Example:**
+Display the plan and ask for approval:
+
 ```json
 {
   "questions": [{
@@ -189,147 +166,52 @@ Use AskUserQuestion for approval with these options:
 }
 ```
 
-**Important:** The "Other" option is always available, allowing users to type specific modifications directly. Treat any non-"Yes" response as a modification request.
+### When User Approves
 
-### When User Approves ("Yes, generate the playbook")
+Proceed immediately to Step 5. Generate all files directly with Write tool.
 
-Your NEXT response after approval MUST contain exactly 1 Task tool call to ac-generator (Step 4). Do NOT use Write, Edit, or Bash to create any playbook files. The generator loads reference files, validates FQCN usage, and applies idempotency patterns that writing directly would skip. Proceed immediately to Step 4.
+### Modification Loop
 
-### CRITICAL: Modification Loop
+When user selects "Modify" or provides modification text:
+1. **DO NOT proceed to generation (Step 5)**
+2. Collect the user's requested changes
+3. Regenerate the plan inline with modifications applied
+4. Display the updated plan
+5. Ask for approval again — repeat until user approves or cancels
 
-**When user selects "Modify" or provides modification text:**
+## Step 5: Generate Files (Direct Write)
 
-1. **DO NOT proceed to generation (Step 4)**
-2. **Collect the user's requested changes** (playbook name, features, plays, etc.)
-3. **Re-invoke ac-planner** with the original requirements PLUS the modifications:
+Generate all playbook files directly using the Write tool.
 
-```
-Task(ac-planner):
-  prompt: |
-    Regenerate playbook plan with these modifications:
-
-    ORIGINAL REQUIREMENTS:
-    [original requirements from Step 1]
-
-    USER MODIFICATIONS:
-    [changes requested by user, e.g., 'rename to deploy_lamp', 'add backup play']
-
-    [rest of planner prompt...]
+### 5.1: Create directory structure
+```bash
+mkdir -p [playbook_name]/group_vars
 ```
 
-4. **Display the UPDATED plan** to the user
-5. **Ask for approval again** - repeat until user approves or cancels
+### 5.2: Generate files
 
-This loop ensures the user can iteratively refine the plan before any code is generated.
+1. `playbook.yml` — Main playbook with all plays
+2. `inventory.example` — Example inventory file
+3. `group_vars/all.yml` — Global variables
+4. `group_vars/[group].yml` — Per-group variables
+5. `README.md` — Usage instructions
 
-## Step 4: Generate Files ⚠️ AGENT REQUIRED
+## Generation Requirements
 
-**STOP — DO NOT use Write tool here.** Pass the plan to ac-generator below. It handles file creation. Using Write directly skips FQCN validation, idempotency patterns, and reference loading that the agent performs.
+These rules are **mandatory** for all generated files:
 
-After approval, invoke the generator agent:
+### FQCN Rules
+- ALL modules must use fully qualified names
+- `ansible.builtin.apt:` not `apt:`
+- `ansible.builtin.template:` not `template:`
 
+### Play Structure
 ```
-Task(ac-generator):
-  prompt: |
-    Generate playbook files based on this approved plan:
-
-    [Full plan content]
-
-    Output directory: [playbook_name]/
-
-    Create structure:
-    - playbook.yml (main playbook)
-    - inventory.example (example inventory)
-    - group_vars/all.yml (global variables)
-    - group_vars/[group].yml (per-group variables)
-    - README.md (usage instructions)
-
-    Load references:
-    - cc/common/references/playbook-structure.md
-    - cc/common/references/fqcn.md
-    - cc/common/references/patterns.md
-```
-
-## Step 5: Validation
-
-Run combined validation (static checks + ansible-lint):
-
-```
-Task(ac-validator):
-  prompt: |
-    Validate the generated playbook at: [playbook_name]/
-
-    Phase 1: Static checks —
-    - YAML syntax
-    - FQCN compliance
-    - Idempotency patterns
-    - Variable references valid
-
-    Phase 2: Run ansible-lint —
-    Execute: ansible-lint [playbook_name]/playbook.yml
-    Parse violations into structured format.
-
-    Return combined validation report with file:line references,
-    auto-fixable issues, and fix suggestions.
-```
-
-## Step 6: Auto-Fix
-
-If violations found, invoke the fixer agent:
-
-```
-Task(ac-fixer):
-  prompt: |
-    Apply fixes for these violations:
-
-    [Violations from ac-validator]
-
-    Playbook path: [playbook_name]/
-
-    Load references:
-    - cc/common/references/lint-fixes.md
-    - cc/common/references/fqcn.md
-
-    Apply auto-fixes and report results.
-```
-
-## Step 7: Final Report
-
-Display final results:
-
-```
-## Playbook Generation Complete
-
-**Playbook:** [playbook_name]
-**Location:** [playbook_name]/
-
-### File Tree
-[tree output]
-
-### Validation
-- Errors: [count]
-- Warnings: [count]
-- Auto-fixed: [count]
-
-### Usage
-
-1. Copy inventory.example to inventory
-2. Update hosts and variables
-3. Run: ansible-playbook -i inventory playbook.yml
-```
-
-## Key Requirements
-
-### FQCN - Always use fully qualified names
-See [role/references/fqcn.md](role/references/fqcn.md) for complete mapping.
-
-### Play Execution Order
-```
-1. pre_tasks     → Validation, prerequisite checks
-2. roles         → If using roles
-3. tasks         → Main work
-4. handlers      → Triggered by notify
-5. post_tasks    → Verification, health checks
+1. pre_tasks     -> Validation, prerequisite checks
+2. roles         -> If using roles
+3. tasks         -> Main work
+4. handlers      -> Triggered by notify
+5. post_tasks    -> Verification, health checks
 ```
 
 ### pre_tasks - Use for Validation
@@ -372,8 +254,27 @@ post_tasks:
         state: restarted
 ```
 
-### Idempotency & YAML Formatting
-See [role/references/patterns.md](role/references/patterns.md) for complete patterns.
+### YAML Formatting Rules
+- 2-space indentation, never tabs
+- Booleans: `true`/`false` (never `yes`/`no`)
+- Jinja2 variables quoted: `"{{ var }}"`
+- File modes quoted: `mode: '0644'`
+- Files start with `---`
+- Files end with newline
+
+### Idempotency Rules
+- Always specify `state:` parameter
+- Use handlers for service restarts (notify:)
+- Add `creates:` for command idempotency
+- Use `changed_when: false` for read-only commands
+
+### Rolling Updates
+```yaml
+- name: Rolling update
+  hosts: webservers
+  serial: 1              # One host at a time
+  max_fail_percentage: 25
+```
 
 ### Windows Considerations
 - Use `ansible.windows.*` modules
@@ -384,22 +285,60 @@ See [role/references/patterns.md](role/references/patterns.md) for complete patt
   ansible_winrm_transport=ntlm
   ```
 
-### Rolling Updates
-```yaml
-- name: Rolling update
-  hosts: webservers
-  serial: 1              # One host at a time
-  max_fail_percentage: 25
+## Step 6: Validate
+
+Run validation directly — do NOT spawn an agent.
+
+### Static Checks
+
+Perform inline checks on generated files:
+- **FQCN compliance**: grep for short module names
+- **Boolean values**: no yes/no, only true/false
+- **Jinja2 quoting**: all `{{ }}` expressions quoted
+- **File mode quoting**: all mode values quoted strings
+
+### ansible-lint
+
+Run via Bash:
+```bash
+ansible-lint [playbook_name]/playbook.yml 2>&1
 ```
 
-## Agents Used
+If ansible-lint is not installed, report and suggest `pip install ansible-lint`.
 
-| Agent | Purpose | Tools |
-|-------|---------|-------|
-| ac-planner | Generate playbook plan | Read, Grep, Glob, WebSearch |
-| ac-generator | Create playbook files | Read, Write, Grep, Glob |
-| ac-validator | Static validation + ansible-lint | Read, Bash, Grep, Glob |
-| ac-fixer | Apply auto-fixes | Read, Edit, Grep |
+## Step 7: Fix (If Violations Found)
+
+If violations found in Step 6:
+
+1. Read `cc/common/references/lint-fixes.md` for fix patterns
+2. Read `cc/common/references/fqcn.md` for FQCN mappings
+3. Apply fixes using the Edit tool
+4. Report what was fixed vs what requires manual intervention
+
+## Step 8: Final Report
+
+Display final results:
+
+```
+## Playbook Generation Complete
+
+**Playbook:** [playbook_name]
+**Location:** [playbook_name]/
+
+### File Tree
+[tree output]
+
+### Validation
+- Errors: [count]
+- Warnings: [count]
+- Auto-fixed: [count]
+
+### Usage
+
+1. Copy inventory.example to inventory
+2. Update hosts and variables
+3. Run: ansible-playbook -i inventory playbook.yml
+```
 
 ## References
 
