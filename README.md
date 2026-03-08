@@ -23,27 +23,27 @@ ansible-craft provides slash commands for [Claude Code](https://docs.anthropic.c
 npm install -g ansible-craft
 ```
 
-Commands are automatically installed to `~/.claude/commands/ac/` via the postinstall hook.
+Skills are automatically installed to `~/.claude/skills/ac/` via the postinstall hook.
 
 ### Manual install from repository
 
 ```bash
 git clone https://github.com/ansible-craft/ansible-craft.git
 cd ansible-craft
-node cc/scripts/install-skills.mjs
+node scripts/install-skills.mjs
 ```
 
 ### Project-local install
 
 ```bash
-node cc/scripts/install-skills.mjs --project
+node scripts/install-skills.mjs --project
 ```
 
-This installs commands to `./.claude/commands/ac/` in the current directory.
+This installs skills to `./.claude/skills/ac/` in the current directory.
 
 ## Usage
 
-All commands are available as slash commands in Claude Code.
+All skills are available as slash commands in Claude Code.
 
 ### `/ac:role` - Generate Ansible Roles
 
@@ -107,8 +107,8 @@ production-ready Ansible code directly.
 /ac:role  ──→  references  ──→  generate files  ──→  validate + fix
 ```
 
-- **Commands** (`cc/plugin/commands/`) - User-facing slash commands that define workflows
-- **References** (`cc/common/references/`) - Shared Ansible knowledge (FQCN mappings, patterns, structure guides)
+- **Skills** (`skills/`) - User-facing slash commands that define workflows
+- **References** (`references/`) - Shared Ansible knowledge (FQCN mappings, patterns, structure guides)
 
 ## Contributing
 

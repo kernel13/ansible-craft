@@ -34,7 +34,7 @@ Step 5: Display results      → Show created structure
 ## Step 1: Requirements Gathering
 
 First, read the reference for collection structure:
-- `references/collection-structure.md`
+- `/Users/stephanesop/Documents/01-Projects/ansible-craft/.claude/skills/ansible-craft-collection/references/collection-structure.md`
 
 Then use AskUserQuestion to gather essential information:
 
@@ -262,4 +262,4 @@ find collections/ansible_collections/<namespace>/<name> -type f | sort
 ## Reference Files
 
 Read for guidance on collection structures:
-- [collection-structure.md](../references/collection-structure.md)
+- [collection-structure.md](/Users/stephanesop/Documents/01-Projects/ansible-craft/.claude/skills/ansible-craft-collection/references/collection-structure.md)

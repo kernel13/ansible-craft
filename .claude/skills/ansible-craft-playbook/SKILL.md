@@ -101,9 +101,9 @@ Use AskUserQuestion:
 ## Step 2: Read Reference Files
 
 Read these references directly using the Read tool:
-- `references/playbook-structure.md` — Directory conventions
-- `references/fqcn.md` — Module FQCN mappings (filter by platform)
-- `references/patterns.md` — Idempotency, validation, formatting
+- `/Users/stephanesop/Documents/01-Projects/ansible-craft/.claude/skills/ansible-craft-playbook/references/playbook-structure.md` — Directory conventions
+- `/Users/stephanesop/Documents/01-Projects/ansible-craft/.claude/skills/ansible-craft-playbook/references/fqcn.md` — Module FQCN mappings (filter by platform)
+- `/Users/stephanesop/Documents/01-Projects/ansible-craft/.claude/skills/ansible-craft-playbook/references/patterns.md` — Idempotency, validation, formatting
 
 ## Step 3: Generate Plan Inline
 
@@ -310,8 +310,8 @@ If ansible-lint is not installed, report and suggest `pip install ansible-lint`.
 
 If violations found in Step 6:
 
-1. Read `references/lint-fixes.md` for fix patterns
-2. Read `references/fqcn.md` for FQCN mappings
+1. Read `/Users/stephanesop/Documents/01-Projects/ansible-craft/.claude/skills/ansible-craft-playbook/references/lint-fixes.md` for fix patterns
+2. Read `/Users/stephanesop/Documents/01-Projects/ansible-craft/.claude/skills/ansible-craft-playbook/references/fqcn.md` for FQCN mappings
 3. Apply fixes using the Edit tool
 4. Report what was fixed vs what requires manual intervention
 
@@ -342,7 +342,7 @@ Display final results:
 
 ## References
 
-- Playbook structure: [playbook-structure.md](../references/playbook-structure.md)
-- FQCN modules: [fqcn.md](../references/fqcn.md)
-- Patterns: [patterns.md](../references/patterns.md)
-- Lint fixes: [lint-fixes.md](../references/lint-fixes.md)
+- Playbook structure: [playbook-structure.md](/Users/stephanesop/Documents/01-Projects/ansible-craft/.claude/skills/ansible-craft-playbook/references/playbook-structure.md)
+- FQCN modules: [fqcn.md](/Users/stephanesop/Documents/01-Projects/ansible-craft/.claude/skills/ansible-craft-playbook/references/fqcn.md)
+- Patterns: [patterns.md](/Users/stephanesop/Documents/01-Projects/ansible-craft/.claude/skills/ansible-craft-playbook/references/patterns.md)
+- Lint fixes: [lint-fixes.md](/Users/stephanesop/Documents/01-Projects/ansible-craft/.claude/skills/ansible-craft-playbook/references/lint-fixes.md)

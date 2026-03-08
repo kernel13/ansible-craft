@@ -290,7 +290,7 @@ find {project_path} -type f | sort
 ## Reference Files
 
 Read for guidance on project structures:
-- [project-structure.md](../references/project-structure.md)
+- [project-structure.md](/Users/stephanesop/Documents/01-Projects/ansible-craft/.claude/skills/ansible-craft-project/references/project-structure.md)
 
 ## Example Session
 

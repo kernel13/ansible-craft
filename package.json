@@ -3,11 +3,11 @@
   "version": "0.3.0",
   "description": "Claude Code skills for generating production-ready Ansible roles and playbooks",
   "type": "module",
-  "files": ["cc/plugin", "cc/common", "cc/scripts/install-skills.mjs", "README.md", "LICENSE"],
+  "files": ["skills", "references", "scripts/install-skills.mjs", "README.md", "LICENSE"],
   "scripts": {
-    "postinstall": "node cc/scripts/install-skills.mjs --quiet || true",
-    "install-skills": "node cc/scripts/install-skills.mjs",
-    "install-skills:project": "node cc/scripts/install-skills.mjs --project",
+    "postinstall": "node scripts/install-skills.mjs --quiet || true",
+    "install-skills": "node scripts/install-skills.mjs",
+    "install-skills:project": "node scripts/install-skills.mjs --project",
     "lint": "biome check .",
     "format": "biome format . --write"
   },

@@ -6,6 +6,6 @@
 - **[examples/generated-roles/](examples/generated-roles/)** - Example generated roles (nginx-ssl, docker)
 - **[examples/generated-playbooks/](examples/generated-playbooks/)** - Example generated playbooks (lamp-stack, k8s-cluster)
 
-## Skills & Agents Documentation
+## Skills & References
 
-See [cc/README.md](../cc/README.md) for skills, agents, and reference documentation.
+See [skills/](../skills/) for slash command definitions and [references/](../references/) for shared Ansible knowledge.

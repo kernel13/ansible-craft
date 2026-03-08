@@ -2,11 +2,12 @@
 /**
  * Skill installer for Claude Code integration.
  *
- * Copies ansible-craft skills to ~/.claude/commands/ansible-craft/
- * and references to ~/.claude/commands/ansible-craft/references/.
+ * Deploys each ansible-craft skill into its own folder under ~/.claude/skills/:
+ *   ~/.claude/skills/ansible-craft-{name}/SKILL.md
+ *   ~/.claude/skills/ansible-craft-{name}/references/{scoped refs}
  *
- * Skills are discovered as /ansible-craft:<name> by Claude Code.
- * Reference paths inside skill files are rewritten to absolute paths
+ * Skills are discovered as /ansible-craft-{name} by Claude Code.
+ * Reference paths inside SKILL.md are rewritten to absolute paths
  * so the Read tool can locate them regardless of the user's CWD.
  *
  * Usage:
@@ -25,7 +26,6 @@ import {
   readdirSync,
   readFileSync,
   rmSync,
-  statSync,
   writeFileSync,
 } from 'node:fs';
 import { homedir } from 'node:os';
@@ -36,6 +36,19 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const NAMESPACE = 'ansible-craft';
+
+// ---------------------------------------------------------------------------
+// Reference mapping — only these files are copied per skill
+// ---------------------------------------------------------------------------
+
+const SKILL_REFERENCES = {
+  role: ['role-structure.md', 'fqcn.md', 'patterns.md', 'molecule.md', 'lint-fixes.md'],
+  playbook: ['playbook-structure.md', 'fqcn.md', 'patterns.md', 'lint-fixes.md'],
+  collection: ['collection-structure.md'],
+  project: ['project-structure.md'],
+  explain: [],
+  fix: [],
+};
 
 // ---------------------------------------------------------------------------
 // Source directories
@@ -65,54 +78,20 @@ function getReferencesSourceDir() {
 // Target directories
 // ---------------------------------------------------------------------------
 
-function getSkillsTargetDir(options) {
+function getSkillsBaseDir(options) {
   if (options.project) {
-    return resolve(process.cwd(), '.claude', 'commands', NAMESPACE);
+    return resolve(process.cwd(), '.claude', 'skills');
   }
-  return join(homedir(), '.claude', 'commands', NAMESPACE);
+  return join(homedir(), '.claude', 'skills');
 }
 
-function getReferencesTargetDir(options) {
-  return join(getSkillsTargetDir(options), 'references');
+function getSkillTargetDir(skillName, options) {
+  return join(getSkillsBaseDir(options), `${NAMESPACE}-${skillName}`);
 }
 
 // ---------------------------------------------------------------------------
-// File utilities
+// Reference path rewriting
 // ---------------------------------------------------------------------------
-
-/**
- * Recursively list markdown files in a directory.
- * Returns relative paths from sourceDir.
- */
-function listMarkdownFiles(sourceDir, subDir = '') {
-  const files = [];
-  const currentDir = subDir ? join(sourceDir, subDir) : sourceDir;
-
-  try {
-    const entries = readdirSync(currentDir);
-
-    for (const entry of entries) {
-      const entryPath = join(currentDir, entry);
-      const relativePath = subDir ? join(subDir, entry) : entry;
-
-      try {
-        const stat = statSync(entryPath);
-
-        if (stat.isDirectory()) {
-          files.push(...listMarkdownFiles(sourceDir, relativePath));
-        } else if (entry.endsWith('.md')) {
-          files.push(relativePath);
-        }
-      } catch {
-        // Skip entries we can't stat
-      }
-    }
-  } catch {
-    // Return empty array if we can't read the directory
-  }
-
-  return files;
-}
 
 /**
  * Rewrite `references/` paths in skill content to absolute paths.
@@ -120,8 +99,6 @@ function listMarkdownFiles(sourceDir, subDir = '') {
  * user's working directory when the skill runs.
  */
 function rewriteReferencePaths(content, referencesAbsPath) {
-  // Match `references/<file>` in any context (backticks, parens, plain text)
-  // Handles both `references/foo.md` and `../references/foo.md` patterns
   return content.replace(/\.\.\/references\//g, `${referencesAbsPath}/`).replace(
     /(?<![/\w])references\//g,
     `${referencesAbsPath}/`,
@@ -133,109 +110,92 @@ function rewriteReferencePaths(content, referencesAbsPath) {
 // ---------------------------------------------------------------------------
 
 /**
- * Install files from source to target directory.
- * For skill files (.md at the top level of sourceDir), rewrite reference paths.
+ * Install a single skill and its scoped references.
  */
-function installFiles(sourceDir, targetDir, files, options, referencesAbsPath = null) {
+function installSkill(skillName, options) {
+  const skillsSourceDir = getSkillsSourceDir();
+  const refsSourceDir = getReferencesSourceDir();
+  const skillTargetDir = getSkillTargetDir(skillName, options);
+  const refsTargetDir = join(skillTargetDir, 'references');
+  const refsAbsPath = refsTargetDir;
+
   const result = {
     success: true,
     installed: [],
     skipped: [],
     errors: [],
-    targetDir,
+    targetDir: skillTargetDir,
   };
 
   try {
-    if (!existsSync(targetDir)) {
-      mkdirSync(targetDir, { recursive: true });
-    }
+    mkdirSync(skillTargetDir, { recursive: true });
+  } catch (err) {
+    result.errors.push(`Failed to create ${skillTargetDir}: ${err.message}`);
+    result.success = false;
+    return result;
+  }
 
-    for (const file of files) {
-      const sourcePath = join(sourceDir, file);
-      const targetPath = join(targetDir, file);
+  // Install skill file as SKILL.md
+  const sourcePath = join(skillsSourceDir, `${skillName}.md`);
+  const targetPath = join(skillTargetDir, 'SKILL.md');
 
-      try {
-        const parentDir = dirname(targetPath);
-        if (!existsSync(parentDir)) {
-          mkdirSync(parentDir, { recursive: true });
-        }
+  try {
+    let content = readFileSync(sourcePath, 'utf-8');
+    content = rewriteReferencePaths(content, refsAbsPath);
 
-        let content = readFileSync(sourcePath, 'utf-8');
-
-        // Rewrite reference paths in skill files (not in reference files themselves)
-        if (referencesAbsPath && file.endsWith('.md') && !file.includes('/')) {
-          content = rewriteReferencePaths(content, referencesAbsPath);
-        }
-
-        if (existsSync(targetPath) && !options.force) {
-          const targetContent = readFileSync(targetPath, 'utf-8');
-
-          if (content === targetContent) {
-            result.skipped.push(file);
-            continue;
-          }
-
-          if (options.quiet) {
-            result.skipped.push(file);
-            continue;
-          }
-        }
-
+    if (existsSync(targetPath) && !options.force) {
+      const existing = readFileSync(targetPath, 'utf-8');
+      if (content === existing || options.quiet) {
+        result.skipped.push('SKILL.md');
+      } else {
         writeFileSync(targetPath, content, 'utf-8');
-        result.installed.push(file);
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        result.errors.push(`Failed to install ${file}: ${message}`);
+        result.installed.push('SKILL.md');
       }
-    }
-
-    if (result.errors.length > 0 && result.installed.length === 0) {
-      result.success = false;
+    } else {
+      writeFileSync(targetPath, content, 'utf-8');
+      result.installed.push('SKILL.md');
     }
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    result.errors.push(message);
+    result.errors.push(`Failed to install SKILL.md for ${skillName}: ${err.message}`);
+  }
+
+  // Install scoped references
+  const refs = SKILL_REFERENCES[skillName] ?? [];
+  if (refs.length > 0 && refsSourceDir) {
+    try {
+      mkdirSync(refsTargetDir, { recursive: true });
+    } catch (err) {
+      result.errors.push(`Failed to create references dir: ${err.message}`);
+    }
+
+    for (const ref of refs) {
+      const refSource = join(refsSourceDir, ref);
+      const refTarget = join(refsTargetDir, ref);
+
+      try {
+        const content = readFileSync(refSource, 'utf-8');
+
+        if (existsSync(refTarget) && !options.force) {
+          const existing = readFileSync(refTarget, 'utf-8');
+          if (content === existing || options.quiet) {
+            result.skipped.push(`references/${ref}`);
+            continue;
+          }
+        }
+
+        writeFileSync(refTarget, content, 'utf-8');
+        result.installed.push(`references/${ref}`);
+      } catch (err) {
+        result.errors.push(`Failed to install references/${ref}: ${err.message}`);
+      }
+    }
+  }
+
+  if (result.errors.length > 0 && result.installed.length === 0 && result.skipped.length === 0) {
     result.success = false;
   }
 
   return result;
-}
-
-function installSkills(options = {}) {
-  const sourceDir = getSkillsSourceDir();
-  const targetDir = getSkillsTargetDir(options);
-  const referencesAbsPath = getReferencesTargetDir(options);
-
-  const skillFiles = listMarkdownFiles(sourceDir);
-  if (skillFiles.length === 0) {
-    return {
-      success: false,
-      installed: [],
-      skipped: [],
-      errors: ['No skill files found in source directory'],
-      targetDir,
-    };
-  }
-
-  return installFiles(sourceDir, targetDir, skillFiles, options, referencesAbsPath);
-}
-
-function installReferences(options = {}) {
-  const sourceDir = getReferencesSourceDir();
-  if (!sourceDir) {
-    return {
-      success: true,
-      installed: [],
-      skipped: ['(no references directory found)'],
-      errors: [],
-      targetDir: '',
-    };
-  }
-
-  const targetDir = getReferencesTargetDir(options);
-  const refFiles = listMarkdownFiles(sourceDir);
-
-  return installFiles(sourceDir, targetDir, refFiles, options);
 }
 
 // ---------------------------------------------------------------------------
@@ -248,14 +208,15 @@ function installReferences(options = {}) {
 function cleanupOldInstalls(options) {
   const cleaned = [];
 
-  // Old namespace dirs and plugin cache entries
   const staleDirs = options.project
     ? [
         resolve(process.cwd(), '.claude', 'commands', 'ac'),
+        resolve(process.cwd(), '.claude', 'commands', NAMESPACE),
         resolve(process.cwd(), '.claude', 'skills', 'ac'),
       ]
     : [
         join(homedir(), '.claude', 'commands', 'ac'),
+        join(homedir(), '.claude', 'commands', NAMESPACE),
         join(homedir(), '.claude', 'skills', 'ac'),
         join(homedir(), '.claude', 'plugins', 'cache', 'local', 'ansible-craft'),
         join(homedir(), '.claude', 'plugins', 'cache', 'local', 'ac'),
@@ -345,14 +306,19 @@ function cleanupPluginRegistry(options) {
 
 function installAll(options = {}) {
   const cleanedUp = cleanupOldInstalls(options);
-  const skills = installSkills(options);
-  const references = installReferences(options);
+  const skillResults = {};
+  let overallSuccess = true;
+
+  for (const skillName of Object.keys(SKILL_REFERENCES)) {
+    const result = installSkill(skillName, options);
+    skillResults[skillName] = result;
+    if (!result.success) overallSuccess = false;
+  }
 
   return {
-    skills,
-    references,
+    skillResults,
     cleanedUp,
-    success: skills.success && references.success,
+    success: overallSuccess,
   };
 }
 
@@ -360,28 +326,17 @@ function installAll(options = {}) {
 // Output formatting
 // ---------------------------------------------------------------------------
 
-function formatResult(result, label) {
+function formatSkillResult(skillName, result) {
   const lines = [];
 
   if (result.installed.length > 0) {
-    lines.push(`Installed ${result.installed.length} ${label}(s) to ${result.targetDir}:`);
-    for (const file of result.installed) {
-      lines.push(`  + ${file}`);
-    }
+    lines.push(`  ${NAMESPACE}-${skillName}: installed ${result.installed.join(', ')}`);
+  } else if (result.skipped.length > 0) {
+    lines.push(`  ${NAMESPACE}-${skillName}: up to date`);
   }
 
-  if (result.skipped.length > 0) {
-    lines.push(`Skipped ${result.skipped.length} unchanged ${label}(s):`);
-    for (const file of result.skipped) {
-      lines.push(`  = ${file}`);
-    }
-  }
-
-  if (result.errors.length > 0) {
-    lines.push(`${label} errors:`);
-    for (const error of result.errors) {
-      lines.push(`  ! ${error}`);
-    }
+  for (const error of result.errors) {
+    lines.push(`  ${NAMESPACE}-${skillName}: ERROR ${error}`);
   }
 
   return lines.join('\n');
@@ -390,17 +345,9 @@ function formatResult(result, label) {
 function formatFullResult(result) {
   const lines = [];
 
-  const skillsOutput = formatResult(result.skills, 'skill');
-  if (skillsOutput) {
-    lines.push('=== Skills ===');
-    lines.push(skillsOutput);
-  }
-
-  const refsOutput = formatResult(result.references, 'reference');
-  if (refsOutput) {
-    if (lines.length > 0) lines.push('');
-    lines.push('=== References ===');
-    lines.push(refsOutput);
+  for (const [skillName, skillResult] of Object.entries(result.skillResults)) {
+    const line = formatSkillResult(skillName, skillResult);
+    if (line) lines.push(line);
   }
 
   if (result.cleanedUp) {
@@ -411,7 +358,7 @@ function formatFullResult(result) {
   }
 
   if (lines.length === 0) {
-    lines.push('No skills or references to install.');
+    lines.push('No skills to install.');
   }
 
   return lines.join('\n');
@@ -435,16 +382,12 @@ function main() {
     console.log(formatFullResult(result));
 
     if (result.success) {
-      const skillCount = result.skills.installed.length;
-      const refCount = result.references.installed.length;
-
-      if (skillCount > 0 || refCount > 0) {
+      const anyInstalled = Object.values(result.skillResults).some((r) => r.installed.length > 0);
+      if (anyInstalled) {
         console.log('\nClaude Code integration installed successfully!');
-        if (skillCount > 0) {
-          console.log(
-            'Skills: /ansible-craft:role, /ansible-craft:playbook, /ansible-craft:explain, /ansible-craft:fix, /ansible-craft:project, /ansible-craft:collection',
-          );
-        }
+        console.log(
+          'Skills: /ansible-craft-role, /ansible-craft-playbook, /ansible-craft-explain, /ansible-craft-fix, /ansible-craft-project, /ansible-craft-collection',
+        );
       }
     }
   }

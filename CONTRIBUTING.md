@@ -4,9 +4,8 @@ Thank you for your interest in contributing to ansible-craft!
 
 ## Ways to Contribute
 
-- **Improve skills** - Enhance slash command workflows in `cc/skills/ac/`
-- **Improve agents** - Refine agent prompts and behavior in `cc/agents/`
-- **Add references** - Expand shared Ansible knowledge in `cc/common/references/`
+- **Improve skills** - Enhance slash command workflows in `skills/`
+- **Add references** - Expand shared Ansible knowledge in `references/`
 - **Report bugs** - Open a [GitHub Issue](https://github.com/ansible-craft/ansible-craft/issues)
 - **Suggest features** - Start a [GitHub Discussion](https://github.com/ansible-craft/ansible-craft/discussions)
 
@@ -21,14 +20,14 @@ bun install
 ### Install skills locally for testing
 
 ```bash
-node cc/scripts/install-skills.mjs --force
+node scripts/install-skills.mjs --force
 ```
 
 ## File Structure
 
-- **Skills**: `cc/skills/ac/{name}.md` - becomes `/ac:{name}` command
-- **Agents**: `cc/agents/ac-{name}.md` - becomes `ac-{name}` subagent_type
-- **References**: `cc/common/references/{topic}.md` - shared knowledge documents
+- **Skills**: `skills/{name}.md` - becomes `/ac:{name}` slash command
+- **References**: `references/{topic}.md` - shared knowledge documents
+- **Scripts**: `scripts/install-skills.mjs` - installation script
 
 ### Skill format
 
@@ -41,18 +40,6 @@ description: What this skill does
 allowed-tools:
   - Task
   - Read
----
-```
-
-### Agent format
-
-Agents use YAML frontmatter followed by markdown instructions:
-
-```yaml
----
-name: ac-new-agent
-description: What this agent does
-tools: Read, Write, Grep, Glob
 ---
 ```
 
@@ -69,7 +56,7 @@ We follow [Conventional Commits](https://www.conventionalcommits.org/):
 
 ```
 feat(skills): add database role generation skill
-fix(agents): improve FQCN validation in ac-validator
+fix(skills): improve FQCN validation in role generator
 docs(references): add PostgreSQL patterns to patterns.md
 ```
 

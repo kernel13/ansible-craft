@@ -12,18 +12,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-ansible-craft is a set of Claude Code slash commands for generating production-ready Ansible roles and playbooks from natural language descriptions. Distributed via npm with a postinstall hook that installs commands to `~/.claude/commands/ac/`.
+ansible-craft is a set of Claude Code slash commands for generating production-ready Ansible roles and playbooks from natural language descriptions. Distributed via npm with a postinstall hook that installs skills to `~/.claude/skills/ac/`.
 
 ## Project Structure
 
 ```
 ansible-craft/
 ├── .claude/                    # Claude Code IDE configuration (DO NOT MOVE)
-├── cc/                         # Claude Code distributable integration
-│   ├── plugin/                 # Claude Code integration
-│   │   └── commands/           # Slash command definitions (→ ~/.claude/commands/ac/)
-│   ├── common/references/      # Shared reference documentation
-│   └── scripts/                # Installation scripts
+├── skills/                     # Slash command definitions (→ ~/.claude/skills/ac/)
+├── references/                 # Shared reference documentation
+├── scripts/                    # Installation scripts
 ├── docs/                       # Documentation
 │   ├── architecture/           # Ansible best practices reference
 │   └── examples/               # Generated role/playbook showcases
@@ -41,13 +39,13 @@ ansible-craft/
 bun run lint             # Check code with Biome
 bun run format           # Format code with Biome
 
-# Install commands
-node cc/scripts/install-skills.mjs              # Install to ~/.claude/ (global)
-node cc/scripts/install-skills.mjs --project    # Install to ./.claude/ (project-local)
-node cc/scripts/install-skills.mjs --force      # Force overwrite existing files
+# Install skills
+node scripts/install-skills.mjs              # Install to ~/.claude/ (global)
+node scripts/install-skills.mjs --project    # Install to ./.claude/ (project-local)
+node scripts/install-skills.mjs --force      # Force overwrite existing files
 ```
 
-## Commands (Slash Commands)
+## Skills (Slash Commands)
 
 | Command | Description |
 |---------|-------------|
@@ -60,7 +58,7 @@ node cc/scripts/install-skills.mjs --force      # Force overwrite existing files
 
 ## References
 
-Shared knowledge documents in `cc/common/references/`:
+Shared knowledge documents in `references/`:
 
 | File | Description |
 |------|-------------|
@@ -77,25 +75,25 @@ Shared knowledge documents in `cc/common/references/`:
 ## Installation
 
 ```bash
-# Via npm (installs commands to ~/.claude/commands/ac/ automatically)
+# Via npm (installs skills to ~/.claude/skills/ac/ automatically)
 npm install -g ansible-craft
 
 # Manual install from repo
-node cc/scripts/install-skills.mjs
+node scripts/install-skills.mjs
 
 # Project-local install
-node cc/scripts/install-skills.mjs --project
+node scripts/install-skills.mjs --project
 ```
 
 ## Development
 
-### Adding a New Command
+### Adding a New Skill
 
-1. Create `cc/plugin/commands/{name}.md` with YAML frontmatter (`description`, `allowed-tools`, `argument-hint`)
+1. Create `skills/{name}.md` with YAML frontmatter (`description`, `allowed-tools`, `argument-hint`)
 2. Define the workflow in the markdown body
-3. Run `node cc/scripts/install-skills.mjs --force`
+3. Run `node scripts/install-skills.mjs --force`
 
 ### Adding a Reference Document
 
-1. Create `cc/common/references/{topic}.md`
+1. Create `references/{topic}.md`
 2. Update relevant commands to read the new reference
