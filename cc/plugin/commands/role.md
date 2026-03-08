@@ -50,16 +50,31 @@ ls roles/[role_name]/ 2>/dev/null || ls [role_name]/ 2>/dev/null
 ```
 
 **If role directory exists** → set `MODE=update`:
-- Read these files before proceeding to Step 1:
-  - `defaults/main.yml` — capture all existing variables and their comments
-  - `vars/main.yml` — capture internal variables
-  - `tasks/main.yml` — understand current task structure
-  - `meta/main.yml` — extract role metadata (platforms, dependencies)
-- Display a brief update notice:
-  ```
-  ## Updating existing role: [role_name]
-  Existing variables preserved. New variables will be added with comments.
-  ```
+
+1. Read core files:
+   - `defaults/main.yml` — capture all existing variables and their comments
+   - `vars/main.yml` — capture internal variables
+   - `meta/main.yml` — extract role metadata (platforms, dependencies)
+
+2. Scan ALL task files and templates to audit variable usage:
+   ```bash
+   # Find all role-prefixed variables used across tasks and templates
+   grep -Eoh "[a-z]+_[a-z_]+" roles/[role_name]/tasks/*.yml roles/[role_name]/templates/*.j2 2>/dev/null | sort -u
+   ```
+   - Separate top-level variables (e.g. `apache_port`) from sub-keys of list/dict variables (e.g. `item.serveralias`)
+   - Sub-keys of list/dict variables belong as **commented examples** inside the parent variable definition in defaults/main.yml, not as standalone entries
+
+3. Build a **variable gap report** before proceeding:
+   - Variables in defaults/main.yml but NOT used anywhere → flag as potentially unused
+   - Variables used in tasks/templates but NOT in defaults/main.yml and NOT in vars/main.yml → missing, must be added
+   - List/dict variables whose optional sub-keys are used in templates but not documented in defaults/main.yml → must add commented sub-key examples
+
+4. Display a brief update notice:
+   ```
+   ## Updating existing role: [role_name]
+   Found: 10 existing variables, 2 missing from defaults, 3 sub-keys undocumented.
+   Existing variables preserved. Missing variables will be added with comments.
+   ```
 
 **If role directory does not exist** → set `MODE=create` and proceed normally.
 
@@ -241,6 +256,11 @@ role_name_packages:
   RedHat:
     - package1
 ```
+
+**When MODE=update**, use the variable gap report from Step 0 to drive the plan:
+- List every variable to be added to defaults/main.yml (with its comment and default value)
+- List every list/dict variable whose optional sub-keys need to be added as commented examples
+- Do NOT redesign variables that already exist — only fill the gaps
 
 ### Task Flow Ordering
 
@@ -438,12 +458,32 @@ role_name_service_enabled: true
 role_name_service_state: "started"
 ```
 
+**For list/dict variables** — document all optional sub-keys as commented examples inside the value:
+
+```yaml
+# List of virtual host definitions.
+# Required keys: servername, documentroot
+# Optional keys:
+#   serveralias      — alternative hostname (e.g. www subdomain)
+#   serveradmin      — admin email shown in error pages
+#   allowoverride    — .htaccess override level (default: All)
+#   options          — directory options (default: -Indexes +FollowSymLinks)
+#   extra_parameters — raw directives appended to the block
+role_name_items:
+  - required_key: "value"
+    other_key: "value"
+    # optional_key: "value"
+    # another_optional: "value"
+```
+
 **When MODE=update** (existing role):
 - Read current `defaults/main.yml` first (already done in Step 0)
 - Preserve ALL existing variables and their current values exactly
 - Preserve existing comments; improve them only if they are missing or incorrect
-- Append new variables from the plan at the end of the relevant group (or create a new group)
-- Use `Edit` tool to update the file — do NOT overwrite with `Write`
+- Use the variable gap report (Step 0) to identify what to add
+- For missing top-level variables: append at the end of the relevant group (or create a new group)
+- For list/dict variables with undocumented sub-keys: Edit the existing variable definition to add the sub-key comment block above it and commented optional keys inside the example item
+- Use `Write` tool to rewrite the full file when more than 2 variables or comment blocks need to be added — `Edit` only for small targeted additions
 - Never remove a variable that already exists, even if unused in the new plan
 
 ### YAML Formatting Rules
