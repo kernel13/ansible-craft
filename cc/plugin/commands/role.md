@@ -26,6 +26,7 @@ Generate Galaxy-standard Ansible roles with conversational exploration. Generate
 ## Workflow Overview
 
 ```
+Step 0:  Detect existing role        — read current files if role exists
 Step 1:  Research (optional)        — WebSearch for uncommon software only
 Step 2:  Interactive Overview        — display findings, smart defaults
 Step 3:  Topic Exploration Loop      — user selects topics or continues
@@ -33,11 +34,34 @@ Step 4:  Summary & Modification      — confirm or describe changes
 Step 5:  Read Reference Files        — lazy load only what's needed
 Step 6:  Generate Plan Inline        — variable design, task flow, handlers
 Step 7:  Plan Approval Loop          — approve/modify/cancel
-Step 8:  Generate Files (Write)      — create all role files directly
+Step 8:  Generate Files (Write/Edit) — create or update role files
 Step 9:  Validate                    — ansible-lint + static checks
 Step 10: Fix                         — read lint-fixes.md, apply Edit fixes
 Step 11: Final Report                — file tree, validation, next steps
 ```
+
+## Step 0: Detect Existing Role
+
+Before anything else, resolve the role name from the argument and check if the role already exists.
+
+```bash
+# Detect role directory (try common locations)
+ls roles/[role_name]/ 2>/dev/null || ls [role_name]/ 2>/dev/null
+```
+
+**If role directory exists** → set `MODE=update`:
+- Read these files before proceeding to Step 1:
+  - `defaults/main.yml` — capture all existing variables and their comments
+  - `vars/main.yml` — capture internal variables
+  - `tasks/main.yml` — understand current task structure
+  - `meta/main.yml` — extract role metadata (platforms, dependencies)
+- Display a brief update notice:
+  ```
+  ## Updating existing role: [role_name]
+  Existing variables preserved. New variables will be added with comments.
+  ```
+
+**If role directory does not exist** → set `MODE=create` and proceed normally.
 
 ## Step 1: Research Phase (Optional)
 
@@ -330,7 +354,7 @@ mkdir -p roles/[role_name]/{defaults,vars,tasks,handlers,templates,files,meta,mo
 
 ### 8.2: Generate files in order
 
-1. `defaults/main.yml` — Default variables
+1. `defaults/main.yml` — Default variables (see rules below)
 2. `vars/main.yml` — Internal variables
 3. `handlers/main.yml` — Service handlers (FQCN, listen directive)
 4. `meta/main.yml` — Galaxy metadata
@@ -379,6 +403,48 @@ These rules are **mandatory** for all generated files:
 - ALL variables must be role-prefixed: `nginx_port` not `port`
 - defaults/main.yml = user-overridable values
 - vars/main.yml = internal/computed values
+
+### defaults/main.yml Rules
+
+Every variable **must** have an inline or block comment explaining its purpose and accepted values.
+
+**Required format** — group variables by concern, each group preceded by a comment block:
+
+```yaml
+---
+# [role_name] default variables
+# Override these in your playbook or inventory.
+
+# --- Installation ---
+# Package name to install
+role_name_package: "package"
+# Version to install. Use "latest" to always upgrade.
+role_name_version: "latest"
+
+# --- Network ---
+# Port the service listens on (1-65535)
+role_name_port: 8080
+
+# --- Paths ---
+# Directory for configuration files
+role_name_config_dir: "/etc/role_name"
+# Directory for persistent data
+role_name_data_dir: "/var/lib/role_name"
+
+# --- Service ---
+# Whether to enable the service at boot
+role_name_service_enabled: true
+# Desired service state: started, stopped, restarted, reloaded
+role_name_service_state: "started"
+```
+
+**When MODE=update** (existing role):
+- Read current `defaults/main.yml` first (already done in Step 0)
+- Preserve ALL existing variables and their current values exactly
+- Preserve existing comments; improve them only if they are missing or incorrect
+- Append new variables from the plan at the end of the relevant group (or create a new group)
+- Use `Edit` tool to update the file — do NOT overwrite with `Write`
+- Never remove a variable that already exists, even if unused in the new plan
 
 ### YAML Formatting Rules
 - 2-space indentation, never tabs
