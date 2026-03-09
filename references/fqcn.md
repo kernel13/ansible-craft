@@ -69,7 +69,6 @@ Fully Qualified Collection Names for all Ansible modules.
 | win_template | ansible.windows.win_template |
 | win_user | ansible.windows.win_user |
 | win_group | ansible.windows.win_group |
-| win_firewall_rule | ansible.windows.win_firewall_rule |
 | win_reboot | ansible.windows.win_reboot |
 | win_shell | ansible.windows.win_shell |
 | win_command | ansible.windows.win_command |
@@ -77,7 +76,6 @@ Fully Qualified Collection Names for all Ansible modules.
 | win_acl | ansible.windows.win_acl |
 | win_environment | ansible.windows.win_environment |
 | win_path | ansible.windows.win_path |
-| win_scheduled_task | ansible.windows.win_scheduled_task |
 
 ### PowerShell Module Development
 
@@ -208,6 +206,22 @@ plugins/modules/
         state: present
       when: ansible_os_family == "Windows"
 ```
+
+## Windows Modules (community.windows)
+
+| Short Name | FQCN |
+|------------|------|
+| win_firewall | community.windows.win_firewall |
+| win_firewall_rule | community.windows.win_firewall_rule |
+| win_scheduled_task | community.windows.win_scheduled_task |
+| win_scheduled_task_stat | community.windows.win_scheduled_task_stat |
+| win_nssm | community.windows.win_nssm |
+| win_iis_website | community.windows.win_iis_website |
+| win_iis_webbinding | community.windows.win_iis_webbinding |
+| win_iis_webapppool | community.windows.win_iis_webapppool |
+| win_timezone | community.windows.win_timezone |
+| win_hosts | community.windows.win_hosts |
+| win_product_facts | community.windows.win_product_facts |
 
 ## Chocolatey Modules (chocolatey.chocolatey)
 

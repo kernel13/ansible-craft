@@ -229,7 +229,7 @@ Read reference files directly using the Read tool. Lazy load only what's needed:
 - `references/role-structure.md` — Full Galaxy structure
 - `references/fqcn.md` — Filter by platform:
   - Linux-only: include `ansible.builtin.*`, `ansible.posix.*`, skip Windows
-  - Windows-only: include `ansible.windows.*`, `chocolatey.*`, skip Linux
+  - Windows-only: include `ansible.windows.*`, `community.windows.*`, `chocolatey.*`, skip Linux
   - Multi-platform: include all
 - `references/patterns.md` — Idempotency, validation, variable naming
 
@@ -647,7 +647,8 @@ Run validation directly — do NOT spawn an agent.
 
 Perform inline checks on generated files:
 
-- **FQCN compliance**: grep for short module names (apt, yum, template, service, etc.)
+- **FQCN compliance**: grep for short module names (apt, yum, template, service, win_service, etc.)
+- **FQCN namespace check**: for each Windows module used, verify the namespace prefix matches fqcn.md (e.g. `win_firewall_rule` → `community.windows`, NOT `ansible.windows`)
 - **Variable naming**: verify all defaults/vars use role prefix
 - **Boolean values**: no yes/no, only true/false
 - **Jinja2 quoting**: all `{{ }}` expressions quoted
