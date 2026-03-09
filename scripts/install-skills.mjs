@@ -1,33 +1,26 @@
 #!/usr/bin/env node
 /**
- * Skill installer for Claude Code integration.
+ * Skill installer for Claude Code, Cursor, and GitHub Copilot integration.
  *
- * Deploys each ansible-craft skill into its own folder under ~/.claude/skills/:
- *   ~/.claude/skills/ansible-craft-{name}/SKILL.md
- *   ~/.claude/skills/ansible-craft-{name}/references/{scoped refs}
- *
- * Skills are discovered as /ansible-craft-{name} by Claude Code.
- * Reference paths inside SKILL.md are rewritten to absolute paths
- * so the Read tool can locate them regardless of the user's CWD.
+ * Deploys each ansible-craft skill to one or more targets:
+ *   Claude Code (global):   ~/.claude/skills/ansible-craft-{name}/SKILL.md
+ *   Claude Code (project):  ./.claude/skills/ansible-craft-{name}/SKILL.md
+ *   Cursor (global):        ~/.cursor/rules/ansible-craft-{name}.mdc
+ *   Cursor (project):       ./.cursor/rules/ansible-craft-{name}.mdc
+ *   GitHub Copilot:         ./.github/instructions/ansible-craft-{name}.instructions.md
  *
  * Usage:
- *   node scripts/install-skills.mjs [--global|--project]
- *
- * Options:
- *   --global   Install to ~/.claude/ (default)
- *   --project  Install to ./.claude/ (current directory)
- *   --force    Overwrite existing files without prompting
- *   --quiet    Suppress output (for postinstall script)
+ *   node scripts/install-skills.mjs                    # interactive target selection (TTY)
+ *   node scripts/install-skills.mjs --global           # all global targets (Claude + Cursor)
+ *   node scripts/install-skills.mjs --project          # all project targets (Claude + Cursor + Copilot)
+ *   node scripts/install-skills.mjs --global --project # all five targets
+ *   node scripts/install-skills.mjs --all              # all five targets
+ *   node scripts/install-skills.mjs --targets=cursor-global,copilot
+ *   node scripts/install-skills.mjs --force            # overwrite existing files
+ *   node scripts/install-skills.mjs --quiet            # suppress output (postinstall)
  */
 
-import {
-  existsSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -49,6 +42,180 @@ const SKILL_REFERENCES = {
   explain: [],
   fix: [],
 };
+
+// ---------------------------------------------------------------------------
+// Target definitions
+// ---------------------------------------------------------------------------
+
+const ALL_TARGETS = [
+  {
+    key: 'claude-global',
+    label: 'Claude Code (global)',
+    hint: '~/.claude/skills/',
+    defaultSelected: true,
+  },
+  {
+    key: 'claude-project',
+    label: 'Claude Code (project)',
+    hint: './.claude/skills/',
+    defaultSelected: false,
+  },
+  {
+    key: 'cursor-global',
+    label: 'Cursor (global)',
+    hint: '~/.cursor/rules/',
+    defaultSelected: false,
+  },
+  {
+    key: 'cursor-project',
+    label: 'Cursor (project)',
+    hint: '.cursor/rules/',
+    defaultSelected: false,
+  },
+  {
+    key: 'copilot-global',
+    label: 'GitHub Copilot (global)',
+    hint: '~/.github/instructions/',
+    defaultSelected: false,
+  },
+  {
+    key: 'copilot',
+    label: 'GitHub Copilot (project)',
+    hint: '.github/instructions/',
+    defaultSelected: false,
+  },
+];
+
+// ---------------------------------------------------------------------------
+// Interactive prompt
+// ---------------------------------------------------------------------------
+
+async function promptTargets() {
+  const items = ALL_TARGETS.map((t) => ({ ...t, selected: t.defaultSelected }));
+  let cursor = 0;
+
+  const labelWidth = Math.max(...items.map((t) => t.label.length));
+
+  function render() {
+    process.stdout.write('\x1b[2J\x1b[H'); // clear screen
+    process.stdout.write('ansible-craft - Select installation targets:\n');
+    process.stdout.write('Use \u2191\u2193 to navigate, Space to toggle, Enter to confirm\n\n');
+    for (let i = 0; i < items.length; i++) {
+      const pointer = i === cursor ? '>' : ' ';
+      const check = items[i].selected ? '\u25cf' : '\u25cb';
+      const label = items[i].label.padEnd(labelWidth);
+      process.stdout.write(`  ${pointer} ${check} ${label}  ${items[i].hint}\n`);
+    }
+  }
+
+  return new Promise((resolvePromise) => {
+    process.stdin.setRawMode(true);
+    process.stdin.resume();
+    process.stdin.setEncoding('utf-8');
+
+    render();
+
+    function onKey(key) {
+      if (key === '\x03' || key === '\x1b') {
+        // Ctrl-C or Escape
+        process.stdin.setRawMode(false);
+        process.stdin.pause();
+        process.stdout.write('\n');
+        process.exit(0);
+      }
+
+      if (key === '\x1b[A') {
+        // arrow up
+        cursor = (cursor - 1 + items.length) % items.length;
+        render();
+        return;
+      }
+
+      if (key === '\x1b[B') {
+        // arrow down
+        cursor = (cursor + 1) % items.length;
+        render();
+        return;
+      }
+
+      if (key === '\x20') {
+        // space — toggle
+        items[cursor].selected = !items[cursor].selected;
+        render();
+        return;
+      }
+
+      if (key === '\r') {
+        // enter — confirm
+        const selected = items.filter((t) => t.selected).map((t) => t.key);
+        if (selected.length === 0) {
+          process.stdout.write('\n  Please select at least one target.\n');
+          render();
+          return;
+        }
+        process.stdin.setRawMode(false);
+        process.stdin.pause();
+        process.stdin.removeListener('data', onKey);
+        process.stdout.write('\n');
+        resolvePromise(selected);
+      }
+    }
+
+    process.stdin.on('data', onKey);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Argument parsing
+// ---------------------------------------------------------------------------
+
+const GLOBAL_TARGETS = ['claude-global', 'cursor-global', 'copilot-global'];
+const PROJECT_TARGETS = ['claude-project', 'cursor-project', 'copilot'];
+
+async function resolveTargets(args) {
+  if (args.includes('--quiet') || args.includes('-q')) {
+    return ['claude-global'];
+  }
+
+  if (args.includes('--all')) {
+    return ALL_TARGETS.map((t) => t.key);
+  }
+
+  const targetsArg = args.find((a) => a.startsWith('--targets='));
+  if (targetsArg) {
+    const keys = targetsArg
+      .slice('--targets='.length)
+      .split(',')
+      .map((s) => s.trim());
+    const valid = ALL_TARGETS.map((t) => t.key);
+    const invalid = keys.filter((k) => !valid.includes(k));
+    if (invalid.length > 0) {
+      console.error(`Unknown target(s): ${invalid.join(', ')}`);
+      console.error(`Valid targets: ${valid.join(', ')}`);
+      process.exit(1);
+    }
+    return keys;
+  }
+
+  const hasGlobal = args.includes('--global') || args.includes('-g');
+  const hasProject = args.includes('--project') || args.includes('-p');
+
+  if (hasGlobal && hasProject) {
+    return ALL_TARGETS.map((t) => t.key);
+  }
+  if (hasGlobal) {
+    return GLOBAL_TARGETS;
+  }
+  if (hasProject) {
+    return PROJECT_TARGETS;
+  }
+
+  if (process.stdin.isTTY) {
+    return await promptTargets();
+  }
+
+  return ['claude-global'];
+}
 
 // ---------------------------------------------------------------------------
 // Source directories
@@ -75,47 +242,71 @@ function getReferencesSourceDir() {
 }
 
 // ---------------------------------------------------------------------------
-// Target directories
+// Reference path rewriting (Claude Code only)
 // ---------------------------------------------------------------------------
 
-function getSkillsBaseDir(options) {
-  if (options.project) {
+function rewriteReferencePaths(content, referencesAbsPath) {
+  return content
+    .replace(/\.\.\/references\//g, `${referencesAbsPath}/`)
+    .replace(/(?<![/\w])references\//g, `${referencesAbsPath}/`);
+}
+
+// ---------------------------------------------------------------------------
+// Frontmatter parser
+// ---------------------------------------------------------------------------
+
+function parseFrontmatter(content) {
+  const match = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
+  if (!match) {
+    return { fields: {}, body: content };
+  }
+
+  const rawFields = match[1];
+  const body = match[2];
+  const fields = {};
+
+  for (const line of rawFields.split('\n')) {
+    const colonIdx = line.indexOf(':');
+    if (colonIdx === -1) continue;
+    const key = line.slice(0, colonIdx).trim();
+    const value = line.slice(colonIdx + 1).trim();
+    fields[key] = value;
+  }
+
+  return { fields, body };
+}
+
+// ---------------------------------------------------------------------------
+// Format converters
+// ---------------------------------------------------------------------------
+
+function convertToCursor(content) {
+  const { fields, body } = parseFrontmatter(content);
+  const description = fields.description ?? '';
+  return `---\ndescription: "${description}"\nglobs: []\nalwaysApply: false\n---\n${body}`;
+}
+
+function convertToCopilot(content) {
+  const { body } = parseFrontmatter(content);
+  return `---\napplyTo: "**"\n---\n${body}`;
+}
+
+// ---------------------------------------------------------------------------
+// Install — Claude Code
+// ---------------------------------------------------------------------------
+
+function getClaudeSkillsBaseDir(isProject) {
+  if (isProject) {
     return resolve(process.cwd(), '.claude', 'skills');
   }
   return join(homedir(), '.claude', 'skills');
 }
 
-function getSkillTargetDir(skillName, options) {
-  return join(getSkillsBaseDir(options), `${NAMESPACE}-${skillName}`);
-}
-
-// ---------------------------------------------------------------------------
-// Reference path rewriting
-// ---------------------------------------------------------------------------
-
-/**
- * Rewrite `references/` paths in skill content to absolute paths.
- * This ensures the Read tool can locate reference files regardless of the
- * user's working directory when the skill runs.
- */
-function rewriteReferencePaths(content, referencesAbsPath) {
-  return content.replace(/\.\.\/references\//g, `${referencesAbsPath}/`).replace(
-    /(?<![/\w])references\//g,
-    `${referencesAbsPath}/`,
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Install
-// ---------------------------------------------------------------------------
-
-/**
- * Install a single skill and its scoped references.
- */
-function installSkill(skillName, options) {
+function installSkillClaude(skillName, options) {
+  const isProject = options.target === 'claude-project';
   const skillsSourceDir = getSkillsSourceDir();
   const refsSourceDir = getReferencesSourceDir();
-  const skillTargetDir = getSkillTargetDir(skillName, options);
+  const skillTargetDir = join(getClaudeSkillsBaseDir(isProject), `${NAMESPACE}-${skillName}`);
   const refsTargetDir = join(skillTargetDir, 'references');
   const refsAbsPath = refsTargetDir;
 
@@ -135,7 +326,6 @@ function installSkill(skillName, options) {
     return result;
   }
 
-  // Install skill file as SKILL.md
   const sourcePath = join(skillsSourceDir, `${skillName}.md`);
   const targetPath = join(skillTargetDir, 'SKILL.md');
 
@@ -159,7 +349,6 @@ function installSkill(skillName, options) {
     result.errors.push(`Failed to install SKILL.md for ${skillName}: ${err.message}`);
   }
 
-  // Install scoped references
   const refs = SKILL_REFERENCES[skillName] ?? [];
   if (refs.length > 0 && refsSourceDir) {
     try {
@@ -199,16 +388,126 @@ function installSkill(skillName, options) {
 }
 
 // ---------------------------------------------------------------------------
+// Install — Cursor
+// ---------------------------------------------------------------------------
+
+function getCursorRulesDir(isGlobal) {
+  if (isGlobal) {
+    return join(homedir(), '.cursor', 'rules');
+  }
+  return resolve(process.cwd(), '.cursor', 'rules');
+}
+
+function installSkillCursor(skillName, options) {
+  const skillsSourceDir = getSkillsSourceDir();
+  const isGlobal = options.target === 'cursor-global';
+  const targetDir = getCursorRulesDir(isGlobal);
+  const fileName = `${NAMESPACE}-${skillName}.mdc`;
+  const targetPath = join(targetDir, fileName);
+
+  const result = {
+    success: true,
+    installed: [],
+    skipped: [],
+    errors: [],
+    targetDir,
+  };
+
+  try {
+    const sourcePath = join(skillsSourceDir, `${skillName}.md`);
+    const sourceContent = readFileSync(sourcePath, 'utf-8');
+    const converted = convertToCursor(sourceContent);
+
+    try {
+      mkdirSync(targetDir, { recursive: true });
+    } catch (err) {
+      result.errors.push(`Failed to create ${targetDir}: ${err.message}`);
+      result.success = false;
+      return result;
+    }
+
+    if (existsSync(targetPath) && !options.force) {
+      const existing = readFileSync(targetPath, 'utf-8');
+      if (converted === existing || options.quiet) {
+        result.skipped.push(fileName);
+      } else {
+        writeFileSync(targetPath, converted, 'utf-8');
+        result.installed.push(fileName);
+      }
+    } else {
+      writeFileSync(targetPath, converted, 'utf-8');
+      result.installed.push(fileName);
+    }
+  } catch (err) {
+    result.errors.push(`Failed to install Cursor skill ${skillName}: ${err.message}`);
+    result.success = false;
+  }
+
+  return result;
+}
+
+// ---------------------------------------------------------------------------
+// Install — GitHub Copilot
+// ---------------------------------------------------------------------------
+
+function installSkillCopilot(skillName, options) {
+  const skillsSourceDir = getSkillsSourceDir();
+  const isGlobal = options.target === 'copilot-global';
+  const targetDir = isGlobal
+    ? join(homedir(), '.github', 'instructions')
+    : resolve(process.cwd(), '.github', 'instructions');
+  const fileName = `${NAMESPACE}-${skillName}.instructions.md`;
+  const targetPath = join(targetDir, fileName);
+
+  const result = {
+    success: true,
+    installed: [],
+    skipped: [],
+    errors: [],
+    targetDir,
+  };
+
+  try {
+    const sourcePath = join(skillsSourceDir, `${skillName}.md`);
+    const sourceContent = readFileSync(sourcePath, 'utf-8');
+    const converted = convertToCopilot(sourceContent);
+
+    try {
+      mkdirSync(targetDir, { recursive: true });
+    } catch (err) {
+      result.errors.push(`Failed to create ${targetDir}: ${err.message}`);
+      result.success = false;
+      return result;
+    }
+
+    if (existsSync(targetPath) && !options.force) {
+      const existing = readFileSync(targetPath, 'utf-8');
+      if (converted === existing || options.quiet) {
+        result.skipped.push(fileName);
+      } else {
+        writeFileSync(targetPath, converted, 'utf-8');
+        result.installed.push(fileName);
+      }
+    } else {
+      writeFileSync(targetPath, converted, 'utf-8');
+      result.installed.push(fileName);
+    }
+  } catch (err) {
+    result.errors.push(`Failed to install Copilot skill ${skillName}: ${err.message}`);
+    result.success = false;
+  }
+
+  return result;
+}
+
+// ---------------------------------------------------------------------------
 // Cleanup
 // ---------------------------------------------------------------------------
 
-/**
- * Remove stale files from previous install approaches.
- */
-function cleanupOldInstalls(options) {
+function cleanupOldInstalls(isProject) {
   const cleaned = [];
 
-  const staleDirs = options.project
+  const staleDirs = isProject
     ? [
         resolve(process.cwd(), '.claude', 'commands', 'ac'),
         resolve(process.cwd(), '.claude', 'commands', NAMESPACE),
@@ -233,8 +532,7 @@ function cleanupOldInstalls(options) {
     }
   }
 
-  // Legacy agent files (ac-*.md)
-  const agentsDir = options.project
+  const agentsDir = isProject
     ? resolve(process.cwd(), '.claude', 'agents')
     : join(homedir(), '.claude', 'agents');
 
@@ -255,13 +553,13 @@ function cleanupOldInstalls(options) {
     }
   }
 
-  cleanupPluginRegistry(options);
+  cleanupPluginRegistry(isProject);
 
   return cleaned.length > 0 ? cleaned : null;
 }
 
-function cleanupPluginRegistry(options) {
-  const pluginsPath = options.project
+function cleanupPluginRegistry(isProject) {
+  const pluginsPath = isProject
     ? resolve(process.cwd(), '.claude', 'plugins', 'installed_plugins.json')
     : join(homedir(), '.claude', 'plugins', 'installed_plugins.json');
 
@@ -278,7 +576,7 @@ function cleanupPluginRegistry(options) {
     }
   }
 
-  const settingsPath = options.project
+  const settingsPath = isProject
     ? resolve(process.cwd(), '.claude', 'settings.json')
     : join(homedir(), '.claude', 'settings.json');
 
@@ -305,18 +603,53 @@ function cleanupPluginRegistry(options) {
 // ---------------------------------------------------------------------------
 
 function installAll(options = {}) {
-  const cleanedUp = cleanupOldInstalls(options);
-  const skillResults = {};
+  const targets = options.targets ?? ['claude-global'];
+  let cleanedUp = null;
+
+  if (targets.includes('claude-global')) {
+    const c = cleanupOldInstalls(false);
+    if (c) cleanedUp = [...(cleanedUp ?? []), ...c];
+  }
+  if (targets.includes('claude-project')) {
+    const c = cleanupOldInstalls(true);
+    if (c) cleanedUp = [...(cleanedUp ?? []), ...c];
+  }
+
+  // targetResults: { [targetKey]: { [skillName]: result } }
+  const targetResults = {};
   let overallSuccess = true;
 
-  for (const skillName of Object.keys(SKILL_REFERENCES)) {
-    const result = installSkill(skillName, options);
-    skillResults[skillName] = result;
-    if (!result.success) overallSuccess = false;
+  for (const targetKey of targets) {
+    const skillResults = {};
+
+    for (const skillName of Object.keys(SKILL_REFERENCES)) {
+      let result;
+
+      if (targetKey === 'claude-global' || targetKey === 'claude-project') {
+        result = installSkillClaude(skillName, { ...options, target: targetKey });
+      } else if (targetKey === 'cursor-global' || targetKey === 'cursor-project') {
+        result = installSkillCursor(skillName, { ...options, target: targetKey });
+      } else if (targetKey === 'copilot-global' || targetKey === 'copilot') {
+        result = installSkillCopilot(skillName, { ...options, target: targetKey });
+      } else {
+        result = {
+          success: false,
+          installed: [],
+          skipped: [],
+          errors: [`Unknown target: ${targetKey}`],
+          targetDir: '',
+        };
+      }
+
+      skillResults[skillName] = result;
+      if (!result.success) overallSuccess = false;
+    }
+
+    targetResults[targetKey] = skillResults;
   }
 
   return {
-    skillResults,
+    targetResults,
     cleanedUp,
     success: overallSuccess,
   };
@@ -325,6 +658,8 @@ function installAll(options = {}) {
 // ---------------------------------------------------------------------------
 // Output formatting
 // ---------------------------------------------------------------------------
+
+const TARGET_LABELS = Object.fromEntries(ALL_TARGETS.map((t) => [t.key, t.label]));
 
 function formatSkillResult(skillName, result) {
   const lines = [];
@@ -345,16 +680,28 @@ function formatSkillResult(skillName, result) {
 function formatFullResult(result) {
   const lines = [];
 
-  for (const [skillName, skillResult] of Object.entries(result.skillResults)) {
-    const line = formatSkillResult(skillName, skillResult);
-    if (line) lines.push(line);
+  for (const [targetKey, skillResults] of Object.entries(result.targetResults)) {
+    const targetLabel = TARGET_LABELS[targetKey] ?? targetKey;
+    lines.push(`[${targetLabel}]`);
+
+    for (const [skillName, skillResult] of Object.entries(skillResults)) {
+      const line = formatSkillResult(skillName, skillResult);
+      if (line) lines.push(line);
+    }
+
+    lines.push('');
   }
 
   if (result.cleanedUp) {
-    if (lines.length > 0) lines.push('');
     for (const dir of result.cleanedUp) {
       lines.push(`Cleaned up old install: ${dir}`);
     }
+    lines.push('');
+  }
+
+  // Remove trailing empty line
+  while (lines.length > 0 && lines[lines.length - 1] === '') {
+    lines.pop();
   }
 
   if (lines.length === 0) {
@@ -368,10 +715,11 @@ function formatFullResult(result) {
 // CLI entry point
 // ---------------------------------------------------------------------------
 
-function main() {
+async function main() {
   const args = process.argv.slice(2);
+  const targets = await resolveTargets(args);
   const options = {
-    project: args.includes('--project') || args.includes('-p'),
+    targets,
     force: args.includes('--force') || args.includes('-f'),
     quiet: args.includes('--quiet') || args.includes('-q'),
   };
@@ -382,9 +730,11 @@ function main() {
     console.log(formatFullResult(result));
 
     if (result.success) {
-      const anyInstalled = Object.values(result.skillResults).some((r) => r.installed.length > 0);
+      const anyInstalled = Object.values(result.targetResults).some((skillResults) =>
+        Object.values(skillResults).some((r) => r.installed.length > 0),
+      );
       if (anyInstalled) {
-        console.log('\nClaude Code integration installed successfully!');
+        console.log('\nansible-craft skills installed successfully!');
         console.log(
           'Skills: /ansible-craft-role, /ansible-craft-playbook, /ansible-craft-explain, /ansible-craft-fix, /ansible-craft-project, /ansible-craft-collection',
         );
@@ -396,5 +746,8 @@ function main() {
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  main();
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
 }
