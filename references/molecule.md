@@ -3,6 +3,7 @@
 ## Overview
 
 Molecule is the standard testing framework for Ansible roles. It provides:
+
 - Infrastructure provisioning (containers, VMs)
 - Playbook execution (converge)
 - Idempotence verification
@@ -11,14 +12,18 @@ Molecule is the standard testing framework for Ansible roles. It provides:
 ## Testing Levels
 
 ### None
+
 Molecule testing disabled. No molecule directory or files generated.
 
 ### Basic (Recommended)
+
 Quick setup with sensible defaults. Asks only 2 questions:
+
 1. Testing level (basic/advanced/none)
 2. Driver selection (docker/podman/vagrant/delegated)
 
 **Defaults applied:**
+
 | Setting | Value |
 |---------|-------|
 | Test images | Pre-built Ansible images (geerlingguy/*-ansible) |
@@ -32,24 +37,29 @@ Quick setup with sensible defaults. Asks only 2 questions:
 | Verifier | ansible |
 
 ### Advanced
+
 Full control over all Molecule configuration. Includes driver-specific questions plus common options:
 
 **Docker/Podman questions:**
+
 - Use pre-built Ansible test images?
 - If no: Enter custom image per platform
 - Enable privileged mode for systemd?
 - (Podman only) Run in rootless mode?
 
 **Vagrant questions:**
+
 - Provider (virtualbox/libvirt/parallels)?
 - Use standard boxes (generic/*)?
 - If no: Enter custom box per platform
 - VM resources (minimal/standard/powerful)?
 
 **Delegated questions:**
+
 - Instance management (external/managed)?
 
 **Common questions (all drivers):**
+
 - Test sequence (multi-select from 9 stages)
 - Verifier type (ansible/testinfra)
 
@@ -63,6 +73,7 @@ Full control over all Molecule configuration. Includes driver-specific questions
 | **delegated** | Windows, cloud, custom | Maximum flexibility | Manual setup required |
 
 ### Windows Roles
+
 Windows roles use the `vagrant` driver with libvirt/KVM provider and WinRM — Docker/Podman cannot run Windows containers for Ansible testing.
 
 ## molecule.yml Templates
@@ -323,9 +334,7 @@ provisioner:
   name: ansible
   config_options:
     defaults:
-      interpreter_python: auto_silent
       callback_whitelist: profile_tasks, timer, yaml
-      stdout_callback: yaml
   connection_options:
     ansible_user: vagrant
     ansible_password: vagrant
@@ -820,6 +829,7 @@ verifier:
 ```
 
 **tests/test_default.py:**
+
 ```python
 """Testinfra tests for the role."""
 import pytest
@@ -870,6 +880,7 @@ def test_config_contains(host, expected_line):
 ```
 
 **Windows testinfra tests (tests/test_windows.py):**
+
 ```python
 """Testinfra tests for Windows role."""
 
@@ -896,10 +907,13 @@ def test_port_is_listening(host):
 ## Test Scenarios
 
 ### default
+
 Standard test - syntax, create, converge, idempotence, verify, destroy.
 
 ### idempotence
+
 Runs converge twice, verifies no changes on second run.
+
 ```yaml
 scenario:
   name: idempotence
@@ -909,7 +923,9 @@ scenario:
 ```
 
 ### side_effect
+
 Tests upgrade paths or configuration changes.
+
 ```yaml
 # molecule/side_effect/molecule.yml
 scenario:
